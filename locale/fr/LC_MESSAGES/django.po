@@ -1,0 +1,5808 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: FLUXAA Port\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-28 12:22+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FLUXAA\n"
+"Language-Team: FLUXAA\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "AI assistance"
+msgstr "Assistance IA"
+
+msgid "The AI library is not installed on this server."
+msgstr "La bibliothèque d'IA n'est pas installée sur ce serveur."
+
+#, python-format
+msgid "The assistant could not be reached: %(e)s"
+msgstr "L'assistant n'a pas pu être joint : %(e)s"
+
+#, python-format
+msgid "The assistant returned no usable answer (%(r)s)."
+msgstr "L'assistant n'a pas rendu de réponse exploitable (%(r)s)."
+
+msgid "The assistant returned an unreadable answer."
+msgstr "L'assistant a rendu une réponse illisible."
+
+msgid "Extraction from a document"
+msgstr "Extraction depuis un document"
+
+msgid "Consistency review of the call"
+msgstr "Revue de cohérence de l'escale"
+
+msgid "Summary of an exchange"
+msgstr "Résumé d'un échange"
+
+msgid "Draft remarks for the statement of facts"
+msgstr "Projet de remarques pour le rapport des faits"
+
+msgid "Brief of the port"
+msgstr "Point du port"
+
+msgid "Question on the registry of the port"
+msgstr "Question sur le registre du port"
+
+msgid "Completed"
+msgstr "Terminée"
+
+msgid "Failed"
+msgstr "Échouée"
+
+msgid "Empty for the port-level features (brief, question)."
+msgstr "Vide pour les fonctions au niveau du port (point, question)."
+
+msgid "fingerprint of the data sent (SHA-256)"
+msgstr "empreinte des données envoyées (SHA-256)"
+
+msgid "objects the request was built from"
+msgstr "objets à partir desquels la requête a été construite"
+
+msgid "assistant run"
+msgstr "requête à l'assistant"
+
+msgid "assistant runs"
+msgstr "requêtes à l'assistant"
+
+msgid "Awaiting validation"
+msgstr "En attente de validation"
+
+msgid "Validated"
+msgstr "Validée"
+
+msgid "Dismissed"
+msgstr "Écartée"
+
+msgid "extraction awaiting validation"
+msgstr "extraction en attente de validation"
+
+msgid "extractions awaiting validation"
+msgstr "extractions en attente de validation"
+
+msgid "Security documents are never sent to the assistant."
+msgstr "Les documents de sûreté ne sont jamais envoyés à l'assistant."
+
+msgid "Only PDF files and images can be read by the assistant."
+msgstr "L'assistant ne lit que les fichiers PDF et les images."
+
+msgid "This file is too large for the assistant (20 MB maximum)."
+msgstr "Ce fichier est trop volumineux pour l'assistant (20 Mo au maximum)."
+
+msgid "This exchange is not visible to your role."
+msgstr "Cet échange n'est pas visible pour votre rôle."
+
+msgid "Vessel name"
+msgstr "Nom du navire"
+
+msgid "IMO number"
+msgstr "numéro OMI"
+
+msgid "Flag"
+msgstr "Pavillon"
+
+msgid "Vessel type"
+msgstr "Type de navire"
+
+msgid "Call sign"
+msgstr "Indicatif d'appel"
+
+msgid "MMSI"
+msgstr "MMSI"
+
+msgid "Summer deadweight (t)"
+msgstr "Port en lourd d'été (t)"
+
+msgid "Length overall (m)"
+msgstr "Longueur hors tout (m)"
+
+msgid "Beam / breadth (m)"
+msgstr "Largeur (m)"
+
+msgid "Summer draft (m)"
+msgstr "Tirant d'eau d'été (m)"
+
+msgid "Year built"
+msgstr "Année de construction"
+
+msgid "Registered owner"
+msgstr "Propriétaire inscrit"
+
+msgid "Manager / operator"
+msgstr "Gestionnaire / exploitant"
+
+msgid "Bill of lading number"
+msgstr "Numéro du connaissement"
+
+msgid "Date of issue (YYYY-MM-DD)"
+msgstr "Date d'émission (AAAA-MM-JJ)"
+
+msgid "Port of loading"
+msgstr "Port de chargement"
+
+msgid "Port of discharge"
+msgstr "Port de déchargement"
+
+msgid "Product / grade"
+msgstr "Produit / grade"
+
+msgid "Quantity (number only)"
+msgstr "Quantité (nombre seul)"
+
+msgid "Unit of the quantity (MT, M3, BBL…)"
+msgstr "Unité de la quantité (MT, M3, BBL…)"
+
+msgid "Shipper"
+msgstr "Chargeur"
+
+msgid "Consignee"
+msgstr "Destinataire"
+
+msgid "AI assistance is not enabled for this port."
+msgstr "L'assistance IA n'est pas activée pour ce port."
+
+#| msgid "The assistant is not available through the master's access."
+msgid "The assistant is not available through an access link."
+msgstr "L'assistant n'est pas accessible par un lien d'accès."
+
+msgid "The assistant reads Q88, certificates and bills of lading only."
+msgstr "L'assistant ne lit que le Q88, les certificats et les connaissements."
+
+msgid "The call is closed."
+msgstr "L'escale est clôturée."
+
+msgid "This extraction has already been handled."
+msgstr "Cette extraction a déjà été traitée."
+
+#, python-format
+msgid "“%(f)s” is not a valid value for the vessel record."
+msgstr "« %(f)s » n'est pas une valeur valide pour la fiche navire."
+
+msgid "Expiry dates are written YYYY-MM-DD."
+msgstr "Les dates d'expiration s'écrivent AAAA-MM-JJ."
+
+msgid "The quantity must be a number."
+msgstr "La quantité doit être un nombre."
+
+#, python-format
+msgid "Certificate expiring before departure: %(c)s"
+msgstr "Certificat expirant avant le départ : %(c)s"
+
+#, python-format
+msgid "Expiry %(e)s, departure %(d)s."
+msgstr "Expiration le %(e)s, départ le %(d)s."
+
+msgid "Only the person who ran the review can raise its findings."
+msgstr "Seule la personne qui a lancé la revue peut en signaler les constats."
+
+msgid "Unknown finding."
+msgstr "Constat inconnu."
+
+msgid "Write the question."
+msgstr "Rédigez la question."
+
+#, python-format
+msgid "The question is too long (%(n)d characters at most)."
+msgstr "La question est trop longue (%(n)d caractères au plus)."
+
+#, python-format
+msgid "The assistant could not complete this request: %(e)s"
+msgstr "L'assistant n'a pas pu traiter cette demande : %(e)s"
+
+msgid "Proposal dismissed: nothing was recorded."
+msgstr "Proposition écartée : rien n'a été enregistré."
+
+msgid "Values validated and recorded under your name."
+msgstr "Valeurs validées et enregistrées sous votre nom."
+
+msgid "Alert raised: it is recorded in the call journal under your name."
+msgstr ""
+"Alerte signalée : elle est consignée au journal de l'escale sous votre nom."
+
+msgid "AIS vessel data"
+msgstr "données navire AIS"
+
+msgid "AIS position"
+msgstr "position AIS"
+
+msgid "AIS positions"
+msgstr "positions AIS"
+
+msgid "Under way using engine"
+msgstr "En route au moteur"
+
+msgid "At anchor"
+msgstr "Au mouillage"
+
+msgid "Not under command"
+msgstr "Non maître de sa manœuvre"
+
+msgid "Restricted manoeuvrability"
+msgstr "Capacité de manœuvre restreinte"
+
+msgid "Constrained by her draught"
+msgstr "Handicapé par son tirant d'eau"
+
+msgid "Moored"
+msgstr "Amarré"
+
+msgid "Aground"
+msgstr "Échoué"
+
+msgid "Engaged in fishing"
+msgstr "En pêche"
+
+msgid "Under way sailing"
+msgstr "En route à la voile"
+
+msgid "Towing astern"
+msgstr "Remorquage par l'arrière"
+
+msgid "Pushing ahead"
+msgstr "Poussage"
+
+msgid "AIS-SART"
+msgstr "AIS-SART"
+
+msgid "Undefined"
+msgstr "Non défini"
+
+#, python-format
+msgid ""
+"%(v)s is heard in the port waters (%(s)s kn) while call %(r)s has no arrival"
+" recorded."
+msgstr ""
+"%(v)s est entendu dans les eaux du port (%(s)s nd) alors que l'escale %(r)s "
+"n'a pas d'arrivée enregistrée."
+
+#, python-format
+msgid "%(v)s is heard outside the port waters while call %(r)s is “%(st)s”."
+msgstr ""
+"%(v)s est entendu hors des eaux du port alors que l'escale %(r)s est « "
+"%(st)s »."
+
+#, python-format
+msgid "No position from %(v)s for %(h)d h while call %(r)s is “%(st)s”."
+msgstr ""
+"Aucune position de %(v)s depuis %(h)d h alors que l'escale %(r)s est « "
+"%(st)s »."
+
+#, python-format
+msgid ""
+"%(v)s is still heard moored in the port waters %(h).0f h after the departure"
+" recorded on call %(r)s."
+msgstr ""
+"%(v)s est toujours entendu amarré dans les eaux du port %(h).0f h après "
+"l'appareillage enregistré sur l'escale %(r)s."
+
+msgid "Public API"
+msgstr "API publique"
+
+msgid ""
+"Enter your two-factor code in the application before using it from this "
+"browser."
+msgstr ""
+"Saisissez votre code de double authentification dans l'application avant de "
+"l'utiliser depuis ce navigateur."
+
+msgid "settings"
+msgstr "paramètres"
+
+msgid "Delays and thresholds"
+msgstr "Délais et seuils"
+
+msgid "Master access"
+msgstr "Accès capitaine"
+
+msgid "Retention and security"
+msgstr "Conservation et sécurité"
+
+msgid "AI assistance (EF-17)"
+msgstr "Assistance IA (EF-17)"
+
+msgid "roles this organisation may hold"
+msgstr "rôles que cette organisation peut tenir"
+
+msgid "roles"
+msgstr "rôles"
+
+msgid "roles the user may exercise"
+msgstr "rôles que l'utilisateur peut exercer"
+
+msgid "Administration"
+msgstr "Administration"
+
+msgid "Notifications and security"
+msgstr "Notifications et sécurité"
+
+msgid ""
+"Two-factor authentication is activated by the person, from their own phone, "
+"at sign-in; it has been left inactive."
+msgstr ""
+"La double authentification est activée par la personne elle-même, depuis son"
+" téléphone, à la connexion : elle a été laissée inactive."
+
+msgid "[FLUXAA Port] Your account was changed by an administrator"
+msgstr "[FLUXAA Port] Votre compte a été modifié par un administrateur"
+
+#, python-format
+msgid ""
+"%(admin)s has changed your account (%(email)s): %(changes)s. If you did not "
+"expect it, contact your port administrator."
+msgstr ""
+"%(admin)s a modifié votre compte (%(email)s) : %(changes)s. Si vous ne vous "
+"y attendiez pas, prévenez l'administrateur de votre port."
+
+msgid "Platform"
+msgstr "Plateforme"
+
+msgid "UN/LOCODE"
+msgstr "UN/LOCODE"
+
+msgid "e.g. SLFNA, TGLFW"
+msgstr "p. ex. SLFNA, TGLFW"
+
+msgid "name"
+msgstr "nom"
+
+msgid "country (ISO 3166)"
+msgstr "pays (ISO 3166)"
+
+msgid "time zone"
+msgstr "fuseau horaire"
+
+msgid "default language"
+msgstr "langue par défaut"
+
+msgid "countersignature delay (minutes)"
+msgstr "délai de contresignature (minutes)"
+
+msgid ""
+"After this delay an unsigned milestone becomes a tacit countersignature "
+"(EF-3.4)."
+msgstr ""
+"Passé ce délai, un jalon non contresigné vaut contresignature tacite "
+"(EF-3.4)."
+
+msgid "reminder lead time (hours)"
+msgstr "délai de rappel (heures)"
+
+msgid "escalation after lateness (minutes)"
+msgstr "escalade après retard (minutes)"
+
+msgid ""
+"A normal task late beyond this threshold is escalated; a late blocking task "
+"is escalated at once."
+msgstr ""
+"Une tâche normale en retard au-delà de ce seuil est escaladée ; une tâche "
+"bloquante en retard l'est immédiatement."
+
+msgid "ship/shore tolerance (%)"
+msgstr "tolérance bord/terre (%)"
+
+msgid "AIS divergence threshold (minutes)"
+msgstr "seuil d'écart AIS (minutes)"
+
+msgid "master link validity after departure (hours)"
+msgstr "validité du lien capitaine après le départ (heures)"
+
+msgid "master link maximum validity (days)"
+msgstr "validité maximale du lien capitaine (jours)"
+
+#| msgid "master link maximum validity (days)"
+msgid "party access link maximum validity (days)"
+msgstr "validité maximale des liens d'accès des parties (jours)"
+
+msgid ""
+"Account-less access of a terminal, surveyor, owner, provider or marine "
+"service: valid until the closure of the call, at most this many days."
+msgstr ""
+"Accès sans compte d'un terminal, d'un inspecteur, d'un armateur, d'un "
+"prestataire ou d'un service nautique : valable jusqu'à la clôture de "
+"l'escale, au plus ce nombre de jours."
+
+msgid "retention (years)"
+msgstr "conservation (années)"
+
+msgid "daily digest hour (local)"
+msgstr "heure du résumé quotidien (heure locale)"
+
+msgid "security authority e-mail"
+msgstr "e-mail de l'autorité de sûreté"
+
+msgid ""
+"Receives the nominative notifications of access to N4 records (EF-12.4)."
+msgstr ""
+"Reçoit les notifications nominatives d'accès aux dossiers N4 (EF-12.4)."
+
+msgid "AI assistance enabled"
+msgstr "assistance IA activée"
+
+msgid ""
+"EF-17: extraction, draft remarks, consistency review and summaries — never a"
+" decision. Requires the port's written agreement below and the platform's "
+"provider agreement."
+msgstr ""
+"EF-17 : extraction, projet de remarques, revue de cohérence et résumés — "
+"jamais une décision. Exige l'accord écrit du port ci-dessous et la clause "
+"contractuelle de la plateforme avec le fournisseur."
+
+msgid "reference of the port's agreement for AI assistance"
+msgstr "référence de l'accord du port pour l'assistance IA"
+
+msgid ""
+"Contractual clause authorising the transfer of call data to the AI provider "
+"(EF-17)."
+msgstr ""
+"Clause contractuelle autorisant la transmission des données d'escale au "
+"fournisseur d'IA (EF-17)."
+
+msgid "map — southern latitude"
+msgstr "carte — latitude sud"
+
+msgid "map — northern latitude"
+msgstr "carte — latitude nord"
+
+msgid "map — western longitude"
+msgstr "carte — longitude ouest"
+
+msgid "map — eastern longitude"
+msgstr "carte — longitude est"
+
+msgid "map background"
+msgstr "fond de carte"
+
+msgid ""
+"Optional chart or satellite excerpt covering exactly the box above (PNG or "
+"JPEG); the port must hold the rights to publish it."
+msgstr ""
+"Extrait de carte ou d'image satellite facultatif couvrant exactement le "
+"cadre ci-dessus (PNG ou JPEG) ; le port doit détenir les droits de le "
+"publier."
+
+msgid "AIS positions kept (days)"
+msgstr "positions AIS conservées (jours)"
+
+msgid ""
+"Position reports older than this are purged; they are public broadcast data,"
+" not registry acts."
+msgstr ""
+"Les positions plus anciennes sont purgées ; ce sont des données diffusées "
+"publiquement, pas des actes du registre."
+
+msgid "active"
+msgstr "actif"
+
+msgid "port"
+msgstr "port"
+
+msgid "ports"
+msgstr "ports"
+
+msgid "short name"
+msgstr "nom court"
+
+msgid "e-mail"
+msgstr "e-mail"
+
+msgid "phone (escalations)"
+msgstr "téléphone (escalades)"
+
+msgid "organisation"
+msgstr "organisation"
+
+msgid "organisations"
+msgstr "organisations"
+
+#, python-format
+msgid "Unknown roles: %(r)s"
+msgstr "Rôles inconnus : %(r)s"
+
+msgid "full name"
+msgstr "nom complet"
+
+msgid "language"
+msgstr "langue"
+
+msgid "mobile phone"
+msgstr "téléphone mobile"
+
+msgid "functional administrator of the port"
+msgstr "administrateur fonctionnel du port"
+
+msgid ""
+"May edit templates, request types, reference lists and thresholds of their "
+"port (EF-16)."
+msgstr ""
+"Peut modifier les gabarits, les types de demande, les listes de référence et"
+" les seuils de son port (EF-16)."
+
+msgid "technical integration account"
+msgstr "compte d'intégration technique"
+
+msgid "integration scopes"
+msgstr "périmètres d'intégration"
+
+msgid "two-factor authentication enabled"
+msgstr "double authentification activée"
+
+msgid "daily digest for normal tasks"
+msgstr "résumé quotidien pour les tâches normales"
+
+msgid ""
+"Blocking tasks and escalations are always notified in real time and cannot "
+"be muted (EF-6.3)."
+msgstr ""
+"Les tâches bloquantes et les escalades sont toujours notifiées en temps réel"
+" et ne peuvent pas être désactivées (EF-6.3)."
+
+msgid "user"
+msgstr "utilisateur"
+
+msgid "users"
+msgstr "utilisateurs"
+
+#, python-format
+msgid "The organisation cannot hold these roles: %(r)s"
+msgstr "L'organisation ne peut pas tenir ces rôles : %(r)s"
+
+msgid "Quay / jetty"
+msgstr "Quai / appontement"
+
+msgid "Anchorage (roads)"
+msgstr "Rade (mouillage)"
+
+msgid "Offshore buoy (SPM / CBM)"
+msgstr "Bouée au large (SPM / CBM)"
+
+msgid "Offshore STS area"
+msgstr "Zone STS au large"
+
+msgid "code"
+msgstr "code"
+
+msgid "name (French)"
+msgstr "nom (français)"
+
+msgid "name (English)"
+msgstr "nom (anglais)"
+
+msgid "type"
+msgstr "type"
+
+msgid "max LOA (m)"
+msgstr "longueur hors tout max. (m)"
+
+msgid "max draft (m)"
+msgstr "tirant d'eau max. (m)"
+
+msgid "max DWT"
+msgstr "port en lourd max."
+
+msgid "weather limits"
+msgstr "limites météo"
+
+msgid "e.g. {\"wind_kn\": 25, \"swell_m\": 2.0, \"current_kn\": 2.5, \"visibility_nm\": 1}"
+msgstr "p. ex. {\"wind_kn\": 25, \"swell_m\": 2.0, \"current_kn\": 2.5, \"visibility_nm\": 1}"
+
+msgid "vapour recovery system"
+msgstr "récupération des vapeurs"
+
+msgid "latitude"
+msgstr "latitude"
+
+msgid "Centre of the berth or area, drawn on the AIS board."
+msgstr "Centre du poste ou de la zone, dessiné sur le tableau AIS."
+
+msgid "longitude"
+msgstr "longitude"
+
+msgid "radius (m)"
+msgstr "rayon (m)"
+
+msgid "Extent of an anchorage or STS area around its centre."
+msgstr "Étendue d'une zone de mouillage ou STS autour de son centre."
+
+msgid "notes"
+msgstr "notes"
+
+msgid "berth / area"
+msgstr "poste / zone"
+
+msgid "berths / areas"
+msgstr "postes / zones"
+
+msgid "attempt window"
+msgstr "fenêtre de tentatives"
+
+msgid "Shipping agency"
+msgstr "Agence maritime"
+
+msgid "Vessel / master"
+msgstr "Navire / capitaine"
+
+msgid "Terminal / depot"
+msgstr "Terminal / dépôt"
+
+msgid "Harbour master"
+msgstr "Capitainerie"
+
+msgid "Port authority"
+msgstr "Autorité portuaire"
+
+msgid "Marine services"
+msgstr "Services nautiques"
+
+msgid "Customs, immigration, health"
+msgstr "Douanes, immigration, santé"
+
+msgid "Security & naval base"
+msgstr "Sûreté et base navale"
+
+msgid "Surveyor & laboratory"
+msgstr "Inspecteur et laboratoire"
+
+msgid "Owner / charterer"
+msgstr "Armateur / affréteur"
+
+msgid "Service provider"
+msgstr "Prestataire"
+
+msgid "Port management"
+msgstr "Direction du port"
+
+msgid "Any party"
+msgstr "Toute partie"
+
+msgid "Your account has no access to the settings of the port."
+msgstr "Votre compte n'a pas accès au paramétrage du port."
+
+msgid "[FLUXAA Port] Two-factor authentication changed on your account"
+msgstr "[FLUXAA Port] Double authentification modifiée sur votre compte"
+
+#, python-format
+msgid ""
+"A new authenticator application has just been registered for your account "
+"(%(email)s). If you did not do it, contact your port administrator at once: "
+"your password is known to someone else."
+msgstr ""
+"Une nouvelle application d'authentification vient d'être enregistrée pour "
+"votre compte (%(email)s). Si ce n'est pas vous, prévenez immédiatement "
+"l'administrateur de votre port : votre mot de passe est connu d'un tiers."
+
+msgid ""
+"Too many incorrect codes. Wait up to fifteen minutes before trying again."
+msgstr ""
+"Trop de codes erronés. Patientez jusqu'à quinze minutes avant de réessayer."
+
+msgid "The code of your current authenticator application is not valid."
+msgstr ""
+"Le code de votre application d'authentification actuelle n'est pas valide."
+
+msgid "Two-factor authentication is active."
+msgstr "La double authentification est active."
+
+msgid "The code is not valid. Check the time of your phone and try again."
+msgstr ""
+"Le code n'est pas valide. Vérifiez l'heure de votre téléphone et réessayez."
+
+msgid "The code is not valid."
+msgstr "Le code n'est pas valide."
+
+msgid "Notification preference saved."
+msgstr "Préférence de notification enregistrée."
+
+msgid "Copy this token now: it will not be shown again."
+msgstr "Copiez ce jeton maintenant : il ne sera plus affiché."
+
+msgid "API token revoked."
+msgstr "Jeton d'API révoqué."
+
+msgid "published version"
+msgstr "version publiée"
+
+msgid "Create a draft version (copy of the published one) to edit"
+msgstr "Créer une version brouillon (copie de la version publiée) à modifier"
+
+#, python-format
+msgid "Draft v%(n)s of %(code)s ready to edit."
+msgstr "Brouillon v%(n)s de %(code)s prêt à modifier."
+
+msgid "co-signing roles"
+msgstr "rôles cosignataires"
+
+msgid "Who and how"
+msgstr "Qui et comment"
+
+msgid "Deadline (always relative)"
+msgstr "Échéance (toujours relative)"
+
+msgid "Criticality"
+msgstr "Criticité"
+
+msgid "Completed by"
+msgstr "Réalisée par"
+
+msgid "Publish the selected draft version (new calls will use it)"
+msgstr ""
+"Publier la version brouillon sélectionnée (les nouvelles escales "
+"l'utiliseront)"
+
+#, python-format
+msgid "%(v)s published."
+msgstr "%(v)s publiée."
+
+#, python-format
+msgid "%(v)s not published: %(e)s"
+msgstr "%(v)s non publiée : %(e)s"
+
+msgid "required tasks"
+msgstr "tâches requises"
+
+msgid "countersigners"
+msgstr "contresignataires"
+
+msgid "requesting roles"
+msgstr "rôles demandeurs"
+
+msgid "deciding authorities"
+msgstr "autorités décisionnaires"
+
+msgid "issuing roles"
+msgstr "rôles émetteurs"
+
+msgid "required signatories"
+msgstr "signataires requis"
+
+msgid "additional readers (N2)"
+msgstr "lecteurs supplémentaires (N2)"
+
+msgid "Port call registry"
+msgstr "Registre des escales"
+
+msgid "N1 — Call (all parties)"
+msgstr "N1 — Escale (toutes les parties)"
+
+msgid "N2 — Restricted"
+msgstr "N2 — Restreint"
+
+msgid "N3 — Bilateral"
+msgstr "N3 — Bilatéral"
+
+msgid "N4 — Security"
+msgstr "N4 — Sûreté"
+
+msgid "Provide a document"
+msgstr "Fournir un document"
+
+msgid "Enter data"
+msgstr "Saisir des données"
+
+msgid "Decide"
+msgstr "Décider"
+
+msgid "Confirm execution"
+msgstr "Confirmer l'exécution"
+
+msgid "Sign / countersign"
+msgstr "Signer / contresigner"
+
+msgid "Blocking"
+msgstr "Bloquante"
+
+msgid "Normal"
+msgstr "Normale"
+
+msgid "Event-driven (no deadline)"
+msgstr "Sur événement (sans échéance)"
+
+msgid "Nomination"
+msgstr "Nomination"
+
+msgid "Common base (M0)"
+msgstr "Socle commun (M0)"
+
+msgid "Operation model (M1–M8)"
+msgstr "Modèle d'opération (M1–M8)"
+
+msgid "Additional module (M9, MA1–MA3)"
+msgstr "Module complémentaire (M9, MA1–MA3)"
+
+msgid "Draft"
+msgstr "Brouillon"
+
+msgid "Declared"
+msgstr "Déclarée"
+
+msgid "Accepted"
+msgstr "Acceptée"
+
+msgid "Planned"
+msgstr "Planifiée"
+
+msgid "Approaching / at anchorage"
+msgstr "En approche / en rade"
+
+msgid "Alongside"
+msgstr "À quai"
+
+msgid "In operation"
+msgstr "En opération"
+
+msgid "Operations completed"
+msgstr "Opérations terminées"
+
+#| msgid "waiting in the roads"
+msgid "Shifting within the port"
+msgstr "Déhalage dans le port"
+
+msgid "Departed"
+msgstr "Navire parti"
+
+msgid "Closed"
+msgstr "Clôturée"
+
+msgid "Archived"
+msgstr "Archivée"
+
+msgid "Rejected"
+msgstr "Refusée"
+
+msgid "Cancelled"
+msgstr "Annulée"
+
+msgid "Declare the call"
+msgstr "Déclarer l'escale"
+
+msgid "Grant the green light"
+msgstr "Donner le feu vert"
+
+msgid "Assign a berth"
+msgstr "Attribuer un poste"
+
+msgid "Issue the movement authorization"
+msgstr "Délivrer l'autorisation de mouvement"
+
+msgid "Record pilot on board (arrival)"
+msgstr "Enregistrer le pilote à bord (arrivée)"
+
+msgid "Record the berthing (lines ashore, all fast, vessels alongside)"
+msgstr ""
+"Enregistrer l'accostage (amarres à terre, amarrage terminé, navires à "
+"couple)"
+
+msgid "Start the transfer"
+msgstr "Démarrer le transfert"
+
+msgid "Authorize double banking"
+msgstr "Autoriser l'accostage à couple"
+
+msgid "Authorize hot work"
+msgstr "Autoriser les travaux par point chaud"
+
+msgid "Issue the bill of lading"
+msgstr "Émettre le connaissement"
+
+msgid "Issue the departure clearance"
+msgstr "Délivrer l'autorisation de départ"
+
+msgid "Record pilot on board (departure)"
+msgstr "Enregistrer le pilote à bord (départ)"
+
+msgid "Record the departure (last line, vessel departed)"
+msgstr "Enregistrer l'appareillage (dernière amarre, navire appareillé)"
+
+msgid "Close the call"
+msgstr "Clôturer l'escale"
+
+msgid "To do"
+msgstr "À faire"
+
+msgid "Done"
+msgstr "Faite"
+
+msgid "Not applicable"
+msgstr "Sans objet"
+
+msgid "On time"
+msgstr "Dans les délais"
+
+msgid "Reminder"
+msgstr "Rappel"
+
+msgid "Late"
+msgstr "En retard"
+
+msgid "Escalated"
+msgstr "Escaladée"
+
+msgid "Awaiting countersignature"
+msgstr "En attente de contresignature"
+
+msgid "Countersigned"
+msgstr "Contresigné"
+
+msgid "Contested"
+msgstr "Contesté"
+
+msgid "Tacit countersignature"
+msgstr "Contresignature tacite"
+
+msgid "Online entry"
+msgstr "Saisie en ligne"
+
+msgid "Offline entry (synchronised)"
+msgstr "Saisie hors ligne (synchronisée)"
+
+msgid "Paper fallback (re-entered)"
+msgstr "Procédure papier (ressaisie)"
+
+msgid "AIS"
+msgstr "AIS"
+
+msgid "System"
+msgstr "Système"
+
+msgid "Created"
+msgstr "Créée"
+
+msgid "Submitted"
+msgstr "Soumise"
+
+msgid "Under review"
+msgstr "En instruction"
+
+msgid "Approved"
+msgstr "Approuvée"
+
+msgid "Approved with conditions"
+msgstr "Approuvée sous conditions"
+
+msgid "Refused"
+msgstr "Refusée"
+
+msgid "Further information required"
+msgstr "Complément d'information demandé"
+
+msgid "Scheduled"
+msgstr "Programmée"
+
+msgid "Executed"
+msgstr "Exécutée"
+
+msgid "Expired"
+msgstr "Expirée"
+
+msgid "Issued"
+msgstr "Émis"
+
+msgid "Signed"
+msgstr "Signé"
+
+msgid "Replaced"
+msgstr "Remplacé"
+
+msgid "Open"
+msgstr "Ouverte"
+
+msgid "Answered"
+msgstr "Répondue"
+
+msgid "Closed — agreement"
+msgstr "Close — accord"
+
+msgid "Closed — no agreement"
+msgstr "Close — sans accord"
+
+msgid "Ship"
+msgstr "Bord"
+
+msgid "Shore"
+msgstr "Terre"
+
+msgid "Surveyor"
+msgstr "Inspecteur"
+
+msgid "Late task"
+msgstr "Tâche en retard"
+
+msgid "Escalation"
+msgstr "Escalade"
+
+msgid "Hold point refusal"
+msgstr "Refus de point d'arrêt"
+
+msgid "Ship/shore discrepancy"
+msgstr "Écart bord/terre"
+
+msgid "AIS divergence"
+msgstr "Écart AIS"
+
+msgid "Synchronisation conflict"
+msgstr "Conflit de synchronisation"
+
+msgid "Authorization expired"
+msgstr "Autorisation expirée"
+
+msgid "Raised from the assistant review"
+msgstr "Signalée depuis la revue assistée"
+
+msgid "flag"
+msgstr "pavillon"
+
+msgid "Crude, product, chemical, LPG…"
+msgstr "Brut, produits, chimiquier, GPL…"
+
+msgid "call sign"
+msgstr "indicatif d'appel"
+
+msgid "DWT"
+msgstr "port en lourd"
+
+msgid "LOA (m)"
+msgstr "longueur hors tout (m)"
+
+msgid "beam (m)"
+msgstr "largeur (m)"
+
+msgid "summer draft (m)"
+msgstr "tirant d'eau d'été (m)"
+
+msgid "year built"
+msgstr "année de construction"
+
+msgid "registered owner"
+msgstr "propriétaire inscrit"
+
+msgid "manager / operator"
+msgstr "gestionnaire / exploitant"
+
+msgid "vessel"
+msgstr "navire"
+
+msgid "vessels"
+msgstr "navires"
+
+msgid "An IMO number has seven digits."
+msgstr "Un numéro OMI comporte sept chiffres."
+
+msgid "Invalid IMO check digit."
+msgstr "Chiffre de contrôle OMI invalide."
+
+msgid "kind"
+msgstr "nature"
+
+msgid "description (French)"
+msgstr "description (français)"
+
+msgid "description (English)"
+msgstr "description (anglais)"
+
+msgid "applicable berth types"
+msgstr "types de poste concernés"
+
+msgid "Empty = all types."
+msgstr "Vide = tous les types."
+
+msgid "links two calls"
+msgstr "relie deux escales"
+
+msgid "STS and double banking connect two vessels."
+msgstr "Le STS et l'accostage à couple associent deux navires."
+
+msgid "cannot be used alone"
+msgstr "ne peut pas être utilisé seul"
+
+msgid "M9 grafts onto an operation."
+msgstr "M9 se greffe sur une opération."
+
+msgid "call template"
+msgstr "gabarit d'escale"
+
+msgid "call templates"
+msgstr "gabarits d'escale"
+
+msgid "Published"
+msgstr "Publiée"
+
+msgid "Retired"
+msgstr "Retirée"
+
+msgid "version"
+msgstr "version"
+
+msgid "status"
+msgstr "statut"
+
+msgid "change notes"
+msgstr "notes de modification"
+
+msgid "template version"
+msgstr "version de gabarit"
+
+msgid "template versions"
+msgstr "versions de gabarit"
+
+msgid "number"
+msgstr "numéro"
+
+msgid "e.g. 01, 1.05, A1.02"
+msgstr "p. ex. 01, 1.05, A1.02"
+
+msgid "section (French)"
+msgstr "section (français)"
+
+msgid "section (English)"
+msgstr "section (anglais)"
+
+msgid "task (French)"
+msgstr "tâche (français)"
+
+msgid "task (English)"
+msgstr "tâche (anglais)"
+
+msgid "assigned role"
+msgstr "rôle responsable"
+
+msgid "Roles that sign or countersign the task, e.g. [\"NAV\", \"TER\"]."
+msgstr "Rôles qui signent ou contresignent la tâche, p. ex. [\"NAV\", \"TER\"]."
+
+msgid "joint signature required"
+msgstr "signature conjointe requise"
+
+msgid ""
+"The task is done only when the assigned role and every co-signing role have "
+"signed."
+msgstr ""
+"La tâche n'est faite que lorsque le rôle responsable et chaque rôle "
+"cosignataire ont signé."
+
+msgid "nature"
+msgstr "nature"
+
+msgid "deadline anchor"
+msgstr "point d'ancrage de l'échéance"
+
+msgid "offset from anchor (minutes)"
+msgstr "décalage par rapport à l'ancrage (minutes)"
+
+msgid "deadline label (French)"
+msgstr "libellé de l'échéance (français)"
+
+msgid "deadline label (English)"
+msgstr "libellé de l'échéance (anglais)"
+
+msgid "criticality"
+msgstr "criticité"
+
+msgid "confidentiality"
+msgstr "confidentialité"
+
+msgid "basis of the blocking character"
+msgstr "fondement du caractère bloquant"
+
+msgid ""
+"Hold point of PRO-MAR-001 or regulatory obligation. Required for a blocking "
+"task."
+msgstr ""
+"Point d'arrêt de la PRO-MAR-001 ou obligation réglementaire. Obligatoire "
+"pour une tâche bloquante."
+
+msgid "linked request type"
+msgstr "type de demande lié"
+
+msgid "request side"
+msgstr "côté de la demande"
+
+msgid "Completed by submitting the request"
+msgstr "Réalisée par le dépôt de la demande"
+
+msgid "Completed by the decision"
+msgstr "Réalisée par la décision"
+
+msgid "milestones that complete the task"
+msgstr "jalons qui réalisent la tâche"
+
+msgid "expected document type"
+msgstr "type de document attendu"
+
+msgid "completed by platform event"
+msgstr "réalisée par un événement de la plateforme"
+
+msgid "Call created"
+msgstr "Escale créée"
+
+msgid "Call declared"
+msgstr "Escale déclarée"
+
+msgid "continuous task"
+msgstr "tâche continue"
+
+msgid "Kept open until T1 (pumping log, interruptions)."
+msgstr "Reste ouverte jusqu'à T1 (journal de pompage, interruptions)."
+
+msgid "one per vessel (×2)"
+msgstr "une par navire (×2)"
+
+msgid "may be marked not applicable"
+msgstr "peut être déclarée sans objet"
+
+msgid "only for these operating areas"
+msgstr "uniquement pour ces zones d'opération"
+
+msgid ""
+"Operation × berth type: empty = every area; e.g. [\"JETTY\", \"SPM\"] for "
+"ship/shore interface tasks."
+msgstr ""
+"Opération × type de poste : vide = toutes les zones ; p. ex. [\"JETTY\", "
+"\"SPM\"] pour les tâches d'interface navire/terre."
+
+msgid "template task"
+msgstr "tâche de gabarit"
+
+msgid "template tasks"
+msgstr "tâches de gabarit"
+
+msgid ""
+"A blocking task must be tied to a hold point of PRO-MAR-001 or to a "
+"regulatory obligation."
+msgstr ""
+"Une tâche bloquante doit être rattachée à un point d'arrêt de la PRO-MAR-001"
+" ou à une obligation réglementaire."
+
+msgid "An offset requires an anchor (ETA, ETB, ATB, T0, T1, ATD, NOR)."
+msgstr ""
+"Un décalage exige un point d'ancrage (ETA, ETB, ATB, T0, T1, ATD, NOR)."
+
+msgid "Offset out of range (60 days maximum)."
+msgstr "Décalage hors limites (60 jours au maximum)."
+
+msgid ""
+"N4 tasks live in the security domain and cannot be part of an operational "
+"template."
+msgstr ""
+"Les tâches N4 relèvent du domaine sûreté et ne peuvent pas figurer dans un "
+"gabarit opérationnel."
+
+msgid "A published version is frozen. Create a new draft version."
+msgstr "Une version publiée est figée. Créez une nouvelle version brouillon."
+
+msgid "transition"
+msgstr "transition"
+
+msgid "hold point"
+msgstr "point d'arrêt"
+
+msgid "hold points"
+msgstr "points d'arrêt"
+
+msgid "template"
+msgstr "gabarit"
+
+msgid "task number"
+msgstr "numéro de tâche"
+
+msgid "label (French)"
+msgstr "libellé (français)"
+
+msgid "label (English)"
+msgstr "libellé (anglais)"
+
+msgid "attributable to"
+msgstr "imputable à"
+
+msgid "Third party / external"
+msgstr "Tiers / externe"
+
+msgid "Weather"
+msgstr "Météo"
+
+msgid "reason mandatory (\"Other\")"
+msgstr "motif obligatoire (« Autre »)"
+
+msgid "interruption cause"
+msgstr "cause d'interruption"
+
+msgid "interruption causes"
+msgstr "causes d'interruption"
+
+msgid "matrix number"
+msgstr "numéro dans la matrice"
+
+msgid "single emitter"
+msgstr "émetteur unique"
+
+msgid "Party at the origin"
+msgstr "Partie à l'origine"
+
+msgid "may contest"
+msgstr "peuvent contester"
+
+msgid "[\"*\"] = every party"
+msgstr "[\"*\"] = toutes les parties"
+
+msgid "AIS corroboration"
+msgstr "corroboration AIS"
+
+msgid "cause from the closed list required"
+msgstr "cause de la liste fermée obligatoire"
+
+msgid "closes the interval opened by"
+msgstr "clôt l'intervalle ouvert par"
+
+msgid "may occur several times"
+msgstr "peut survenir plusieurs fois"
+
+msgid "guarded by hold point"
+msgstr "gardé par un point d'arrêt"
+
+msgid "sets the actual time"
+msgstr "fixe l'heure réelle"
+
+msgid "moves the call to"
+msgstr "fait passer l'escale à"
+
+msgid "completes template tasks"
+msgstr "réalise les tâches de gabarit"
+
+msgid "e.g. [\"M1:1.09\"]"
+msgstr "p. ex. [\"M1:1.09\"]"
+
+msgid "recorded automatically when this task is done"
+msgstr "enregistré automatiquement quand cette tâche est faite"
+
+msgid "e.g. \"M0:28\""
+msgstr "p. ex. \"M0:28\""
+
+msgid "offered in the field app"
+msgstr "proposé dans l'appli terrain"
+
+msgid "milestone type"
+msgstr "type de jalon"
+
+msgid "milestone types"
+msgstr "types de jalon"
+
+msgid "N4 events belong to the security domain."
+msgstr "Les événements N4 relèvent du domaine sûreté."
+
+msgid "executing role"
+msgstr "rôle exécutant"
+
+msgid "confidentiality of the refusal reason"
+msgstr "confidentialité du motif de refus"
+
+msgid "form fields"
+msgstr "champs du formulaire"
+
+msgid "List of {\"key\", \"label_fr\", \"label_en\", \"type\", \"required\", \"options\"}."
+msgstr "Liste de {\"key\", \"label_fr\", \"label_en\", \"type\", \"required\", \"options\"}."
+
+msgid "expected document types"
+msgstr "types de document attendus"
+
+msgid "processing time (minutes)"
+msgstr "délai d'instruction (minutes)"
+
+msgid "default validity of the authorization (hours)"
+msgstr "validité par défaut de l'autorisation (heures)"
+
+msgid "An authorization always carries an expiry date (EF-2.5)."
+msgstr "Une autorisation porte toujours une date d'expiration (EF-2.5)."
+
+msgid "vessel acceptance (vetting)"
+msgstr "acceptation du navire (vetting)"
+
+msgid "decision guarded by"
+msgstr "décision gardée par"
+
+msgid "submission completes tasks"
+msgstr "le dépôt réalise les tâches"
+
+msgid "decision completes tasks"
+msgstr "la décision réalise les tâches"
+
+msgid "execution completes tasks"
+msgstr "l'exécution réalise les tâches"
+
+msgid "milestone recorded on approval"
+msgstr "jalon enregistré à l'approbation"
+
+msgid "call status on approval"
+msgstr "statut de l'escale à l'approbation"
+
+msgid "call status on refusal"
+msgstr "statut de l'escale au refus"
+
+msgid "the decision assigns a berth"
+msgstr "la décision attribue un poste"
+
+msgid "request type"
+msgstr "type de demande"
+
+msgid "request types"
+msgstr "types de demande"
+
+#, python-format
+msgid "A requesting role can never decide (rule 2): %(r)s"
+msgstr "Un rôle demandeur ne décide jamais (règle 2) : %(r)s"
+
+msgid "N4 requests are filed in the security domain."
+msgstr "Les demandes N4 sont déposées dans le domaine sûreté."
+
+msgid "Each field needs at least a key and a type."
+msgstr "Chaque champ exige au moins une clé et un type."
+
+msgid "generated from the registry"
+msgstr "généré à partir du registre"
+
+msgid "bill of lading (locked)"
+msgstr "connaissement (verrouillé)"
+
+msgid "document type"
+msgstr "type de document"
+
+msgid "document types"
+msgstr "types de document"
+
+msgid "default party"
+msgstr "partie par défaut"
+
+msgid "default parties"
+msgstr "parties par défaut"
+
+msgid "reference"
+msgstr "référence"
+
+msgid "voyage number"
+msgstr "numéro de voyage"
+
+msgid "agency"
+msgstr "agence"
+
+msgid "operating area"
+msgstr "zone d'opération"
+
+msgid "product"
+msgstr "produit"
+
+msgid "declared quantity"
+msgstr "quantité déclarée"
+
+msgid "unit"
+msgstr "unité"
+
+msgid "last port"
+msgstr "dernier port"
+
+msgid "next port"
+msgstr "prochain port"
+
+msgid "ETA"
+msgstr "ETA"
+
+msgid "ETB"
+msgstr "ETB"
+
+msgid "estimated start of operations"
+msgstr "début des opérations estimé"
+
+msgid "estimated completion"
+msgstr "fin des opérations estimée"
+
+msgid "ETD"
+msgstr "ETD"
+
+msgid "actual arrival"
+msgstr "arrivée réelle"
+
+msgid "all fast"
+msgstr "amarré (all fast)"
+
+msgid "start of transfer"
+msgstr "début du transfert"
+
+msgid "end of transfer"
+msgstr "fin du transfert"
+
+msgid "actual departure"
+msgstr "départ réel"
+
+msgid "NOR tendered"
+msgstr "NOR remise"
+
+msgid "STS partner"
+msgstr "partenaire STS"
+
+msgid "Inner vessel (double banking)"
+msgstr "Navire intérieur (accostage à couple)"
+
+msgid "Outer vessel"
+msgstr "Navire extérieur"
+
+msgid "port call"
+msgstr "escale"
+
+msgid "port calls"
+msgstr "escales"
+
+#| msgid "Current calls"
+msgid "Current"
+msgstr "En cours"
+
+#| msgid "recorded"
+msgid "order"
+msgstr "ordre"
+
+msgid "operation templates of this stage"
+msgstr "modèles d'opération de cette étape"
+
+#| msgid "Planned"
+msgid "planned from"
+msgstr "prévue du"
+
+#| msgid "Planned"
+msgid "planned to"
+msgstr "prévue au"
+
+msgid "all fast / alongside at this stage"
+msgstr "amarré / à couple à cette étape"
+
+msgid "left this stage"
+msgstr "étape quittée le"
+
+#| msgid "Reason"
+msgid "reason"
+msgstr "motif"
+
+#| msgid "call sign"
+msgid "call stage"
+msgstr "étape d'escale"
+
+#| msgid "call templates"
+msgid "call stages"
+msgstr "étapes d'escale"
+
+msgid "role on call"
+msgstr "rôle sur l'escale"
+
+msgid "roles on call"
+msgstr "rôles sur l'escale"
+
+msgid "E-mail"
+msgstr "E-mail"
+
+msgid "QR code handed over"
+msgstr "QR code remis"
+
+msgid "Printed"
+msgstr "Imprimé"
+
+msgid "SMS"
+msgstr "SMS"
+
+msgid "Other"
+msgstr "Autre"
+
+#| msgid "short name"
+msgid "holder's name"
+msgstr "nom du titulaire"
+
+msgid "Nominative: entered at issuance, or by the holder at first use."
+msgstr ""
+"Nominatif : saisi à l'émission, ou par le titulaire à la première "
+"utilisation."
+
+#| msgid "roles the user may exercise"
+msgid "role exercised"
+msgstr "rôle exercé"
+
+#| msgid "organisation"
+msgid "party organisation"
+msgstr "organisation de la partie"
+
+#| msgid "Refused by the platform — hold point"
+msgid "issued by the platform at the declaration"
+msgstr "émis par la plateforme à la déclaration"
+
+msgid "sent to"
+msgstr "envoyé à"
+
+msgid "Own vessel"
+msgstr "Navire de l'escale"
+
+#| msgid "master access link"
+msgid "access link"
+msgstr "lien d'accès"
+
+#| msgid "master access links"
+msgid "access links"
+msgstr "liens d'accès"
+
+msgid ""
+"Empty for the tasks of the call as a whole (common base and first stage); "
+"set for the tasks added with a later stage."
+msgstr ""
+"Vide pour les tâches de l'escale dans son ensemble (socle commun et première"
+" étape) ; renseigné pour les tâches ajoutées avec une étape ultérieure."
+
+msgid "ad hoc task"
+msgstr "tâche ad hoc"
+
+msgid "task"
+msgstr "tâche"
+
+msgid "tasks"
+msgstr "tâches"
+
+msgid ""
+"The stage of the call the milestone belongs to (a call may berth several "
+"times)."
+msgstr ""
+"L'étape de l'escale à laquelle le jalon appartient (une escale peut accoster"
+" plusieurs fois)."
+
+msgid "declared time"
+msgstr "heure déclarée"
+
+msgid "system time"
+msgstr "heure système"
+
+msgid "time captured on the device"
+msgstr "heure saisie sur l'appareil"
+
+msgid "deferred entry"
+msgstr "saisie différée"
+
+msgid "competing entry"
+msgstr "saisie concurrente"
+
+msgid "milestone"
+msgstr "jalon"
+
+msgid "milestones"
+msgstr "jalons"
+
+msgid "request"
+msgstr "demande"
+
+msgid "requests"
+msgstr "demandes"
+
+msgid "An authorization without an expiry date cannot be recorded."
+msgstr "Une autorisation sans date d'expiration ne peut pas être enregistrée."
+
+msgid "The expiry must follow the effective date."
+msgstr "L'expiration doit suivre la date d'effet."
+
+msgid "Verified (public code)"
+msgstr "Vérifiée (code public)"
+
+msgid "title"
+msgstr "titre"
+
+msgid "counterpart (N3)"
+msgstr "contrepartie (N3)"
+
+msgid "fingerprint (SHA-256)"
+msgstr "empreinte (SHA-256)"
+
+msgid "document"
+msgstr "document"
+
+msgid "documents"
+msgstr "documents"
+
+msgid "Initial gauging"
+msgstr "Jaugeage initial"
+
+msgid "Final gauging"
+msgstr "Jaugeage final"
+
+msgid "On-board quantity (OBQ)"
+msgstr "Quantité à bord avant opération (OBQ)"
+
+msgid "Remaining on board (ROB)"
+msgstr "Reste à bord (ROB)"
+
+msgid "Bill of lading figure"
+msgstr "Chiffre du connaissement"
+
+msgid "Manual"
+msgstr "Manuelle"
+
+msgid "Automatic"
+msgstr "Automatique"
+
+msgid "subject"
+msgstr "objet"
+
+msgid "Milestone"
+msgstr "Jalon"
+
+msgid "Measurement"
+msgstr "Mesure"
+
+msgid "Authorization"
+msgstr "Autorisation"
+
+msgid "Document"
+msgstr "Document"
+
+msgid "Task"
+msgstr "Tâche"
+
+msgid "Statement"
+msgstr "Exposé"
+
+msgid "Response"
+msgstr "Réponse"
+
+msgid "Closure"
+msgstr "Clôture"
+
+msgid "participating roles"
+msgstr "rôles participants"
+
+msgid "webhook subscription"
+msgstr "abonnement webhook"
+
+msgid "webhook subscriptions"
+msgstr "abonnements webhook"
+
+#, python-format
+msgid "Unknown or inactive call template: %(code)s"
+msgstr "Gabarit d'escale inconnu ou inactif : %(code)s"
+
+#, python-format
+msgid "Template %(code)s has no published version."
+msgstr "Le gabarit %(code)s n'a pas de version publiée."
+
+msgid "A template is selected twice."
+msgstr "Un gabarit est sélectionné deux fois."
+
+msgid "The common base M0 is missing for this port."
+msgstr "Le socle commun M0 manque pour ce port."
+
+msgid "Select at least one operation model (discharge, loading, STS…)."
+msgstr ""
+"Choisissez au moins un modèle d'opération (déchargement, chargement, STS…)."
+
+#, python-format
+msgid "%(code)s is not an operation model."
+msgstr "%(code)s n'est pas un modèle d'opération."
+
+#, python-format
+msgid "%(code)s is not an additional module."
+msgstr "%(code)s n'est pas un module complémentaire."
+
+#, python-format
+msgid "Template %(code)s does not apply to this operating area."
+msgstr "Le gabarit %(code)s ne s'applique pas à cette zone d'opération."
+
+msgid "The partner call is indicated by the agency."
+msgstr "L'escale partenaire est indiquée par l'agence."
+
+msgid "Choose another call of the same port."
+msgstr "Choisissez une autre escale du même port."
+
+msgid "Unknown link."
+msgstr "Lien inconnu."
+
+msgid "Only a shipping agency can create a call."
+msgstr "Seule une agence maritime peut créer une escale."
+
+msgid "This vessel is not registered in this port."
+msgstr "Ce navire n'est pas enregistré dans ce port."
+
+msgid "The requested berth does not match the operating area."
+msgstr "Le poste demandé ne correspond pas à la zone d'opération."
+
+msgid "The partner call belongs to another port."
+msgstr "L'escale partenaire appartient à un autre port."
+
+msgid ""
+"Partner call not found among your calls: the harbour master links the calls "
+"of two different agencies."
+msgstr ""
+"Escale partenaire introuvable parmi vos escales : la capitainerie relie les "
+"escales de deux agences différentes."
+
+msgid "This organisation is not active in this port."
+msgstr "Cette organisation n'est pas active dans ce port."
+
+#, python-format
+msgid "%(org)s cannot hold the role %(role)s."
+msgstr "%(org)s ne peut pas tenir le rôle %(role)s."
+
+msgid ""
+"The agency may invite terminals, surveyors, owners/charterers, providers and"
+" marine services only."
+msgstr ""
+"L'agence ne peut inviter que des terminaux, des inspecteurs, des "
+"armateurs/affréteurs, des prestataires et les services nautiques."
+
+msgid "The agency or the harbour master designates the shore side."
+msgstr "L'agence ou la capitainerie désigne le côté terre."
+
+msgid ""
+"Only an active terminal or provider of the call can speak for the shore "
+"side."
+msgstr ""
+"Seul un terminal ou un prestataire actif sur l'escale peut parler au nom du "
+"côté terre."
+
+msgid "A reason is required."
+msgstr "Un motif est requis."
+
+msgid "This role is not active on the call."
+msgstr "Ce rôle n'est pas actif sur l'escale."
+
+msgid "Only the harbour master may revoke this role."
+msgstr "Seule la capitainerie peut retirer ce rôle."
+
+#, python-format
+#| msgid "Unknown roles: %(r)s"
+msgid "role revoked: %(r)s"
+msgstr "rôle révoqué : %(r)s"
+
+#, python-format
+msgid "Transition from “%(a)s” to “%(b)s” is not part of the call life cycle."
+msgstr ""
+"Le passage de « %(a)s » à « %(b)s » ne fait pas partie du cycle de vie de "
+"l'escale."
+
+msgid "Only the agency declares the call."
+msgstr "Seule l'agence déclare l'escale."
+
+msgid "Only a draft call can be declared."
+msgstr "Seule une escale en brouillon peut être déclarée."
+
+msgid ""
+"STS and double banking link two vessels: indicate the partner call before "
+"declaring."
+msgstr ""
+"Le STS et l'accostage à couple associent deux navires : indiquez l'escale "
+"partenaire avant de déclarer."
+
+#, python-format
+msgid "%(field)s is entered by %(role)s only (single emitter)."
+msgstr "%(field)s est saisi par %(role)s uniquement (émetteur unique)."
+
+msgid "ETA is mandatory."
+msgstr "L'ETA est obligatoire."
+
+msgid "Only the agency can cancel its call."
+msgstr "Seule l'agence peut annuler son escale."
+
+msgid "Only the agency confirms the closure request."
+msgstr "Seule l'agence confirme la demande de clôture."
+
+msgid "The call can be closed only after departure."
+msgstr "L'escale ne peut être clôturée qu'après le départ."
+
+msgid "Only the harbour master closes a call."
+msgstr "Seule la capitainerie clôture une escale."
+
+msgid "The agency has not requested the closure yet."
+msgstr "L'agence n'a pas encore demandé la clôture."
+
+msgid "Only the harbour master archives a call."
+msgstr "Seule la capitainerie archive une escale."
+
+msgid "The access link is issued by the agency."
+msgstr "Le lien d'accès est délivré par l'agence."
+
+msgid "The master's name is required: the signature is nominative."
+msgstr "Le nom du capitaine est requis : la signature est nominative."
+
+#| msgid "The access link is issued by the agency."
+msgid ""
+"The access link of a party is issued by the agency or the harbour master."
+msgstr ""
+"Le lien d'accès d'une partie est émis par l'agence ou la capitainerie."
+
+#, python-format
+msgid ""
+"The role %(role)s decides or runs the call: it needs an account, not a link."
+msgstr ""
+"Le rôle %(role)s décide ou conduit l'escale : il lui faut un compte, pas un "
+"lien."
+
+msgid "The expiry must be in the future."
+msgstr "L'expiration doit être dans le futur."
+
+msgid "Only the agency or the harbour master may revoke this access."
+msgstr "Seule l'agence ou la capitainerie peut révoquer cet accès."
+
+msgid "Master"
+msgstr "Capitaine"
+
+msgid "(name not entered)"
+msgstr "(nom non saisi)"
+
+#, python-format
+msgid "You do not hold the role %(role)s on this call."
+msgstr "Vous ne tenez pas le rôle %(role)s sur cette escale."
+
+msgid "This action is not open to your role on this call."
+msgstr "Cette action n'est pas ouverte à votre rôle sur cette escale."
+
+#, python-format
+msgid "This action is reserved to: %(roles)s."
+msgstr "Cette action est réservée à : %(roles)s."
+
+msgid "Your account is not attached to an organisation of a port."
+msgstr "Votre compte n'est rattaché à aucune organisation d'un port."
+
+msgid "A thread always belongs to a call."
+msgstr "Un fil d'échange appartient toujours à une escale."
+
+msgid "Security matters go to the security space."
+msgstr "Les questions de sûreté vont dans l'espace sûreté."
+
+msgid "A bilateral thread involves exactly two parties."
+msgstr "Un fil bilatéral réunit exactement deux parties."
+
+msgid "Choose at least one other party."
+msgstr "Choisissez au moins une autre partie."
+
+msgid "Subject and message are required."
+msgstr "L'objet et le message sont requis."
+
+msgid "You are not a participant of this thread."
+msgstr "Vous ne participez pas à ce fil."
+
+msgid "The message is empty."
+msgstr "Le message est vide."
+
+msgid "The attachment belongs to another call."
+msgstr "La pièce jointe appartient à une autre escale."
+
+msgid "Unknown subject of dispute."
+msgstr "Objet de contestation inconnu."
+
+msgid "The disputed item does not belong to this call."
+msgstr "L'élément contesté n'appartient pas à cette escale."
+
+msgid "A dispute states its subject and grounds."
+msgstr "Une contestation énonce son objet et ses motifs."
+
+msgid "This dispute is closed."
+msgstr "Cette contestation est close."
+
+msgid "The response is empty."
+msgstr "La réponse est vide."
+
+msgid "This dispute is addressed to another party."
+msgstr "Cette contestation est adressée à une autre partie."
+
+msgid "This dispute is already closed."
+msgstr "Cette contestation est déjà close."
+
+msgid "State how the dispute ends."
+msgstr "Indiquez comment la contestation se termine."
+
+msgid ""
+"The harbour master records a closure without agreement only: an agreement "
+"belongs to the parties."
+msgstr ""
+"La capitainerie n'enregistre qu'une clôture sans accord : l'accord "
+"appartient aux parties."
+
+#, python-format
+msgid "Unknown document type: %(code)s"
+msgstr "Type de document inconnu : %(code)s"
+
+msgid "This document is generated from the registry, never uploaded (EF-7.3)."
+msgstr ""
+"Ce document est généré à partir du registre, jamais téléversé (EF-7.3)."
+
+msgid "N4 documents are filed in the security space only."
+msgstr "Les documents N4 sont déposés uniquement dans l'espace sûreté."
+
+msgid "A bilateral (N3) document names its counterpart."
+msgstr "Un document bilatéral (N3) désigne sa contrepartie."
+
+#, python-format
+msgid "File type not accepted (%(ext)s)."
+msgstr "Type de fichier non accepté (%(ext)s)."
+
+#, python-format
+msgid "File too large (max %(mb)s MB)."
+msgstr "Fichier trop volumineux (%(mb)s Mo au maximum)."
+
+msgid "The file is empty."
+msgstr "Le fichier est vide."
+
+msgid "A new version concerns the same call and document type."
+msgstr ""
+"Une nouvelle version concerne la même escale et le même type de document."
+
+msgid "Only an issued or signed document can be replaced."
+msgstr "Seul un document émis ou signé peut être remplacé."
+
+msgid "Only the issuer publishes a new version."
+msgstr "Seul l'émetteur publie une nouvelle version."
+
+msgid "This task belongs to another call."
+msgstr "Cette tâche appartient à une autre escale."
+
+msgid "This task is already closed."
+msgstr "Cette tâche est déjà close."
+
+#, python-format
+msgid "Task %(task)s expects another document: %(type)s."
+msgstr "La tâche %(task)s attend un autre document : %(type)s."
+
+#, python-format
+msgid "Task %(task)s is not completed by providing a document."
+msgstr "La tâche %(task)s ne se réalise pas par la fourniture d'un document."
+
+msgid "Only an issued document awaiting signatures can be signed."
+msgstr "Seul un document émis en attente de signatures peut être signé."
+
+msgid "Invalid signature image."
+msgstr "Image de signature invalide."
+
+msgid "Only the issuer cancels a document."
+msgstr "Seul l'émetteur annule un document."
+
+msgid "This document can no longer be cancelled."
+msgstr "Ce document ne peut plus être annulé."
+
+msgid "Not found."
+msgstr "Introuvable."
+
+msgid "This decision requires a recent two-factor authentication."
+msgstr "Cette décision exige une double authentification récente."
+
+#| msgid "Unknown anchor."
+msgid "Unknown form."
+msgstr "Formulaire inconnu."
+
+#| msgid "This task is not assigned to your role."
+msgid "This form is not generated by your role."
+msgstr "Ce formulaire n'est pas produit par votre rôle."
+
+#, python-format
+msgid "Refused: “%(transition)s” is not possible yet."
+msgstr "Refus : « %(transition)s » n'est pas encore possible."
+
+#, python-format
+msgid ""
+"Missing task %(code)s “%(title)s” — responsible: %(roles)s — expected "
+"action: %(action)s."
+msgstr ""
+"Tâche manquante %(code)s « %(title)s » — responsable : %(roles)s — action "
+"attendue : %(action)s."
+
+#, python-format
+msgid "“%(f)s” must be a number."
+msgstr "« %(f)s » doit être un nombre."
+
+msgid "Unknown measurement kind."
+msgstr "Nature de mesure inconnue."
+
+msgid "Unknown party."
+msgstr "Partie inconnue."
+
+msgid "This value is entered by its owner only (single emitter)."
+msgstr "Cette valeur est saisie par son seul titulaire (émetteur unique)."
+
+msgid "A quantity is a positive number."
+msgstr "Une quantité est un nombre positif."
+
+msgid "A correction concerns a value of the same party."
+msgstr "Une correction porte sur une valeur de la même partie."
+
+msgid ""
+"The shore figure is entered by the terminal that speaks for the shore side "
+"on this call."
+msgstr ""
+"Le chiffre terre est saisi par le terminal qui parle au nom du côté terre "
+"sur cette escale."
+
+#, python-format
+msgid "Unknown milestone type: %(code)s"
+msgstr "Type de jalon inconnu : %(code)s"
+
+msgid "This milestone is recorded by the platform."
+msgstr "Ce jalon est enregistré par la plateforme."
+
+#, python-format
+msgid "“%(m)s” is recorded by %(role)s only (single emitter)."
+msgstr "« %(m)s » est enregistré par %(role)s uniquement (émetteur unique)."
+
+msgid ""
+"Another organisation speaks for the shore side on this call: the agency or "
+"the harbour master designates it in the parties of the call."
+msgstr ""
+"Une autre organisation parle au nom du côté terre sur cette escale : "
+"l'agence ou la capitainerie la désigne dans les parties de l'escale."
+
+msgid "A milestone cannot be declared in the future."
+msgstr "Un jalon ne peut pas être déclaré dans le futur."
+
+msgid "An interruption requires a cause from the closed list."
+msgstr "Une interruption exige une cause de la liste fermée."
+
+#, python-format
+msgid "The cause “%(c)s” requires a reason."
+msgstr "La cause « %(c)s » exige un motif."
+
+msgid "Indicate the interruption that ends."
+msgstr "Indiquez l'interruption qui prend fin."
+
+msgid "This interruption is already closed."
+msgstr "Cette interruption est déjà close."
+
+msgid "The end cannot precede the start."
+msgstr "La fin ne peut pas précéder le début."
+
+msgid ""
+"The end of an interruption is recorded by the party that recorded its start."
+msgstr ""
+"La fin d'une interruption est enregistrée par la partie qui en a enregistré "
+"le début."
+
+msgid "A rectification concerns a milestone of the same type."
+msgstr "Une rectification porte sur un jalon du même type."
+
+msgid "Only the emitter of a milestone can rectify it."
+msgstr "Seul l'émetteur d'un jalon peut le rectifier."
+
+msgid "A rectification requires a reason."
+msgstr "Une rectification exige un motif."
+
+msgid "A contest states its grounds."
+msgstr "Une contestation énonce ses motifs."
+
+msgid "Your role has already countersigned this milestone."
+msgstr "Votre rôle a déjà contresigné ce jalon."
+
+msgid "Your role has already contested this milestone."
+msgstr "Votre rôle a déjà contesté ce jalon."
+
+msgid "This milestone is not corroborated by AIS."
+msgstr "Ce jalon n'est pas corroboré par l'AIS."
+
+msgid "The statement of facts is produced by the agency."
+msgstr "Le rapport des faits est produit par l'agence."
+
+msgid "The statement of facts is produced after the end of operations."
+msgstr "Le rapport des faits est produit après la fin des opérations."
+
+#, python-format
+msgid "Unknown request type: %(code)s"
+msgstr "Type de demande inconnu : %(code)s"
+
+#, python-format
+msgid "Field “%(f)s” is required."
+msgstr "Le champ « %(f)s » est obligatoire."
+
+#, python-format
+msgid "Field “%(f)s” must be a number."
+msgstr "Le champ « %(f)s » doit être un nombre."
+
+#, python-format
+msgid "Field “%(f)s” must be a date and time."
+msgstr "Le champ « %(f)s » doit être une date et une heure."
+
+#, python-format
+msgid "Invalid choice for “%(f)s”."
+msgstr "Choix invalide pour « %(f)s »."
+
+#, python-format
+msgid "A request in state “%(a)s” cannot become “%(b)s”."
+msgstr "Une demande à l'état « %(a)s » ne peut pas passer à « %(b)s »."
+
+msgid "Choose the provider among the organisations taking part in the call."
+msgstr ""
+"Choisissez le prestataire parmi les organisations qui participent à "
+"l'escale."
+
+msgid ""
+"Several organisations can carry out this service on the call: choose the one"
+" who will."
+msgstr ""
+"Plusieurs organisations peuvent réaliser ce service sur l'escale : "
+"choisissez celle qui le fera."
+
+msgid "Only the requesting party submits the request."
+msgstr "Seule la partie demanderesse dépose la demande."
+
+msgid "The requesting role cannot review its own request (rule 2)."
+msgstr "Le rôle demandeur ne peut pas instruire sa propre demande (règle 2)."
+
+msgid "Unknown decision."
+msgstr "Décision inconnue."
+
+msgid ""
+"The requesting role or person can never decide on its own request (rule 2)."
+msgstr ""
+"Le rôle ou la personne qui demande ne peut jamais décider de sa propre "
+"demande (règle 2)."
+
+msgid "This request is not awaiting a decision."
+msgstr "Cette demande n'attend pas de décision."
+
+msgid "A refusal or a request for information states its reason."
+msgstr "Un refus ou une demande de complément énonce son motif."
+
+msgid "An approval with conditions states the conditions."
+msgstr "Une approbation sous conditions énonce les conditions."
+
+msgid "Select the berth or area assigned."
+msgstr "Choisissez le poste ou la zone attribué."
+
+#| msgid ""
+#| "The berth assigned does not match the operating area of the call."
+msgid ""
+"The berth assigned does not match the operating area of the call, nor of a "
+"planned stage."
+msgstr ""
+"Le poste attribué ne correspond ni à la zone d'exploitation de l'escale, ni "
+"à celle d'une étape planifiée."
+
+msgid "This request awaits the decision of the competent authority."
+msgstr "Cette demande attend la décision de l'autorité compétente."
+
+msgid "This request is not carried out by a provider."
+msgstr "Cette demande n'est pas réalisée par un prestataire."
+
+msgid "Only the requesting party names the provider."
+msgstr "Seule la partie demanderesse désigne le prestataire."
+
+msgid "The provider of this order can no longer be chosen."
+msgstr "Le prestataire de cette commande ne peut plus être choisi."
+
+msgid "This service order is carried out by another provider."
+msgstr "Cette commande de service est réalisée par un autre prestataire."
+
+msgid "Only the requesting party cancels its request."
+msgstr "Seule la partie demanderesse annule sa demande."
+
+msgid "Only the issuing authority cancels an authorization."
+msgstr "Seule l'autorité émettrice annule une autorisation."
+
+msgid "Your role on this call does not allow this action."
+msgstr "Votre rôle sur cette escale ne permet pas cette action."
+
+#| msgid ""
+#| "Select at least one operation model (discharge, loading, STS…)."
+msgid "Select at least one operation model for the stage."
+msgstr "Choisissez au moins un modèle d'opération pour l'étape."
+
+#| msgid ""
+#| "The statements are bilateral: they are visible to the two parties and to the"
+#| " harbour master."
+msgid "The stages of a call are planned by the agency or the harbour master."
+msgstr ""
+"Les étapes d'une escale sont planifiées par l'agence ou la capitainerie."
+
+msgid "The call is closed or the vessel has departed: no further stage."
+msgstr "L'escale est close ou le navire a appareillé : plus d'étape possible."
+
+#| msgid "operating area"
+msgid "Unknown operating area."
+msgstr "Zone d'exploitation inconnue."
+
+msgid "The end of the window must follow its start."
+msgstr "La fin de la fenêtre doit suivre son début."
+
+#| msgid "Only a completed task can be countersigned."
+msgid "Only a planned stage can be cancelled."
+msgstr "Seule une étape planifiée peut être annulée."
+
+#| msgid ""
+#| "Another organisation speaks for the shore side on this call: the agency or "
+#| "the harbour master designates it in the parties of the call."
+msgid ""
+"No next stage is planned for this call: the agency or the harbour master "
+"plans it first (overview, « Stages of the call »)."
+msgstr ""
+"Aucune étape suivante n'est planifiée pour cette escale : l'agence ou la "
+"capitainerie la planifie d'abord (aperçu, « Étapes de l'escale »)."
+
+msgid "(product not stated)"
+msgstr "(produit non renseigné)"
+
+msgid "(no cause)"
+msgstr "(sans cause)"
+
+#, python-format
+msgid "Invalid date for %(f)s."
+msgstr "Date invalide pour %(f)s."
+
+msgid "Unsupported entry kind."
+msgstr "Nature de saisie non prise en charge."
+
+msgid "Unknown milestone."
+msgstr "Jalon inconnu."
+
+msgid "Unknown measurement."
+msgstr "Mesure inconnue."
+
+msgid "Invalid photo."
+msgstr "Photo invalide."
+
+msgid "Unknown task."
+msgstr "Tâche inconnue."
+
+#, python-format
+msgid "task %(code)s"
+msgstr "tâche %(code)s"
+
+msgid "This task is not assigned to your role."
+msgstr "Cette tâche n'est pas assignée à votre rôle."
+
+msgid ""
+"Owners and charterers have no data-entry right: they provide the documents "
+"requested from them."
+msgstr ""
+"Les armateurs et affréteurs n'ont pas de droit de saisie : ils fournissent "
+"les documents qui leur sont demandés."
+
+msgid "This task requires the signature of each party: use “Sign”."
+msgstr ""
+"Cette tâche exige la signature de chaque partie : utilisez « Signer »."
+
+#, python-format
+msgid "This task is completed through its request (%(code)s)."
+msgstr "Cette tâche est réalisée par sa demande (%(code)s)."
+
+msgid "This task is completed by recording its milestones."
+msgstr "Cette tâche est réalisée par l'enregistrement de ses jalons."
+
+msgid "This task is completed by providing the expected document."
+msgstr "Cette tâche est réalisée par la fourniture du document attendu."
+
+msgid "A continuous task is closed after the end of transfer (T1)."
+msgstr "Une tâche continue est close après la fin du transfert (T1)."
+
+msgid "An interruption is still open: record its end first."
+msgstr "Une interruption est encore ouverte : enregistrez d'abord sa fin."
+
+msgid "The pumping log is empty."
+msgstr "Le journal de pompage est vide."
+
+msgid "Owners and charterers have no data-entry right."
+msgstr "Les armateurs et affréteurs n'ont pas de droit de saisie."
+
+msgid "Your role has already signed this task."
+msgstr "Votre rôle a déjà signé cette tâche."
+
+msgid "Joint tasks are signed, not countersigned."
+msgstr "Les tâches conjointes se signent, elles ne se contresignent pas."
+
+msgid "Only a completed task can be countersigned."
+msgstr "Seule une tâche faite peut être contresignée."
+
+msgid "Your role has already answered."
+msgstr "Votre rôle a déjà répondu."
+
+msgid "This task cannot be marked not applicable."
+msgstr "Cette tâche ne peut pas être déclarée sans objet."
+
+msgid "Unknown anchor."
+msgstr "Point d'ancrage inconnu."
+
+msgid "countersigned"
+msgstr "contresigné"
+
+msgid "tacit"
+msgstr "tacite"
+
+msgid "contested"
+msgstr "contesté"
+
+msgid "pending"
+msgstr "en attente"
+
+msgid "Due soon"
+msgstr "Échéance proche"
+
+msgid "Sign"
+msgstr "Signer"
+
+msgid "Yes"
+msgstr "Oui"
+
+msgid "No"
+msgstr "Non"
+
+msgid "valid"
+msgstr "valide"
+
+msgid "expired"
+msgstr "expirée"
+
+msgid "cancelled"
+msgstr "annulée"
+
+msgid "not yet in force"
+msgstr "pas encore en vigueur"
+
+msgid "Overview"
+msgstr "Aperçu"
+
+msgid "Tasks"
+msgstr "Tâches"
+
+msgid "Milestones"
+msgstr "Jalons"
+
+msgid "Requests"
+msgstr "Demandes"
+
+msgid "Documents"
+msgstr "Documents"
+
+msgid "Measurements"
+msgstr "Mesures"
+
+msgid "Disputes"
+msgstr "Contestations"
+
+msgid "Correspondence"
+msgstr "Échanges"
+
+msgid "Journal"
+msgstr "Journal"
+
+msgid "Parties"
+msgstr "Parties"
+
+msgid "Invalid date and time."
+msgstr "Date et heure invalides."
+
+msgid "Confirm your identity with your second factor to take this decision."
+msgstr ""
+"Confirmez votre identité avec votre second facteur pour prendre cette "
+"décision."
+
+msgid "Waiting"
+msgstr "Attente"
+
+msgid "Alongside, before transfer"
+msgstr "À quai, avant transfert"
+
+msgid "Transfer"
+msgstr "Transfert"
+
+msgid "Interruption"
+msgstr "Interruption"
+
+msgid "After transfer"
+msgstr "Après transfert"
+
+msgid "Estimated"
+msgstr "Estimé"
+
+msgid "Expected"
+msgstr "Attendus"
+
+#| msgid "At anchorage / approaching"
+msgid "At anchorage / approaching / shifting"
+msgstr "En rade / en approche / en déhalage"
+
+msgid "Alongside / in operation"
+msgstr "À quai / en opération"
+
+msgid "Departed (24 h)"
+msgstr "Partis (24 h)"
+
+msgid "Choose a vessel or register a new one."
+msgstr "Choisissez un navire ou enregistrez-en un nouveau."
+
+#, python-format
+msgid ""
+"Call %(ref)s created as a draft: provide the vessel data, then declare it."
+msgstr ""
+"Escale %(ref)s créée en brouillon : fournissez les données du navire, puis "
+"déclarez-la."
+
+msgid "Declaration"
+msgstr "Déclaration"
+
+msgid "Green light"
+msgstr "Feu vert"
+
+msgid "Berth assignment"
+msgstr "Attribution du poste"
+
+msgid "Movement authorization"
+msgstr "Autorisation de mouvement"
+
+msgid "Berthing"
+msgstr "Accostage"
+
+msgid "Start of transfer"
+msgstr "Début du transfert"
+
+msgid "Departure clearance"
+msgstr "Autorisation de départ"
+
+msgid "Start of operations"
+msgstr "Début des opérations"
+
+msgid "Completion"
+msgstr "Fin des opérations"
+
+msgid "Ad hoc"
+msgstr "Ad hoc"
+
+msgid "Recorded."
+msgstr "Enregistré."
+
+msgid ""
+"Call declared: every party has been notified and the green light requested."
+msgstr ""
+"Escale déclarée : toutes les parties ont été notifiées et le feu vert est "
+"demandé."
+
+msgid "Times revised: deadlines recomputed."
+msgstr "Heures révisées : échéances recalculées."
+
+#, python-format
+msgid "Stage %(n)d planned: its tasks have been created for every party."
+msgstr "Étape %(n)d planifiée : ses tâches ont été créées pour chaque partie."
+
+msgid "Closure requested from the harbour master."
+msgstr "Clôture demandée à la capitainerie."
+
+msgid "Call closed."
+msgstr "Escale clôturée."
+
+msgid "Shore side designated."
+msgstr "Côté terre désigné."
+
+msgid ""
+"Access issued: hand the link or the code to the master now — they will not "
+"be shown again."
+msgstr ""
+"Accès délivré : remettez maintenant le lien ou le code au capitaine — ils ne"
+" seront plus affichés."
+
+#| msgid ""
+#| "Access issued: hand the link or the code to the master now — they will not "
+#| "be shown again."
+msgid ""
+"Access issued: hand the link or the code to the party now — they will not be"
+" shown again."
+msgstr ""
+"Accès émis : remettez le lien ou le code à la partie maintenant — ils ne "
+"seront plus affichés."
+
+msgid "Milestone recorded."
+msgstr "Jalon enregistré."
+
+msgid "Countersignature recorded."
+msgstr "Contresignature enregistrée."
+
+msgid "Contest recorded: a dispute is open."
+msgstr "Contestation enregistrée : une contestation est ouverte."
+
+msgid "Request submitted to the competent authority."
+msgstr "Demande transmise à l'autorité compétente."
+
+msgid "Provider named."
+msgstr "Prestataire désigné."
+
+msgid "Decision recorded."
+msgstr "Décision enregistrée."
+
+msgid "Choose a file."
+msgstr "Choisissez un fichier."
+
+msgid "Document issued and fingerprinted."
+msgstr "Document émis et empreinte calculée."
+
+msgid "Document signed."
+msgstr "Document signé."
+
+msgid "Statement of facts generated from the registry and sent for signature."
+msgstr ""
+"Rapport des faits généré à partir du registre et envoyé pour signature."
+
+#, python-format
+msgid "Form %(title)s filed in the call's documents (version %(version)s)."
+msgstr ""
+"Formulaire %(title)s déposé dans les documents de l'escale (version "
+"%(version)s)."
+
+#, python-format
+msgid ""
+"Filed in the security space. Receipt: %(r)s — keep it: this request will not"
+" appear anywhere else in the call."
+msgstr ""
+"Déposé dans l'espace sûreté. Récépissé : %(r)s — conservez-le : cette "
+"demande n'apparaîtra nulle part ailleurs dans l'escale."
+
+msgid ""
+"Too many unsuccessful attempts. Wait up to fifteen minutes before trying "
+"again."
+msgstr ""
+"Trop de tentatives infructueuses. Patientez jusqu'à quinze minutes avant de "
+"réessayer."
+
+msgid ""
+"This code is not valid, has expired or was revoked. Ask your agent for a new"
+" access."
+msgstr ""
+"Ce code n'est pas valide, a expiré ou a été révoqué. Demandez un nouvel "
+"accès à votre agent."
+
+msgid ""
+"This link is not valid, has expired or was revoked. Ask your agent for a new"
+" access."
+msgstr ""
+"Ce lien n'est pas valide, a expiré ou a été révoqué. Demandez un nouvel "
+"accès à votre agent."
+
+#| msgid "full name"
+msgid "Enter your full name."
+msgstr "Saisissez votre nom complet."
+
+msgid "Security domain (N4)"
+msgstr "Domaine sûreté (N4)"
+
+msgid "Armed guards"
+msgstr "Gardes armés"
+
+msgid "Naval escort"
+msgstr "Escorte navale"
+
+msgid "Security plan / declaration"
+msgstr "Plan / déclaration de sûreté"
+
+msgid "Security incident"
+msgstr "Incident de sûreté"
+
+msgid "Other security matter"
+msgstr "Autre question de sûreté"
+
+msgid "security record (N4)"
+msgstr "dossier de sûreté (N4)"
+
+msgid "security records (N4)"
+msgstr "dossiers de sûreté (N4)"
+
+msgid "Unknown security request kind."
+msgstr "Nature de demande de sûreté inconnue."
+
+msgid "The request is empty."
+msgstr "La demande est vide."
+
+msgid "Only the security authority decides."
+msgstr "Seule l'autorité de sûreté décide."
+
+msgid "This item is not awaiting a decision."
+msgstr "Ce dossier n'attend pas de décision."
+
+msgid "State the modalities or the reason."
+msgstr "Indiquez les modalités ou le motif."
+
+msgid "Only the security authority confirms."
+msgstr "Seule l'autorité de sûreté confirme."
+
+msgid "Unknown confirmation."
+msgstr "Confirmation inconnue."
+
+msgid "Already confirmed."
+msgstr "Déjà confirmé."
+
+msgid "File too large (10 MB maximum in the security space)."
+msgstr "Fichier trop volumineux (10 Mo au maximum dans l'espace sûreté)."
+
+msgid "Decision recorded in the security space."
+msgstr "Décision enregistrée dans l'espace sûreté."
+
+msgid "Confirmation recorded."
+msgstr "Confirmation enregistrée."
+
+msgid "Attachment encrypted and stored."
+msgstr "Pièce jointe chiffrée et conservée."
+
+msgid "Français"
+msgstr "Français"
+
+msgid "English"
+msgstr "English"
+
+msgid "Check the values read by the assistant"
+msgstr "Vérifier les valeurs lues par l'assistant"
+
+#, python-format
+msgid ""
+"The assistant has read “%(doc)s” (v%(v)s). Nothing has been recorded: each "
+"value below is pre-filled and stays a proposal until you validate it. "
+"Correct a value or untick it to leave it out."
+msgstr ""
+"L'assistant a lu « %(doc)s » (v%(v)s). Rien n'a été enregistré : chaque "
+"valeur ci-dessous est pré-remplie et reste une proposition tant que vous ne "
+"l'avez pas validée. Corrigez une valeur ou décochez-la pour l'écarter."
+
+msgid ""
+"The IMO number read in the document differs from the vessel of this call."
+msgstr ""
+"Le numéro OMI lu dans le document diffère de celui du navire de cette "
+"escale."
+
+msgid "Check that the right document was provided before validating anything."
+msgstr ""
+"Vérifiez que le bon document a été fourni avant de valider quoi que ce soit."
+
+msgid "Keep"
+msgstr "Retenir"
+
+msgid "Certificate"
+msgstr "Certificat"
+
+msgid "Number"
+msgstr "Numéro"
+
+msgid "Expiry (YYYY-MM-DD)"
+msgstr "Expiration (AAAA-MM-JJ)"
+
+msgid "Read in the document"
+msgstr "Lu dans le document"
+
+msgid "pre-filled"
+msgstr "pré-rempli"
+
+msgid "The assistant found no certificate in this document."
+msgstr "L'assistant n'a trouvé aucun certificat dans ce document."
+
+msgid "Field"
+msgstr "Champ"
+
+msgid "Value read"
+msgstr "Valeur lue"
+
+msgid "Current vessel record"
+msgstr "Fiche navire actuelle"
+
+msgid "Shown for cross-checking only"
+msgstr "Affiché pour contrôle seulement"
+
+msgid ""
+"Validating updates the vessel record with the ticked values, under your "
+"name, and writes it in the call journal."
+msgstr ""
+"La validation met à jour la fiche navire avec les valeurs cochées, sous "
+"votre nom, et l'inscrit au journal de l'escale."
+
+msgid ""
+"Validating records these expiry dates for this document; the review of the "
+"call will compare them with the departure."
+msgstr ""
+"La validation enregistre ces dates d'expiration pour ce document ; la revue "
+"de l'escale les comparera au départ."
+
+msgid ""
+"Validating records these values; the quantity can then pre-fill your bill of"
+" lading figure in Measurements, which you still enter yourself."
+msgstr ""
+"La validation enregistre ces valeurs ; la quantité peut ensuite pré-remplir "
+"votre chiffre du connaissement dans Mesures, que vous saisissez toujours "
+"vous-même."
+
+msgid "Validate the ticked values"
+msgstr "Valider les valeurs cochées"
+
+msgid "Dismiss the proposal"
+msgstr "Écarter la proposition"
+
+#, python-format
+msgid ""
+"Read by %(model)s on %(at)s. The assistant never decides, signs or records "
+"anything by itself (EF-17)."
+msgstr ""
+"Lu par %(model)s le %(at)s. L'assistant ne décide, ne signe et n'enregistre "
+"jamais rien de lui-même (EF-17)."
+
+msgid "Assistant"
+msgstr "Assistant"
+
+msgid "Assistant of the port"
+msgstr "Assistant du port"
+
+msgid ""
+"The assistant reads the registry as you see it — calls under way and "
+"expected, decisions waiting, late tasks, disputes, the AIS board, the "
+"indicators — and writes in plain words. It cites the calls it draws on, says"
+" when the registry does not show something, and never approves, signs, "
+"closes or corrects anything: people decide. Nothing it writes is recorded in"
+" a call; the request itself is traced."
+msgstr ""
+"L'assistant lit le registre tel que vous le voyez — escales en cours et "
+"attendues, décisions en attente, tâches en retard, contestations, tableau "
+"AIS, indicateurs — et écrit en mots simples. Il cite les escales sur "
+"lesquelles il s'appuie, dit quand le registre ne montre pas quelque chose, "
+"et n'approuve, ne signe, ne clôture ni ne corrige jamais rien : les "
+"personnes décident. Rien de ce qu'il écrit n'est enregistré dans une escale "
+"; la requête elle-même est tracée."
+
+msgid "Refresh the brief"
+msgstr "Actualiser le point"
+
+msgid "Prepare the brief"
+msgstr "Préparer le point"
+
+#, python-format
+msgid ""
+"Written at %(t)s from the registry at that moment; a later change in a call "
+"is not in it."
+msgstr ""
+"Rédigé à %(t)s à partir du registre à cet instant ; un changement ultérieur "
+"dans une escale n'y figure pas."
+
+msgid ""
+"What is alongside, what is expected, what waits for a decision, what is late"
+" or disputed, and what the AIS picture says — in a page, when you ask for "
+"it."
+msgstr ""
+"Ce qui est à quai, ce qui est attendu, ce qui attend une décision, ce qui "
+"est en retard ou contesté, et ce que dit l'image AIS — en une page, quand "
+"vous le demandez."
+
+msgid "Ask the registry"
+msgstr "Interroger le registre"
+
+msgid "Your question"
+msgstr "Votre question"
+
+msgid ""
+"Which calls have a decision waiting for more than four hours? Which vessel "
+"is expected next, and is it heard on AIS?"
+msgstr ""
+"Quelles escales ont une décision en attente depuis plus de quatre heures ? "
+"Quel est le prochain navire attendu, et est-il entendu sur l'AIS ?"
+
+msgid "Ask"
+msgstr "Demander"
+
+msgid ""
+"Answered from the calls you may open, the AIS board and the indicators of "
+"the last 90 days. Earlier periods: statistics page."
+msgstr ""
+"Réponse établie à partir des escales que vous pouvez ouvrir, du tableau AIS "
+"et des indicateurs des 90 derniers jours. Périodes antérieures : page "
+"Statistiques."
+
+#, python-format
+msgid "Answered at %(t)s."
+msgstr "Réponse à %(t)s."
+
+msgid "What the assistant was given"
+msgstr "Ce qui a été transmis à l'assistant"
+
+msgid ""
+"Each request is recorded with the fingerprint of the data sent and the list "
+"of the objects it was built from (roles only, never a person; nothing from "
+"the security domain)."
+msgstr ""
+"Chaque requête est enregistrée avec l'empreinte des données envoyées et la "
+"liste des objets dont elle a été construite (des rôles seulement, jamais une"
+" personne ; rien du domaine sûreté)."
+
+#, python-format
+msgid "%(n)s vessel heard"
+msgid_plural "%(n)s vessels heard"
+msgstr[0] "%(n)s navire entendu"
+msgstr[1] "%(n)s navires entendus"
+
+msgid "at"
+msgstr "à"
+
+msgid "in the port waters"
+msgstr "dans les eaux du port"
+
+msgid "with a call"
+msgstr "avec une escale"
+
+msgid "Port waters: berths, areas and the vessels heard"
+msgstr "Eaux du port : postes, zones et navires entendus"
+
+msgid "alongside / in operation"
+msgstr "à quai / en opération"
+
+msgid "expected, approaching"
+msgstr "attendu, en approche"
+
+msgid "departed"
+msgstr "appareillé"
+
+msgid "no call in this port"
+msgstr "sans escale dans ce port"
+
+msgid "squares: berths · circles: anchorage and STS areas"
+msgstr "carrés : postes · cercles : zones de mouillage et STS"
+
+#, python-format
+msgid "box %(s)s° to %(n)s° N, %(w)s° to %(e)s° E"
+msgstr "cadre %(s)s° à %(n)s° N, %(w)s° à %(e)s° E"
+
+msgid ""
+"The map of the port waters is not configured yet: the port administrator "
+"enters the four limits of the box (and, if wished, a chart excerpt) in the "
+"settings of the port. Until then the board is a list."
+msgstr ""
+"La carte des eaux du port n'est pas encore configurée : l'administrateur du "
+"port saisit les quatre limites du cadre (et, s'il le souhaite, un extrait de"
+" carte) dans le paramétrage du port. D'ici là, le tableau est une liste."
+
+#, python-format
+msgid "%(n)s discrepancy between the AIS picture and the registry"
+msgid_plural "%(n)s discrepancies between the AIS picture and the registry"
+msgstr[0] "%(n)s écart entre l'image AIS et le registre"
+msgstr[1] "%(n)s écarts entre l'image AIS et le registre"
+
+msgid ""
+"A discrepancy is a question for the harbour master and the agency: the "
+"registry keeps what its emitters declared, and only they can rectify it."
+msgstr ""
+"Un écart est une question pour la capitainerie et l'agence : le registre "
+"conserve ce que ses émetteurs ont déclaré, et eux seuls peuvent le "
+"rectifier."
+
+msgid "Vessel"
+msgstr "Navire"
+
+msgid "Call"
+msgstr "Escale"
+
+msgid "Position"
+msgstr "Position"
+
+msgid "Speed / course"
+msgstr "Vitesse / route"
+
+msgid "AIS status"
+msgstr "Statut AIS"
+
+msgid "Destination"
+msgstr "Destination"
+
+msgid "Last report"
+msgstr "Dernier rapport"
+
+msgid "known vessel, no current call"
+msgstr "navire connu, pas d'escale en cours"
+
+msgid "outside the box"
+msgstr "hors du cadre"
+
+msgid ""
+"No position received over the period. Connect a receiver or a stream "
+"(deployment guide, §15)."
+msgstr ""
+"Aucune position reçue sur la période. Raccordez un récepteur ou un flux "
+"(guide de déploiement, §15)."
+
+msgid "AIS board"
+msgstr "Tableau AIS"
+
+#, python-format
+msgid ""
+"Positions broadcast by the vessels themselves, as received over the last "
+"%(h)s hours. They inform, corroborate the declared arrival and departure (an"
+" alert, never a correction) and never replace a milestone entered by its "
+"emitter."
+msgstr ""
+"Positions émises par les navires eux-mêmes, telles que reçues au cours des "
+"%(h)s dernières heures. Elles informent, corroborent l'arrivée et "
+"l'appareillage déclarés (une alerte, jamais une correction) et ne remplacent"
+" jamais un jalon saisi par son émetteur."
+
+msgid "Refreshed every minute"
+msgstr "Actualisé chaque minute"
+
+msgid "Skip to content"
+msgstr "Aller au contenu"
+
+msgid "Main menu"
+msgstr "Menu principal"
+
+msgid "Dashboard"
+msgstr "Tableau de bord"
+
+msgid "Calls"
+msgstr "Escales"
+
+msgid "Statistics"
+msgstr "Statistiques"
+
+msgid "Security space"
+msgstr "Espace sûreté"
+
+msgid "Calibration"
+msgstr "Pilotage"
+
+msgid "Settings"
+msgstr "Paramétrage"
+
+msgid "Times shown in the port time zone"
+msgstr "Heures affichées dans le fuseau horaire du port"
+
+msgid "Your roles"
+msgstr "Vos rôles"
+
+msgid "Language"
+msgstr "Langue"
+
+msgid "Notifications"
+msgstr "Notifications"
+
+msgid "Sign out"
+msgstr "Se déconnecter"
+
+msgid "Access by link, limited to one call"
+msgstr "Accès par lien, limité à une escale"
+
+msgid "Leave"
+msgstr "Quitter"
+
+msgid "FLUXAA Port — operational registry of tanker calls."
+msgstr ""
+"FLUXAA Port — registre opérationnel des escales de navires pétroliers."
+
+#, python-format
+msgid "Times are shown in the port time zone (%(tz)s) and stored in UTC."
+msgstr ""
+"Les heures sont affichées dans le fuseau horaire du port (%(tz)s) et "
+"conservées en UTC."
+
+msgid "Sign in"
+msgstr "Se connecter"
+
+msgid "Operational registry of tanker calls — for the parties to each call."
+msgstr ""
+"Registre opérationnel des escales de navires pétroliers — pour les parties "
+"de chaque escale."
+
+msgid "E-mail or password incorrect."
+msgstr "E-mail ou mot de passe incorrect."
+
+msgid "Password"
+msgstr "Mot de passe"
+
+msgid "Master of a vessel? Enter the access code given by your agent."
+msgstr ""
+"Capitaine d'un navire ? Saisissez le code d'accès remis par votre agent."
+
+msgid "Verify an authorization"
+msgstr "Vérifier une autorisation"
+
+msgid "Two-factor authentication"
+msgstr "Double authentification"
+
+msgid "Replace your authenticator application"
+msgstr "Remplacer votre application d'authentification"
+
+msgid ""
+"To register a new application, first enter a code from the one you use now."
+msgstr ""
+"Pour enregistrer une nouvelle application, saisissez d'abord un code de "
+"celle que vous utilisez aujourd'hui."
+
+msgid "Activate two-factor authentication"
+msgstr "Activer la double authentification"
+
+msgid ""
+"Your role takes decisions that bind the port: a second factor is required "
+"(authenticator application on your phone)."
+msgstr ""
+"Votre rôle prend des décisions qui engagent le port : un second facteur est "
+"requis (application d'authentification sur votre téléphone)."
+
+msgid ""
+"Scan this code with an authenticator application (Google Authenticator, "
+"Microsoft Authenticator, FreeOTP…)."
+msgstr ""
+"Scannez ce code avec une application d'authentification (Google "
+"Authenticator, Microsoft Authenticator, FreeOTP…)."
+
+msgid "Enter the six-digit code it shows."
+msgstr "Saisissez le code à six chiffres qu'elle affiche."
+
+msgid "QR code to scan"
+msgstr "QR code à scanner"
+
+msgid "Key for manual entry:"
+msgstr "Clé pour la saisie manuelle :"
+
+msgid "Code from your current application"
+msgstr "Code de votre application actuelle"
+
+msgid "Code from the new application"
+msgstr "Code de la nouvelle application"
+
+msgid "Six-digit code"
+msgstr "Code à six chiffres"
+
+msgid "Replace"
+msgstr "Remplacer"
+
+msgid "Activate"
+msgstr "Activer"
+
+msgid ""
+"Phone lost or replaced? Your port administrator can reset your two-factor "
+"authentication; you will then register the new application at your next "
+"sign-in."
+msgstr ""
+"Téléphone perdu ou remplacé ? L'administrateur de votre port peut "
+"réinitialiser votre double authentification ; vous enregistrerez la nouvelle"
+" application à votre prochaine connexion."
+
+msgid "Second factor"
+msgstr "Second facteur"
+
+msgid "Confirm with your second factor"
+msgstr "Confirmez avec votre second facteur"
+
+msgid ""
+"Decisions and access to restricted areas require a recent two-factor check."
+msgstr ""
+"Les décisions et l'accès aux espaces restreints exigent une vérification "
+"récente du second facteur."
+
+msgid "Confirm"
+msgstr "Confirmer"
+
+msgid "My account"
+msgstr "Mon compte"
+
+msgid "Roles"
+msgstr "Rôles"
+
+msgid ""
+"Rights are carried by the role your organisation holds on each call, never "
+"by the person."
+msgstr ""
+"Les droits sont portés par le rôle que votre organisation tient sur chaque "
+"escale, jamais par la personne."
+
+msgid "Daily summary for normal tasks"
+msgstr "Résumé quotidien pour les tâches normales"
+
+msgid ""
+"Blocking tasks and escalations are always sent at once: they cannot be "
+"muted."
+msgstr ""
+"Les tâches bloquantes et les escalades sont toujours envoyées immédiatement "
+": elles ne peuvent pas être désactivées."
+
+msgid "Save"
+msgstr "Enregistrer"
+
+msgid "Active"
+msgstr "Active"
+
+msgid "Not active"
+msgstr "Inactive"
+
+msgid "API token"
+msgstr "Jeton d'API"
+
+msgid ""
+"For integrations with your own systems. Send it as: Authorization: Bearer "
+"<token>."
+msgstr ""
+"Pour les intégrations avec vos propres systèmes. Transmettez-le ainsi : "
+"Authorization: Bearer <jeton>."
+
+msgid "Replace the token"
+msgstr "Remplacer le jeton"
+
+msgid "Create a token"
+msgstr "Créer un jeton"
+
+msgid "Revoke"
+msgstr "Révoquer"
+
+msgid "Bar chart"
+msgstr "Diagramme en barres"
+
+msgid "Berth plan — 72 hours"
+msgstr "Plan des postes — 72 heures"
+
+msgid "Solid: actual. Outlined: estimated. Filled green: transfer under way."
+msgstr "Plein : réel. Contour : estimé. Vert plein : transfert en cours."
+
+msgid "Refreshed every minute."
+msgstr "Actualisé chaque minute."
+
+msgid "Berth plan"
+msgstr "Plan des postes"
+
+msgid "Berth / area"
+msgstr "Poste / zone"
+
+msgid "Not yet assigned"
+msgstr "Pas encore attribué"
+
+msgid "waiting in the roads"
+msgstr "en attente sur rade"
+
+msgid "Free"
+msgstr "Libre"
+
+msgid "Indicators"
+msgstr "Indicateurs"
+
+#, python-format
+msgid "Indicators — last %(d)s days"
+msgstr "Indicateurs — %(d)s derniers jours"
+
+msgid ""
+"Each figure is recomputed from the registry; security records are never "
+"counted."
+msgstr ""
+"Chaque chiffre est recalculé à partir du registre ; les dossiers de sûreté "
+"ne sont jamais comptés."
+
+msgid "Source calls:"
+msgstr "Escales sources :"
+
+msgid "None."
+msgstr "Aucune."
+
+msgid "Your next tasks"
+msgstr "Vos prochaines tâches"
+
+#, python-format
+msgid "%(n)s draft call not yet declared"
+msgid_plural "%(n)s draft calls not yet declared"
+msgstr[0] "%(n)s escale en brouillon pas encore déclarée"
+msgstr[1] "%(n)s escales en brouillon pas encore déclarées"
+
+msgid "Due"
+msgstr "Échéance"
+
+msgid "Role"
+msgstr "Rôle"
+
+msgid "State"
+msgstr "État"
+
+msgid "Nothing is waiting for your roles."
+msgstr "Rien n'attend vos rôles."
+
+msgid "Refused by the platform — hold point"
+msgstr "Refusé par la plateforme — point d'arrêt"
+
+#, python-format
+msgid "expected action: %(action)s"
+msgstr "action attendue : %(action)s"
+
+msgid ""
+"This refusal is recorded in the call journal, readable by the harbour "
+"master."
+msgstr ""
+"Ce refus est consigné dans le journal de l'escale, lisible par la "
+"capitainerie."
+
+msgid "Calibration of alerts and deadlines"
+msgstr "Pilotage des alertes et des échéances"
+
+#, python-format
+msgid ""
+"%(n)s declared calls over the last %(d)s days. These figures tell the port "
+"administrator which templates, delays and thresholds generate noise or "
+"delays — they judge the settings, never the people."
+msgstr ""
+"%(n)s escales déclarées sur les %(d)s derniers jours. Ces chiffres indiquent"
+" à l'administrateur du port quels gabarits, délais et seuils produisent du "
+"bruit ou des retards — ils jugent le paramétrage, jamais les personnes."
+
+msgid "Period"
+msgstr "Période"
+
+msgid "30 days"
+msgstr "30 jours"
+
+msgid "90 days"
+msgstr "90 jours"
+
+msgid "180 days"
+msgstr "180 jours"
+
+msgid "365 days"
+msgstr "365 jours"
+
+msgid "Show"
+msgstr "Afficher"
+
+msgid "Notifications received per person and per call"
+msgstr "Notifications reçues par personne et par escale"
+
+msgid "average per person and per call"
+msgstr "moyenne par personne et par escale"
+
+msgid "highest"
+msgstr "maximum"
+
+msgid "person-call pairs above 15 (EF-6 target)"
+msgstr "couples personne-escale au-delà de 15 (cible EF-6)"
+
+msgid "tasks escalated"
+msgstr "tâches escaladées"
+
+msgid "Alerts per call template"
+msgstr "Alertes par gabarit d'escale"
+
+msgid "Template"
+msgstr "Gabarit"
+
+msgid "Alerts"
+msgstr "Alertes"
+
+msgid "Alerts per call"
+msgstr "Alertes par escale"
+
+msgid "By kind"
+msgstr "Par nature"
+
+msgid "No call over the period."
+msgstr "Aucune escale sur la période."
+
+msgid "Deadlines and entries per role"
+msgstr "Échéances et saisies par rôle"
+
+msgid "Tasks due"
+msgstr "Tâches échues"
+
+msgid "Average lateness (h)"
+msgstr "Retard moyen (h)"
+
+msgid "Milestones entered"
+msgstr "Jalons saisis"
+
+msgid "Average entry delay (min)"
+msgstr "Délai moyen de saisie (min)"
+
+msgid ""
+"Entry delay: time between the declared time of a milestone and its recording"
+" in the registry (offline and paper re-entries included)."
+msgstr ""
+"Délai de saisie : temps entre l'heure déclarée d'un jalon et son "
+"enregistrement au registre (saisies hors ligne et ressaisies papier "
+"comprises)."
+
+msgid "Announce a call"
+msgstr "Annoncer une escale"
+
+msgid ""
+"The call is created as a draft. The platform instantiates the tasks of every"
+" party from the port's templates; the parties are notified when you declare "
+"it."
+msgstr ""
+"L'escale est créée en brouillon. La plateforme instancie les tâches de "
+"chaque partie à partir des gabarits du port ; les parties sont notifiées "
+"quand vous la déclarez."
+
+msgid "Registered vessel"
+msgstr "Navire enregistré"
+
+msgid "new vessel"
+msgstr "nouveau navire"
+
+msgid "Register a new vessel"
+msgstr "Enregistrer un nouveau navire"
+
+msgid "Name"
+msgstr "Nom"
+
+msgid "Type"
+msgstr "Type"
+
+msgid "Product tanker"
+msgstr "Pétrolier de produits"
+
+msgid "Where and what"
+msgstr "Où et quoi"
+
+msgid "Operating area"
+msgstr "Zone d'opération"
+
+msgid "Requested berth or area (optional)"
+msgstr "Poste ou zone demandé (facultatif)"
+
+msgid "Operations"
+msgstr "Opérations"
+
+msgid "Additional modules"
+msgstr "Modules complémentaires"
+
+msgid ""
+"The SPM module and the anchorage stay are added automatically when the area "
+"calls for them."
+msgstr ""
+"Le module bouée (SPM) et le séjour en rade sont ajoutés automatiquement "
+"quand la zone l'exige."
+
+msgid "Partner call (STS, double banking)"
+msgstr "Escale partenaire (STS, accostage à couple)"
+
+msgid "Times"
+msgstr "Heures"
+
+msgid "port time"
+msgstr "heure du port"
+
+msgid "Start of operations (est.)"
+msgstr "Début des opérations (est.)"
+
+msgid "Completion (est.)"
+msgstr "Fin des opérations (est.)"
+
+msgid "Cargo and voyage"
+msgstr "Cargaison et voyage"
+
+msgid "Product"
+msgstr "Produit"
+
+msgid "Gasoil 10 ppm"
+msgstr "Gasoil 10 ppm"
+
+msgid "Declared quantity"
+msgstr "Quantité déclarée"
+
+msgid "Unit"
+msgstr "Unité"
+
+msgid "Voyage"
+msgstr "Voyage"
+
+msgid "Last port"
+msgstr "Dernier port"
+
+msgid "Next port"
+msgstr "Prochain port"
+
+msgid "Parties you invite"
+msgstr "Parties que vous invitez"
+
+msgid ""
+"The port authorities (harbour master, port authority, customs-immigration-"
+"health, security, marine services) are invited automatically."
+msgstr ""
+"Les autorités du port (capitainerie, autorité portuaire, douanes-"
+"immigration-santé, sûreté, services nautiques) sont invitées "
+"automatiquement."
+
+msgid "Providers"
+msgstr "Prestataires"
+
+msgid "None registered in the port."
+msgstr "Aucune enregistrée dans le port."
+
+msgid "Create the draft call"
+msgstr "Créer l'escale en brouillon"
+
+msgid "Cancel"
+msgstr "Annuler"
+
+msgid "Call template"
+msgstr "Gabarit d'escale"
+
+#, python-format
+msgid "Partner: %(name)s"
+msgstr "Partenaire : %(name)s"
+
+msgid "Field app"
+msgstr "Appli terrain"
+
+msgid "Statement of facts"
+msgstr "Rapport des faits"
+
+msgid "Forms"
+msgstr "Formulaires"
+
+msgid "Export"
+msgstr "Exporter"
+
+msgid "Passage strip of the call"
+msgstr "Bande de passage de l'escale"
+
+msgid "now"
+msgstr "maintenant"
+
+msgid "waiting"
+msgstr "attente"
+
+msgid "alongside"
+msgstr "à quai"
+
+msgid "transfer"
+msgstr "transfert"
+
+msgid "interruption"
+msgstr "interruption"
+
+msgid "to come"
+msgstr "à venir"
+
+msgid "Arrival"
+msgstr "Arrivée"
+
+msgid "All fast"
+msgstr "Amarré"
+
+msgid "Departure"
+msgstr "Départ"
+
+msgid "Sections of the call"
+msgstr "Sections de l'escale"
+
+msgid "Calls on which your organisation holds a role."
+msgstr "Escales sur lesquelles votre organisation tient un rôle."
+
+msgid "Search"
+msgstr "Rechercher"
+
+msgid "Vessel, IMO or reference"
+msgstr "Navire, OMI ou référence"
+
+msgid "Scope"
+msgstr "Périmètre"
+
+msgid "Current calls"
+msgstr "Escales en cours"
+
+msgid "All, archives included"
+msgstr "Toutes, archives comprises"
+
+msgid "Filter"
+msgstr "Filtrer"
+
+msgid "Reference"
+msgstr "Référence"
+
+msgid "Status"
+msgstr "Statut"
+
+msgid ""
+"No call yet. Announce the first one: the platform creates every task of the "
+"call for each party."
+msgstr ""
+"Aucune escale pour l'instant. Annoncez la première : la plateforme crée "
+"chaque tâche de l'escale pour chaque partie."
+
+msgid "No call involves your organisation for the moment."
+msgstr "Aucune escale ne concerne votre organisation pour le moment."
+
+msgid "Port calls of tankers"
+msgstr "Escales de navires pétroliers"
+
+#, python-format
+msgid ""
+"%(port)s — quays, anchorage and offshore areas, as recorded in the registry."
+msgstr ""
+"%(port)s — quais, rade et zones au large, tels qu'enregistrés dans le "
+"registre."
+
+msgid "All calls"
+msgstr "Toutes les escales"
+
+msgid "Back to the call"
+msgstr "Retour à l'escale"
+
+msgid "The field app needs JavaScript to keep your entries on this device."
+msgstr ""
+"L'appli terrain a besoin de JavaScript pour conserver vos saisies sur cet "
+"appareil."
+
+msgid "Synchronisation status"
+msgstr "État de la synchronisation"
+
+msgid "Connecting…"
+msgstr "Connexion…"
+
+msgid "Synchronise now"
+msgstr "Synchroniser maintenant"
+
+msgid "Sections of the field app"
+msgstr "Sections de l'appli terrain"
+
+msgid "To countersign"
+msgstr "À contresigner"
+
+msgid "Pumping log"
+msgstr "Journal de pompage"
+
+msgid "My tasks"
+msgstr "Mes tâches"
+
+msgid "On this device"
+msgstr "Sur cet appareil"
+
+msgid "Record a milestone"
+msgstr "Enregistrer un jalon"
+
+msgid "Open interruptions"
+msgstr "Interruptions en cours"
+
+msgid "Loading…"
+msgstr "Chargement…"
+
+msgid "Declared time"
+msgstr "Heure déclarée"
+
+msgid "Now"
+msgstr "Maintenant"
+
+msgid "Cause"
+msgstr "Cause"
+
+msgid "Choose a cause"
+msgstr "Choisir une cause"
+
+msgid "Reason"
+msgstr "Motif"
+
+msgid "This cause requires a reason."
+msgstr "Cette cause exige un motif."
+
+msgid "Interruption that ends"
+msgstr "Interruption qui prend fin"
+
+msgid "No open interruption to close."
+msgstr "Aucune interruption en cours à clore."
+
+msgid "Note"
+msgstr "Note"
+
+msgid "(optional)"
+msgstr "(facultatif)"
+
+msgid "Photo"
+msgstr "Photo"
+
+msgid "Preview of the photo"
+msgstr "Aperçu de la photo"
+
+msgid "Remove the photo"
+msgstr "Retirer la photo"
+
+msgid "Record"
+msgstr "Enregistrer"
+
+msgid ""
+"Countersigning confirms a milestone recorded by its emitter. Contesting "
+"opens a dispute: the milestone itself is never changed."
+msgstr ""
+"Contresigner confirme un jalon enregistré par son émetteur. Contester ouvre "
+"une contestation : le jalon lui-même n'est jamais modifié."
+
+msgid "Time of the reading"
+msgstr "Heure du relevé"
+
+msgid "Manifold pressure"
+msgstr "Pression au manifold"
+
+msgid "Flow rate"
+msgstr "Débit"
+
+msgid "Temperature"
+msgstr "Température"
+
+msgid "Add the reading"
+msgstr "Ajouter le relevé"
+
+msgid "Read only: the pending tasks of your roles, by due time."
+msgstr "Lecture seule : les tâches en attente de vos rôles, par échéance."
+
+msgid "Entries on this device"
+msgstr "Saisies sur cet appareil"
+
+msgid ""
+"Each entry keeps the declared time of the fact and the time it was saved on "
+"this device; the registry adds its own time on receipt and marks late "
+"arrivals “deferred entry”. A competing entry never overwrites another one: "
+"the registry opens a dispute."
+msgstr ""
+"Chaque saisie conserve l'heure déclarée du fait et l'heure de son "
+"enregistrement sur cet appareil ; le registre ajoute sa propre heure à "
+"réception et marque les arrivées tardives « saisie différée ». Une saisie "
+"concurrente n'en écrase jamais une autre : le registre ouvre une "
+"contestation."
+
+msgid "Results of the last synchronisations"
+msgstr "Résultats des dernières synchronisations"
+
+msgid "Clear the results"
+msgstr "Effacer les résultats"
+
+msgid "already recorded"
+msgstr "déjà enregistré"
+
+msgid "Connection back: synchronising…"
+msgstr "Connexion rétablie : synchronisation…"
+
+#, python-brace-format
+msgid ""
+"Already recorded on this device ({time}) and waiting to be sent. A new entry"
+" does not replace it: the registry will open a dispute."
+msgstr ""
+"Déjà enregistré sur cet appareil ({time}) et en attente d'envoi. Une "
+"nouvelle saisie ne le remplace pas : le registre ouvrira une contestation."
+
+#, python-brace-format
+msgid ""
+"Already recorded in the registry ({time}). A new entry does not replace it: "
+"the registry will open a dispute."
+msgstr ""
+"Déjà enregistré au registre ({time}). Une nouvelle saisie ne le remplace pas"
+" : le registre ouvrira une contestation."
+
+#, python-brace-format
+msgid ""
+"Working from the data saved on this device on {time}: it may be out of date."
+msgstr ""
+"Travail à partir des données enregistrées sur cet appareil le {time} : elles"
+" peuvent ne plus être à jour."
+
+msgid "This call is closed: the registry will refuse new entries."
+msgstr ""
+"Cette escale est clôturée : le registre refusera les nouvelles saisies."
+
+#, python-brace-format
+msgid "{cause} — {reason}"
+msgstr "{cause} — {reason}"
+
+msgid "Contest"
+msgstr "Contester"
+
+msgid "Grounds for the contest"
+msgstr "Motifs de la contestation"
+
+msgid ""
+"Required. A dispute is opened with the emitter; the milestone itself is not "
+"changed."
+msgstr ""
+"Obligatoire. Une contestation est ouverte avec l'émetteur ; le jalon lui-"
+"même n'est pas modifié."
+
+#, python-brace-format
+msgid "Contest — {label}"
+msgstr "Contester — {label}"
+
+#, python-brace-format
+msgid "Contest “{label}” declared at {time}"
+msgstr "Contester « {label} » déclaré à {time}"
+
+msgid "contest waiting to be sent"
+msgstr "contestation en attente d'envoi"
+
+#, python-brace-format
+msgid "Contest of “{label}” saved on this device."
+msgstr "Contestation de « {label} » enregistrée sur cet appareil."
+
+msgid "Send the contest"
+msgstr "Envoyer la contestation"
+
+msgid "contest sent"
+msgstr "contestation envoyée"
+
+msgid "Countersign"
+msgstr "Contresigner"
+
+msgid "Confirm the countersignature"
+msgstr "Confirmer la contresignature"
+
+#, python-brace-format
+msgid "Countersignature — {label}"
+msgstr "Contresignature — {label}"
+
+#, python-brace-format
+msgid "Countersign “{label}” declared at {time}?"
+msgstr "Contresigner « {label} » déclaré à {time} ?"
+
+#, python-brace-format
+msgid "Countersignature of “{label}” saved on this device."
+msgstr "Contresignature de « {label} » enregistrée sur cet appareil."
+
+msgid "Nothing awaits your countersignature."
+msgstr "Rien n'attend votre contresignature."
+
+msgid "countersignature waiting to be sent"
+msgstr "contresignature en attente d'envoi"
+
+msgid "countersignature sent"
+msgstr "contresignature envoyée"
+
+#, python-brace-format
+msgid "saved data of {time}"
+msgstr "données enregistrées du {time}"
+
+#, python-brace-format
+msgid "Declared {time}"
+msgstr "Déclaré le {time}"
+
+#, python-brace-format
+msgid "saved on the device {time}"
+msgstr "enregistré sur l'appareil le {time}"
+
+#, python-brace-format
+msgid ""
+"Time of this device ({offset}). It follows the clock until you change it."
+msgstr ""
+"Heure de cet appareil ({offset}). Elle suit l'horloge tant que vous ne la "
+"modifiez pas."
+
+msgid "Dismiss"
+msgstr "Écarter"
+
+#, python-brace-format
+msgid "Due {time}"
+msgstr "Échéance {time}"
+
+#, python-brace-format
+msgid "Due: {timing}"
+msgstr "Échéance : {timing}"
+
+#, python-brace-format
+msgid "Ends: {what} (started {time})"
+msgstr "Clôt : {what} (commencée {time})"
+
+msgid "The end cannot precede the start of the interruption."
+msgstr "La fin ne peut pas précéder le début de l'interruption."
+
+msgid "Choose a cause from the list."
+msgstr "Choisissez une cause dans la liste."
+
+msgid "State the grounds for the contest."
+msgstr "Énoncez les motifs de la contestation."
+
+msgid "The declared time cannot be in the future."
+msgstr "L'heure déclarée ne peut pas être dans le futur."
+
+#, python-brace-format
+msgid "“{field}” must be a number."
+msgstr "« {field} » doit être un nombre."
+
+msgid "Enter at least one value."
+msgstr "Saisissez au moins une valeur."
+
+msgid "Choose the interruption that ends."
+msgstr "Choisissez l'interruption qui prend fin."
+
+msgid "The field app could not start on this device."
+msgstr "L'appli terrain n'a pas pu démarrer sur cet appareil."
+
+msgid "This entry could not be saved on this device."
+msgstr "Cette saisie n'a pas pu être enregistrée sur cet appareil."
+
+msgid ""
+"This entry could not be saved on this device: its storage may be full. "
+"Remove the photo and try again."
+msgstr ""
+"Cette saisie n'a pas pu être enregistrée sur cet appareil : son stockage est"
+" peut-être plein. Retirez la photo et réessayez."
+
+msgid "Enter a valid date and time."
+msgstr "Saisissez une date et une heure valides."
+
+msgid ""
+"Guarded by a hold point: the registry refuses this milestone while its "
+"prerequisites are missing."
+msgstr ""
+"Gardé par un point d'arrêt : le registre refuse ce jalon tant que ses "
+"préalables manquent."
+
+msgid "Countersignature"
+msgstr "Contresignature"
+
+msgid "Measurement value"
+msgstr "Valeur de mesure"
+
+msgid "Pumping log reading"
+msgstr "Relevé du journal de pompage"
+
+msgid "Task completed"
+msgstr "Tâche faite"
+
+msgid "Task signature"
+msgstr "Signature de tâche"
+
+#, python-brace-format
+msgid "Last synchronisation: {time}"
+msgstr "Dernière synchronisation : {time}"
+
+msgid "on this device, not sent yet"
+msgstr "sur cet appareil, pas encore envoyé"
+
+#, python-brace-format
+msgid "Milestone of {time}"
+msgstr "Jalon du {time}"
+
+msgid "Your roles on this call record no milestone in the field."
+msgstr "Vos rôles sur cette escale n'enregistrent aucun jalon sur le terrain."
+
+msgid "Offline"
+msgstr "Hors ligne"
+
+msgid "Online"
+msgstr "En ligne"
+
+msgid "Synchronising…"
+msgstr "Synchronisation…"
+
+msgid "Server unreachable"
+msgstr "Serveur injoignable"
+
+msgid "Not synchronised yet on this device"
+msgstr "Pas encore synchronisé sur cet appareil"
+
+msgid ""
+"The data of this call is not saved on this device yet: it is being loaded."
+msgstr ""
+"Les données de cette escale ne sont pas encore enregistrées sur cet appareil"
+" : chargement en cours."
+
+msgid ""
+"The data of this call is not saved on this device: connect to the network "
+"once to load it."
+msgstr ""
+"Les données de cette escale ne sont pas enregistrées sur cet appareil : "
+"connectez-vous une fois au réseau pour les charger."
+
+msgid "No due time yet"
+msgstr "Pas encore d'échéance"
+
+msgid "no open interruption"
+msgstr "aucune interruption en cours"
+
+msgid ""
+"Offline: entries are kept on this device and will be sent when the "
+"connection returns."
+msgstr ""
+"Hors ligne : les saisies sont conservées sur cet appareil et seront envoyées"
+" au retour de la connexion."
+
+msgid "in progress"
+msgstr "en cours"
+
+msgid ""
+"Entries of other calls are waiting on this device. Open their field app to "
+"send them:"
+msgstr ""
+"Des saisies d'autres escales attendent sur cet appareil. Ouvrez leur appli "
+"terrain pour les envoyer :"
+
+#, python-brace-format
+msgid "waiting: {n}"
+msgstr "en attente : {n}"
+
+#, python-brace-format
+msgid ""
+"Entries recorded on this device by another person: {n}. They stay here until"
+" that person signs in again."
+msgstr ""
+"Saisies enregistrées sur cet appareil par une autre personne : {n}. Elles "
+"restent ici jusqu'à ce que cette personne se reconnecte."
+
+msgid "This image cannot be read on this device."
+msgstr "Cette image ne peut pas être lue sur cet appareil."
+
+msgid "Preparing the photo…"
+msgstr "Préparation de la photo…"
+
+#, python-brace-format
+msgid "Photo ready: {w} × {h} px, {kb} kB."
+msgstr "Photo prête : {w} × {h} px, {kb} ko."
+
+#, python-brace-format
+msgid "{w} × {h} px, {kb} kB"
+msgstr "{w} × {h} px, {kb} ko"
+
+#, python-brace-format
+msgid "Photo — {label} — {time}"
+msgstr "Photo — {label} — {time}"
+
+msgid "Wait until the photo is ready."
+msgstr "Attendez que la photo soit prête."
+
+msgid ""
+"Your session has expired or is no longer valid: sign in again. Your entries "
+"are kept on this device."
+msgstr ""
+"Votre session a expiré ou n'est plus valide : reconnectez-vous. Vos saisies "
+"sont conservées sur cet appareil."
+
+msgid ""
+"This call is no longer available to you. Your entries are kept on this "
+"device."
+msgstr ""
+"Cette escale ne vous est plus accessible. Vos saisies sont conservées sur "
+"cet appareil."
+
+msgid ""
+"This page was opened under another session. Reload it before recording "
+"anything."
+msgstr ""
+"Cette page a été ouverte sous une autre session. Rechargez-la avant toute "
+"saisie."
+
+#, python-brace-format
+msgid "To send: {n}"
+msgstr "À envoyer : {n}"
+
+msgid "No entry waiting: everything recorded on this device has been sent."
+msgstr ""
+"Aucune saisie en attente : tout ce qui a été enregistré sur cet appareil a "
+"été envoyé."
+
+msgid "Nothing to send"
+msgstr "Rien à envoyer"
+
+msgid "Record the end"
+msgstr "Enregistrer la fin"
+
+#, python-brace-format
+msgid "Recorded by {who}"
+msgstr "Enregistré par {who}"
+
+#, python-brace-format
+msgid "Refused: {n}"
+msgstr "Refusées : {n}"
+
+#, python-brace-format
+msgid "Refused by the registry: {message}"
+msgstr "Refusé par le registre : {message}"
+
+msgid "Reload the page"
+msgstr "Recharger la page"
+
+msgid "competing entry — dispute opened"
+msgstr "saisie concurrente — contestation ouverte"
+
+msgid ""
+"Nothing was overwritten: the registry keeps both entries and opened a "
+"dispute for the parties to settle."
+msgstr ""
+"Rien n'a été écrasé : le registre conserve les deux saisies et a ouvert une "
+"contestation que les parties régleront."
+
+msgid "recorded"
+msgstr "enregistré"
+
+msgid "No synchronisation result yet."
+msgstr "Aucun résultat de synchronisation pour l'instant."
+
+msgid "Send again"
+msgstr "Renvoyer"
+
+#, python-brace-format
+msgid "“{label}” saved on this device at {time}; sending…"
+msgstr "« {label} » enregistré sur cet appareil à {time} ; envoi…"
+
+#, python-brace-format
+msgid ""
+"“{label}” saved on this device at {time}. It will be sent when the "
+"connection returns."
+msgstr ""
+"« {label} » enregistré sur cet appareil à {time}. Il sera envoyé au retour "
+"de la connexion."
+
+msgid "Available once the data of this call has been loaded."
+msgstr "Disponible une fois les données de cette escale chargées."
+
+msgid "Sign in again"
+msgstr "Se reconnecter"
+
+msgid "Signature area: draw with your finger"
+msgstr "Zone de signature : tracez avec le doigt"
+
+msgid "Clear the signature"
+msgstr "Effacer la signature"
+
+msgid ""
+"Draw in the box with a finger or a stylus. It is filed as a field photo "
+"along with your answer."
+msgstr ""
+"Tracez dans le cadre avec le doigt ou un stylet. Elle est classée comme "
+"photo de terrain avec votre réponse."
+
+msgid "Hand-drawn signature"
+msgstr "Signature manuscrite"
+
+msgid "Hand-drawn signature (optional)"
+msgstr "Signature manuscrite (facultative)"
+
+#, python-brace-format
+msgid "Signature — {action} — {time}"
+msgstr "Signature — {action} — {time}"
+
+msgid "another person"
+msgstr "une autre personne"
+
+msgid "waiting to be sent"
+msgstr "en attente d'envoi"
+
+msgid "refused"
+msgstr "refusé"
+
+msgid "sending…"
+msgstr "envoi…"
+
+#, python-brace-format
+msgid "Started {time}"
+msgstr "Commencée {time}"
+
+msgid ""
+"The storage of this device is full: the data of this call could not be saved"
+" for offline use."
+msgstr ""
+"Le stockage de cet appareil est plein : les données de cette escale n'ont "
+"pas pu être enregistrées pour un usage hors ligne."
+
+msgid ""
+"This browser cannot keep entries on the device: keep this page open until "
+"they are sent."
+msgstr ""
+"Ce navigateur ne peut pas conserver les saisies sur l'appareil : gardez "
+"cette page ouverte jusqu'à leur envoi."
+
+msgid ""
+"This browser cannot keep the field app for offline use: open it while "
+"connected."
+msgstr ""
+"Ce navigateur ne peut pas conserver l'appli terrain pour un usage hors ligne"
+" : ouvrez-la en étant connecté."
+
+#, python-brace-format
+msgid "Competing entries (dispute opened): {n}."
+msgstr "Saisies concurrentes (contestation ouverte) : {n}."
+
+#, python-brace-format
+msgid "Deferred entries: {n}."
+msgstr "Saisies différées : {n}."
+
+#, python-brace-format
+msgid "Synchronised at {time}."
+msgstr "Synchronisé à {time}."
+
+msgid ""
+"Synchronisation impossible: your session has expired. Entries are kept on "
+"this device."
+msgstr ""
+"Synchronisation impossible : votre session a expiré. Les saisies sont "
+"conservées sur cet appareil."
+
+msgid ""
+"No connection to the server: entries are kept on this device and will be "
+"sent later."
+msgstr ""
+"Pas de connexion au serveur : les saisies sont conservées sur cet appareil "
+"et seront envoyées plus tard."
+
+msgid ""
+"Synchronisation impossible: this call is no longer available to you. Entries"
+" are kept on this device."
+msgstr ""
+"Synchronisation impossible : cette escale ne vous est plus accessible. Les "
+"saisies sont conservées sur cet appareil."
+
+#, python-brace-format
+msgid ""
+"The server could not process the synchronisation (error {status}). Entries "
+"are kept and will be sent again."
+msgstr ""
+"Le serveur n'a pas pu traiter la synchronisation (erreur {status}). Les "
+"saisies sont conservées et seront renvoyées."
+
+#, python-brace-format
+msgid "Up to date at {time}: nothing to send."
+msgstr "À jour à {time} : rien à envoyer."
+
+#, python-brace-format
+msgid "Recorded: {n}."
+msgstr "Enregistrées : {n}."
+
+#, python-brace-format
+msgid "Refused: {n}, see the entries on this device."
+msgstr "Refusées : {n}, voir les saisies sur cet appareil."
+
+#, python-brace-format
+msgid "synchronised {time}"
+msgstr "synchronisé {time}"
+
+msgid "No pending task for your roles."
+msgstr "Aucune tâche en attente pour vos rôles."
+
+msgid "Too large to be accepted by the server."
+msgstr "Trop volumineux pour être accepté par le serveur."
+
+#, python-brace-format
+msgid "Times are those of this device ({device}); the port is on {port}."
+msgstr ""
+"Les heures sont celles de cet appareil ({device}) ; le port est en {port}."
+
+#, python-brace-format
+msgid "Your roles on this call: {roles}"
+msgstr "Vos rôles sur cette escale : {roles}"
+
+msgid "Standard forms"
+msgstr "Formulaires standards"
+
+msgid ""
+"One structure for every form: header of the call, body of the standard, "
+"signatures by role, sealed footer. What the registry knows is pre-filled; "
+"the rest is completed and signed on paper, then filed back as a document."
+msgstr ""
+"Une structure unique pour tous les formulaires : en-tête de l'escale, corps "
+"selon le standard, signatures par rôle, pied scellé. Ce que le registre "
+"connaît est prérempli ; le reste est complété et signé sur le papier, puis "
+"déposé comme document."
+
+msgid "Forms you may generate"
+msgstr "Formulaires que vous pouvez produire"
+
+#| msgid "Your roles on this call: {roles}"
+msgid "Your roles on this call:"
+msgstr "Vos rôles sur cette escale :"
+
+msgid "Form"
+msgstr "Formulaire"
+
+#| msgid "Reference"
+msgid "Reference standard"
+msgstr "Standard de référence"
+
+#| msgid "Signed"
+msgid "Signed by"
+msgstr "Signé par"
+
+msgid "Filed"
+msgstr "Déposé"
+
+#| msgid "Preview of the photo"
+msgid "Preview / print"
+msgstr "Aperçu / imprimer"
+
+msgid ""
+"Generates the form from the registry and files it in the documents of the "
+"call, fingerprinted, under your role."
+msgstr ""
+"Génère le formulaire depuis le registre et le dépose dans les documents de "
+"l'escale, avec son empreinte, sous votre rôle."
+
+#| msgid "Close the call"
+msgid "File in the call"
+msgstr "Déposer dans l'escale"
+
+#| msgid "This action is not open to your role on this call."
+msgid "None of the standard forms is generated by your roles on this call."
+msgstr ""
+"Aucun formulaire standard n'est produit par vos rôles sur cette escale."
+
+msgid ""
+"A filed form is a generated document: it carries its SHA-256 fingerprint, "
+"its version and the electronic signatures of the roles named on it. The "
+"completed and signed paper is deposited as a new version of the same "
+"document."
+msgstr ""
+"Un formulaire déposé est un document généré : il porte son empreinte "
+"SHA-256, sa version et les signatures électroniques des rôles qui y "
+"figurent. Le papier complété et signé est déposé comme nouvelle version du "
+"même document."
+
+msgid "Other forms of the call (generated by other roles)"
+msgstr "Autres formulaires de l'escale (produits par d'autres rôles)"
+
+#| msgid "short name"
+msgid "Your name"
+msgstr "Votre nom"
+
+#, python-format
+msgid ""
+"This access was issued to %(org)s as %(role)s on call %(ref)s. Every entry, "
+"signature and countersignature on the platform is nominative: enter your "
+"full name before you start. It will be shown next to what you record."
+msgstr ""
+"Cet accès a été émis pour %(org)s en tant que %(role)s sur l'escale %(ref)s."
+" Toute saisie, signature et contresignature sur la plateforme est nominative"
+" : saisissez votre nom complet avant de commencer. Il sera affiché à côté de"
+" ce que vous enregistrez."
+
+#| msgid "full name"
+msgid "Full name"
+msgstr "Nom complet"
+
+#| msgid "Open my call"
+msgid "Open the call"
+msgstr "Ouvrir l'escale"
+
+msgid "Master's access"
+msgstr "Accès capitaine"
+
+#| msgid "Access code"
+msgid "Access by code"
+msgstr "Accès par code"
+
+msgid ""
+"Master, terminal, surveyor, owner, provider or marine service without an "
+"account: enter the eight-character code you received. The access is limited "
+"to one call — until departure for the master, until closure for the other "
+"parties."
+msgstr ""
+"Capitaine, terminal, inspecteur, armateur, prestataire ou service nautique "
+"sans compte : saisissez le code de huit caractères que vous avez reçu. "
+"L'accès est limité à une escale — jusqu'à l'appareillage pour le capitaine, "
+"jusqu'à la clôture pour les autres parties."
+
+msgid "Access code"
+msgstr "Code d'accès"
+
+msgid "Open my call"
+msgstr "Ouvrir mon escale"
+
+msgid ""
+"Always derived from an act or a deadline of a call — never typed by hand."
+msgstr ""
+"Toujours issues d'un acte ou d'une échéance d'une escale — jamais saisies à "
+"la main."
+
+msgid "Mark all as read"
+msgstr "Tout marquer comme lu"
+
+msgid "sent by e-mail"
+msgstr "envoyée par e-mail"
+
+msgid "No notification."
+msgstr "Aucune notification."
+
+msgid "Statistics of the port"
+msgstr "Statistiques du port"
+
+#, python-format
+msgid ""
+"%(p)s. Every figure is recomputed from the registry when this page opens; "
+"nothing is stored or adjusted. Months are those of the ETA for calls and of "
+"the event for decisions, disputes and signatures. Draft calls are not "
+"counted."
+msgstr ""
+"%(p)s. Chaque chiffre est recalculé à partir du registre à l'ouverture de "
+"cette page ; rien n'est stocké ni ajusté. Les mois sont ceux de l'ETA pour "
+"les escales et de l'événement pour les décisions, contestations et "
+"signatures. Les escales en brouillon ne sont pas comptées."
+
+msgid "Port"
+msgstr "Port"
+
+msgid "From"
+msgstr "Du"
+
+msgid "to"
+msgstr "au"
+
+msgid "CSV"
+msgstr "CSV"
+
+msgid "calls over the period"
+msgstr "escales sur la période"
+
+msgid "completed (departed, closed)"
+msgstr "terminées (appareillées, clôturées)"
+
+msgid "cancelled or rejected"
+msgstr "annulées ou rejetées"
+
+msgid "tonnes declared (MT only)"
+msgstr "tonnes déclarées (MT seulement)"
+
+msgid "h waiting at anchorage, average"
+msgstr "h d'attente en rade, moyenne"
+
+msgid "median"
+msgstr "médiane"
+
+msgid "h net transfer time, average"
+msgstr "h de transfert net, moyenne"
+
+msgid "h in port (arrival to departure), average"
+msgstr "h dans le port (arrivée à appareillage), moyenne"
+
+msgid "h to decide a request, average"
+msgstr "h pour décider une demande, moyenne"
+
+msgid "Calls and quantities per month"
+msgstr "Escales et quantités par mois"
+
+msgid "Calls (ETA in the month)"
+msgstr "Escales (ETA dans le mois)"
+
+msgid "Quantity declared (tonnes)"
+msgstr "Quantité déclarée (tonnes)"
+
+msgid "Average waiting at anchorage (h)"
+msgstr "Attente moyenne en rade (h)"
+
+msgid "Average net transfer time (h)"
+msgstr "Durée nette moyenne de transfert (h)"
+
+msgid "Monthly table"
+msgstr "Tableau mensuel"
+
+msgid "Month"
+msgstr "Mois"
+
+msgid "Tonnes"
+msgstr "Tonnes"
+
+msgid "Waiting (h)"
+msgstr "Attente (h)"
+
+msgid "Net transfer (h)"
+msgstr "Transfert net (h)"
+
+msgid "In port (h)"
+msgstr "Dans le port (h)"
+
+msgid "What the port handled"
+msgstr "Ce que le port a traité"
+
+msgid "By operation model"
+msgstr "Par modèle d'opération"
+
+msgid "Operation"
+msgstr "Opération"
+
+msgid "By area requested"
+msgstr "Par zone demandée"
+
+msgid "Area"
+msgstr "Zone"
+
+msgid "By product (tonnes declared)"
+msgstr "Par produit (tonnes déclarées)"
+
+msgid "No quantity declared."
+msgstr "Aucune quantité déclarée."
+
+msgid "Berths and areas"
+msgstr "Postes et zones"
+
+msgid "Berth"
+msgstr "Poste"
+
+msgid "Hours alongside"
+msgstr "Heures à quai"
+
+msgid "Occupancy"
+msgstr "Occupation"
+
+msgid "No berth configured."
+msgstr "Aucun poste configuré."
+
+msgid ""
+"Occupancy: hours between actual berthing and departure over the hours of the"
+" period, for quays and jetties only."
+msgstr ""
+"Occupation : heures entre l'accostage réel et l'appareillage rapportées aux "
+"heures de la période, pour les quais et appontements seulement."
+
+msgid "Interruptions and dead time"
+msgstr "Interruptions et temps morts"
+
+msgid "interruptions recorded"
+msgstr "interruptions enregistrées"
+
+msgid "hours of interruption"
+msgstr "heures d'interruption"
+
+msgid "of dead time with a cause established contradictorily"
+msgstr "des temps morts à cause établie contradictoirement"
+
+msgid "Attributable to"
+msgstr "Imputable à"
+
+msgid "Count"
+msgstr "Nombre"
+
+msgid "Hours"
+msgstr "Heures"
+
+msgid "No interruption over the period."
+msgstr "Aucune interruption sur la période."
+
+msgid ""
+"Attribution is that of the cause chosen when the interruption was declared, "
+"as the port configured it; a contested interruption keeps its declared cause"
+" until the dispute is closed."
+msgstr ""
+"L'imputation est celle de la cause choisie à la déclaration de "
+"l'interruption, telle que le port l'a configurée ; une interruption "
+"contestée garde sa cause déclarée jusqu'à la clôture de la contestation."
+
+msgid "Decisions of the authorities"
+msgstr "Décisions des autorités"
+
+msgid "Request type"
+msgstr "Type de demande"
+
+msgid "Decided by"
+msgstr "Décidé par"
+
+msgid "Decisions"
+msgstr "Décisions"
+
+msgid "With conditions"
+msgstr "Sous conditions"
+
+msgid "Average (h)"
+msgstr "Moyenne (h)"
+
+msgid "Median (h)"
+msgstr "Médiane (h)"
+
+msgid "Longest (h)"
+msgstr "Plus long (h)"
+
+msgid "No decision over the period."
+msgstr "Aucune décision sur la période."
+
+msgid ""
+"Time from submission to decision, requests decided in the period. The figure"
+" describes the flow of requests, not a person: a long delay often means a "
+"file that waited for documents."
+msgstr ""
+"Délai entre la soumission et la décision, demandes décidées dans la période."
+" Le chiffre décrit le flux des demandes, pas une personne : un long délai "
+"signifie souvent un dossier qui a attendu des pièces."
+
+msgid "Disputes and countersignatures"
+msgstr "Contestations et contresignatures"
+
+msgid "disputes opened"
+msgstr "contestations ouvertes"
+
+msgid "still open"
+msgstr "encore ouvertes"
+
+msgid "closed in agreement"
+msgstr "closes avec accord"
+
+msgid "closed without agreement"
+msgstr "closes sans accord"
+
+msgid "opened automatically (conflicting entries)"
+msgstr "ouvertes automatiquement (saisies concurrentes)"
+
+msgid "days to close, average"
+msgstr "jours pour clore, moyenne"
+
+msgid "countersignature answers"
+msgstr "réponses de contresignature"
+
+msgid "tacit (no answer in time)"
+msgstr "tacites (sans réponse dans le délai)"
+
+msgid "Disputes by subject:"
+msgstr "Contestations par objet :"
+
+msgid "Entries, documents and alerts"
+msgstr "Saisies, documents et alertes"
+
+msgid "milestones recorded"
+msgstr "jalons enregistrés"
+
+msgid "entered late (offline, paper)"
+msgstr "saisis en différé (hors ligne, papier)"
+
+msgid "documents filed"
+msgstr "documents déposés"
+
+msgid "alerts emitted"
+msgstr "alertes émises"
+
+msgid "Milestones by source"
+msgstr "Jalons par source"
+
+msgid "Source"
+msgstr "Source"
+
+msgid "No milestone over the period."
+msgstr "Aucun jalon sur la période."
+
+msgid "Alerts by kind"
+msgstr "Alertes par nature"
+
+msgid "Kind"
+msgstr "Nature"
+
+msgid "No alert over the period."
+msgstr "Aucune alerte sur la période."
+
+msgid "Tasks done on time, per role"
+msgstr "Tâches faites dans les délais, par rôle"
+
+msgid "Tasks done"
+msgstr "Tâches faites"
+
+msgid "Blocking tasks"
+msgstr "Tâches bloquantes"
+
+msgid "Blocking on time"
+msgstr "Bloquantes dans les délais"
+
+msgid "No task completed over the period."
+msgstr "Aucune tâche achevée sur la période."
+
+msgid ""
+"Roles, never people: these figures judge the templates and the deadlines the"
+" port configured (EF-10.2). The calibration page shows the alerts they "
+"generate."
+msgstr ""
+"Des rôles, jamais des personnes : ces chiffres jugent les modèles et les "
+"délais que le port a configurés (EF-10.2). La page Pilotage montre les "
+"alertes qu'ils génèrent."
+
+msgid "What the platform will refuse — and why"
+msgstr "Ce que la plateforme refusera — et pourquoi"
+
+msgid ""
+"Hold points of the port: each transition opens only once its blocking tasks "
+"are done."
+msgstr ""
+"Points d'arrêt du port : chaque transition ne s'ouvre qu'une fois ses tâches"
+" bloquantes faites."
+
+msgid "Held"
+msgstr "Bloqué"
+
+msgid "Assisted review"
+msgstr "Revue assistée"
+
+msgid "Review the call with the assistant"
+msgstr "Revoir l'escale avec l'assistant"
+
+msgid ""
+"The assistant points out what deserves a check, from what your role can see."
+" It never corrects the registry: you decide whether a finding becomes an "
+"alert."
+msgstr ""
+"L'assistant signale ce qui mérite une vérification, à partir de ce que votre"
+" rôle peut voir. Il ne corrige jamais le registre : vous décidez si un "
+"constat devient une alerte."
+
+msgid "rule check"
+msgstr "contrôle de règle"
+
+msgid "to check first"
+msgstr "à vérifier en priorité"
+
+msgid "to check"
+msgstr "à vérifier"
+
+msgid "for information"
+msgstr "pour information"
+
+msgid "alert raised"
+msgstr "alerte signalée"
+
+msgid ""
+"Raise this finding as an alert to the agency and the harbour master, under "
+"your name?"
+msgstr ""
+"Signaler ce constat comme alerte à l'agence et à la capitainerie, sous votre"
+" nom ?"
+
+msgid "Raise as an alert"
+msgstr "Signaler comme alerte"
+
+msgid "The assistant found nothing to point out."
+msgstr "L'assistant n'a rien relevé."
+
+#, python-format
+msgid "Review of %(at)s by %(model)s — a proposal, not a record of the call."
+msgstr ""
+"Revue du %(at)s par %(model)s — une proposition, pas un enregistrement de "
+"l'escale."
+
+msgid "Your open tasks on this call"
+msgstr "Vos tâches ouvertes sur cette escale"
+
+msgid "All your tasks"
+msgstr "Toutes vos tâches"
+
+msgid "Nothing to do for your roles right now."
+msgstr "Rien à faire pour vos rôles pour l'instant."
+
+msgid "Notice of readiness"
+msgstr "Avis de disponibilité (NOR)"
+
+#, python-format
+msgid "Tendered on %(t)s by %(by)s."
+msgstr "Remis le %(t)s par %(by)s."
+
+msgid "The NOR is visible to every party of the call."
+msgstr "La NOR est visible par toutes les parties de l'escale."
+
+#| msgid "Sections of the call"
+msgid "Stages of the call"
+msgstr "Étapes de l'escale"
+
+msgid ""
+"Roads, STS area, buoy, quay: one call may operate in several areas, in "
+"sequence."
+msgstr ""
+"Rade, zone STS, bouée, quai : une même escale peut opérer dans plusieurs "
+"zones, successivement."
+
+#| msgid "Assign a berth"
+msgid "Area / berth"
+msgstr "Zone / poste"
+
+msgid "Window"
+msgstr "Fenêtre"
+
+msgid "Left"
+msgstr "Quittée"
+
+#| msgid "Current calls"
+msgid "current"
+msgstr "en cours"
+
+#| msgid "Planned"
+msgid "planned"
+msgstr "planifiée"
+
+#| msgid "Mark done"
+msgid "done"
+msgstr "terminée"
+
+#| msgid "Cancel the call"
+msgid "Cancel the stage"
+msgstr "Annuler l'étape"
+
+msgid "Plan the next stage"
+msgstr "Planifier l'étape suivante"
+
+msgid ""
+"The tasks of the new operations are created at once, for every party. "
+"Leaving the current stage is recorded by the marine services (« Shifting — "
+"leaving the berth or area ») and needs a movement authorization in force; "
+"the berthing at the next stage then uses the usual milestones."
+msgstr ""
+"Les tâches des nouvelles opérations sont créées immédiatement, pour chaque "
+"partie. Le départ de l'étape en cours est enregistré par les services "
+"nautiques (« Déhalage — départ du poste ou de la zone ») et exige une "
+"autorisation de mouvement en vigueur ; l'accostage à l'étape suivante "
+"utilise ensuite les jalons habituels."
+
+msgid "Berth / area (optional, assigned by the port)"
+msgstr "Poste / zone (facultatif, attribué par le port)"
+
+msgid "Operations at this stage"
+msgstr "Opérations à cette étape"
+
+#| msgid "Planned"
+msgid "Planned from"
+msgstr "Prévue du"
+
+#| msgid "Planned"
+msgid "Planned to"
+msgstr "Prévue au"
+
+msgid "e.g. lightering offshore, then discharge of the remainder at the quay"
+msgstr "ex. allègement au large, puis déchargement du reliquat à quai"
+
+#| msgid "Reload the page"
+msgid "Plan the stage"
+msgstr "Planifier l'étape"
+
+msgid "Agency"
+msgstr "Agence"
+
+msgid ""
+"Declaring notifies every party and requests the green light. It requires the"
+" vessel dataset (M0:02), the certificates from the master (M0:03) and the "
+"sanctions screening (M0:05)."
+msgstr ""
+"La déclaration notifie toutes les parties et demande le feu vert. Elle exige"
+" les données du navire (M0:02), les certificats du capitaine (M0:03) et le "
+"contrôle des sanctions (M0:05)."
+
+msgid "Declare the call and notify every party?"
+msgstr "Déclarer l'escale et notifier toutes les parties ?"
+
+msgid "Revise the times"
+msgstr "Réviser les heures"
+
+msgid "Revise and recompute deadlines"
+msgstr "Réviser et recalculer les échéances"
+
+msgid "Agency remarks (optional)"
+msgstr "Remarques de l'agence (facultatives)"
+
+msgid "pre-filled by the assistant — review before generating"
+msgstr "pré-rempli par l'assistant — à relire avant de générer"
+
+msgid ""
+"The facts come from the registry; your remarks are added under your name, "
+"and the statement is then signed by the master and the terminal."
+msgstr ""
+"Les faits proviennent du registre ; vos remarques sont ajoutées sous votre "
+"nom, puis le rapport est signé par le capitaine et le terminal."
+
+msgid "Generate the statement of facts"
+msgstr "Générer le rapport des faits"
+
+msgid "Draft the remarks with the assistant"
+msgstr "Préparer les remarques avec l'assistant"
+
+msgid "Ask the harbour master to close the call?"
+msgstr "Demander à la capitainerie de clôturer l'escale ?"
+
+msgid "Request closure"
+msgstr "Demander la clôture"
+
+msgid "Cancel the call"
+msgstr "Annuler l'escale"
+
+msgid "Cancel this call? This cannot be undone."
+msgstr "Annuler cette escale ? C'est irréversible."
+
+msgid "Link a partner call (STS, double banking)"
+msgstr "Relier une escale partenaire (STS, accostage à couple)"
+
+msgid "Reference of the partner call"
+msgstr "Référence de l'escale partenaire"
+
+msgid ""
+"Your agency links its own calls; the harbour master links the calls of two "
+"different agencies."
+msgstr ""
+"Votre agence relie ses propres escales ; la capitainerie relie les escales "
+"de deux agences différentes."
+
+msgid "Link"
+msgstr "Relier"
+
+msgid "This vessel outside (double banking)"
+msgstr "Ce navire à l'extérieur (accostage à couple)"
+
+msgid "This vessel inside (double banking)"
+msgstr "Ce navire à l'intérieur (accostage à couple)"
+
+msgid ""
+"Close the call? Refused while a dispute is open or the statement of facts is"
+" not signed."
+msgstr ""
+"Clôturer l'escale ? Refusé tant qu'une contestation est ouverte ou que le "
+"rapport des faits n'est pas signé."
+
+msgid "Archive"
+msgstr "Archiver"
+
+msgid "Confidential security filing"
+msgstr "Dépôt confidentiel de sûreté"
+
+msgid ""
+"Armed guards, escorts, security incidents: filed straight into the security "
+"space, encrypted. Nothing about it will appear in this call, its journal or "
+"any export."
+msgstr ""
+"Gardes armés, escortes, incidents de sûreté : déposés directement dans "
+"l'espace sûreté, chiffrés. Rien n'en apparaîtra dans cette escale, son "
+"journal ni aucun export."
+
+msgid "File a security request"
+msgstr "Déposer une demande de sûreté"
+
+msgid "File this request in the security space?"
+msgstr "Déposer cette demande dans l'espace sûreté ?"
+
+msgid "Number of guards"
+msgstr "Nombre de gardes"
+
+msgid "Company"
+msgstr "Société"
+
+msgid "Embarkation"
+msgstr "Embarquement"
+
+msgid "Disembarkation"
+msgstr "Débarquement"
+
+msgid "Escort (route, duration)"
+msgstr "Escorte (route, durée)"
+
+msgid "Details"
+msgstr "Détails"
+
+msgid "File confidentially"
+msgstr "Déposer confidentiellement"
+
+msgid ""
+"A dispute never stops the operation and the platform never decides: the "
+"parties answer and close it, with or without agreement. An open dispute "
+"prevents the closure of the call."
+msgstr ""
+"Une contestation n'arrête jamais l'opération et la plateforme ne tranche "
+"jamais : les parties répondent et la closent, avec ou sans accord. Une "
+"contestation ouverte empêche la clôture de l'escale."
+
+msgid "Opened by"
+msgstr "Ouverte par"
+
+msgid "counterpart"
+msgstr "contrepartie"
+
+msgid "opened by the platform (competing entries)"
+msgstr "ouverte par la plateforme (saisies concurrentes)"
+
+msgid ""
+"The statements are bilateral: they are visible to the two parties and to the"
+" harbour master."
+msgstr ""
+"Les exposés sont bilatéraux : ils sont visibles des deux parties et de la "
+"capitainerie."
+
+msgid "Respond"
+msgstr "Répondre"
+
+msgid "Send the response"
+msgstr "Envoyer la réponse"
+
+msgid "Close"
+msgstr "Clore"
+
+msgid "with agreement"
+msgstr "avec accord"
+
+msgid "without agreement"
+msgstr "sans accord"
+
+msgid ""
+"The harbour master records that the dispute ends without agreement: an "
+"agreement belongs to the parties."
+msgstr ""
+"La capitainerie enregistre que la contestation prend fin sans accord : "
+"l'accord appartient aux parties."
+
+msgid "How it ends"
+msgstr "Issue"
+
+msgid "Close the dispute"
+msgstr "Clore la contestation"
+
+msgid "No dispute."
+msgstr "Aucune contestation."
+
+msgid "Open a dispute"
+msgstr "Ouvrir une contestation"
+
+msgid ""
+"To contest a milestone, use “Contest” on the timeline: the dispute is then "
+"tied to it."
+msgstr ""
+"Pour contester un jalon, utilisez « Contester » sur la chronologie : la "
+"contestation lui est alors rattachée."
+
+msgid "Concerns"
+msgstr "Porte sur"
+
+msgid "Another subject (times, documents, services…)"
+msgstr "Un autre sujet (heures, documents, services…)"
+
+msgid ""
+"The quantities — the bill of lading stays locked until the dispute is closed"
+msgstr ""
+"Les quantités — le connaissement reste verrouillé jusqu'à la clôture de la "
+"contestation"
+
+msgid "Subject"
+msgstr "Objet"
+
+msgid "Counterpart"
+msgstr "Contrepartie"
+
+msgid "Open the dispute"
+msgstr "Ouvrir la contestation"
+
+msgid "Requests and authorizations"
+msgstr "Demandes et autorisations"
+
+msgid ""
+"The requesting role never decides. Every approval produces an authorization "
+"with an expiry and a public verification code."
+msgstr ""
+"Le rôle demandeur ne décide jamais. Chaque approbation produit une "
+"autorisation avec une date d'expiration et un code de vérification public."
+
+msgid "Requested by"
+msgstr "Demandée par"
+
+msgid "decides:"
+msgstr "décide :"
+
+msgid "carries out:"
+msgstr "exécute :"
+
+#, python-format
+msgid "Decision: <b>%(d)s</b>"
+msgstr "Décision : <b>%(d)s</b>"
+
+#, python-format
+msgid "Conditions: %(c)s"
+msgstr "Conditions : %(c)s"
+
+#, python-format
+msgid "Reason: %(reason)s"
+msgstr "Motif : %(reason)s"
+
+msgid ""
+"Reason restricted to the agency, the owner and the instructing service."
+msgstr "Motif réservé à l'agence, à l'armateur et au service instructeur."
+
+msgid "valid until"
+msgstr "valable jusqu'au"
+
+msgid "verification code"
+msgstr "code de vérification"
+
+msgid "second factor required"
+msgstr "second facteur requis"
+
+msgid "Record this decision? It binds the port."
+msgstr "Enregistrer cette décision ? Elle engage le port."
+
+msgid "Decision"
+msgstr "Décision"
+
+msgid "Approve"
+msgstr "Approuver"
+
+msgid "Approve with conditions"
+msgstr "Approuver sous conditions"
+
+msgid "Ask for more information"
+msgstr "Demander un complément d'information"
+
+msgid "Refuse"
+msgstr "Refuser"
+
+msgid "Berth or area assigned"
+msgstr "Poste ou zone attribué"
+
+msgid "Effective from"
+msgstr "En vigueur à partir du"
+
+msgid "Valid until"
+msgstr "Valable jusqu'au"
+
+#, python-format
+msgid "default: %(h)s h"
+msgstr "par défaut : %(h)s h"
+
+msgid "Conditions"
+msgstr "Conditions"
+
+msgid "Reason (mandatory for a refusal or a request for information)"
+msgstr "Motif (obligatoire pour un refus ou une demande de complément)"
+
+msgid "Record the decision"
+msgstr "Enregistrer la décision"
+
+msgid "Take under review"
+msgstr "Prendre en instruction"
+
+msgid "Confirm the service"
+msgstr "Confirmer la prestation"
+
+msgid "Scheduled for"
+msgstr "Programmée pour"
+
+msgid "Confirm the booking"
+msgstr "Confirmer la réservation"
+
+msgid "Mark as carried out"
+msgstr "Marquer comme exécutée"
+
+msgid "Name the provider"
+msgstr "Désigner le prestataire"
+
+msgid "Provider who carries out the service"
+msgstr "Prestataire qui réalise le service"
+
+msgid "Submit again"
+msgstr "Soumettre à nouveau"
+
+msgid "Cancel the request"
+msgstr "Annuler la demande"
+
+msgid "No request visible to your roles."
+msgstr "Aucune demande visible pour vos rôles."
+
+msgid "New request"
+msgstr "Nouvelle demande"
+
+msgid "Choose"
+msgstr "Choisir"
+
+msgid "Submit the request"
+msgstr "Déposer la demande"
+
+msgid ""
+"Each file is fingerprinted (SHA-256). A signed document is frozen: a change "
+"creates a new version, the old one stays readable."
+msgstr ""
+"Chaque fichier reçoit une empreinte (SHA-256). Un document signé est figé : "
+"une modification crée une nouvelle version, l'ancienne reste lisible."
+
+msgid "Issuer"
+msgstr "Émetteur"
+
+msgid "Signatures"
+msgstr "Signatures"
+
+msgid "required:"
+msgstr "requises :"
+
+msgid "Download"
+msgstr "Télécharger"
+
+msgid "Check the values read"
+msgstr "Vérifier les valeurs lues"
+
+msgid ""
+"The assistant proposes values; nothing is recorded until you validate them."
+msgstr ""
+"L'assistant propose des valeurs ; rien n'est enregistré tant que vous ne les"
+" avez pas validées."
+
+msgid "Read with the assistant"
+msgstr "Lire avec l'assistant"
+
+msgid "Clear"
+msgstr "Effacer"
+
+msgid "Sign the document"
+msgstr "Signer le document"
+
+msgid ""
+"Your signature is attached to this exact version (its SHA-256 fingerprint)."
+msgstr ""
+"Votre signature est attachée à cette version exacte (son empreinte SHA-256)."
+
+msgid "New version"
+msgstr "Nouvelle version"
+
+msgid "File"
+msgstr "Fichier"
+
+msgid "Publish the new version"
+msgstr "Publier la nouvelle version"
+
+msgid "No document visible to your roles."
+msgstr "Aucun document visible pour vos rôles."
+
+msgid ""
+"Generated from the registry in one structure (ISGOTT, OCIMF, IMO FAL / ISPS,"
+" MARPOL, API MPMS): preview, print, file in the call."
+msgstr ""
+"Générés depuis le registre dans une structure unique (ISGOTT, OCIMF, FAL / "
+"ISPS de l'OMI, MARPOL, API MPMS) : aperçu, impression, dépôt dans l'escale."
+
+#| msgid "Sections of the call"
+msgid "All the forms of the call"
+msgstr "Tous les formulaires de l'escale"
+
+msgid "For the task"
+msgstr "Pour la tâche"
+
+msgid "Title (optional)"
+msgstr "Titre (facultatif)"
+
+msgid "Confidentiality"
+msgstr "Confidentialité"
+
+msgid "type default"
+msgstr "selon le type"
+
+msgid "all parties"
+msgstr "toutes les parties"
+
+msgid "restricted"
+msgstr "restreint"
+
+msgid "bilateral"
+msgstr "bilatéral"
+
+msgid "Counterpart (N3)"
+msgstr "Contrepartie (N3)"
+
+msgid "Issue the document"
+msgstr "Émettre le document"
+
+msgid ""
+"The bill of lading cannot be issued before the principal's written "
+"documentary instructions and an agreed quantity — no role can lift this "
+"lock."
+msgstr ""
+"Le connaissement ne peut pas être émis avant les instructions documentaires "
+"écrites du mandant et une quantité convenue — aucun rôle ne peut lever ce "
+"verrou."
+
+msgid ""
+"Every exchange is attached to the call and, if possible, to an object. There"
+" is no free messaging."
+msgstr ""
+"Chaque échange est rattaché à l'escale et, si possible, à un objet. Il n'y a"
+" pas de messagerie libre."
+
+msgid "summary by the assistant — check against the messages"
+msgstr "résumé par l'assistant — à vérifier au regard des messages"
+
+msgid "Summarise with the assistant"
+msgstr "Résumer avec l'assistant"
+
+msgid "Message"
+msgstr "Message"
+
+msgid "Reply…"
+msgstr "Répondre…"
+
+msgid "Send"
+msgstr "Envoyer"
+
+msgid "No exchange yet."
+msgstr "Aucun échange pour l'instant."
+
+msgid "New exchange"
+msgstr "Nouvel échange"
+
+msgid "With"
+msgstr "Avec"
+
+msgid "restricted to the participants"
+msgstr "restreint aux participants"
+
+msgid "bilateral (one other party)"
+msgstr "bilatéral (une autre partie)"
+
+msgid "every party of the call"
+msgstr "toutes les parties de l'escale"
+
+msgid "Contradictory timeline"
+msgstr "Chronologie contradictoire"
+
+msgid ""
+"One emitter per milestone; the other parties countersign or contest. Silence"
+" becomes a tacit countersignature after the port's delay — never an "
+"agreement."
+msgstr ""
+"Un émetteur par jalon ; les autres parties contresignent ou contestent. Le "
+"silence vaut contresignature tacite après le délai du port — jamais accord."
+
+msgid "Emitter"
+msgstr "Émetteur"
+
+msgid "Countersignatures"
+msgstr "Contresignatures"
+
+msgid "System time"
+msgstr "Heure système"
+
+msgid "sys."
+msgstr "sys."
+
+msgid "rectification"
+msgstr "rectification"
+
+msgid "recorded by the platform"
+msgstr "enregistré par la plateforme"
+
+msgid "Grounds (mandatory)"
+msgstr "Motifs (obligatoires)"
+
+msgid "No milestone yet."
+msgstr "Aucun jalon pour l'instant."
+
+msgid "Declared time (port time)"
+msgstr "Heure déclarée (heure du port)"
+
+msgid "Cause — for an interruption (closed list)"
+msgstr "Cause — pour une interruption (liste fermée)"
+
+msgid "Reason (mandatory for “Other”)"
+msgstr "Motif (obligatoire pour « Autre »)"
+
+msgid "Re-entry from the paper fallback procedure (marked as deferred)"
+msgstr ""
+"Ressaisie depuis la procédure papier de secours (marquée comme différée)"
+
+msgid ""
+"Some milestones are guarded by hold points: the platform refuses them, names"
+" the missing task and keeps the refusal in the journal."
+msgstr ""
+"Certains jalons sont gardés par des points d'arrêt : la plateforme les "
+"refuse, nomme la tâche manquante et consigne le refus au journal."
+
+msgid "In the field"
+msgstr "Sur le terrain"
+
+msgid ""
+"On the jetty, use the field app: it works without connection and "
+"synchronises later with both timestamps."
+msgstr ""
+"Sur l'appontement, utilisez l'appli terrain : elle fonctionne sans connexion"
+" et se synchronise ensuite avec les deux horodatages."
+
+msgid "Open the field app"
+msgstr "Ouvrir l'appli terrain"
+
+msgid "Journal of the call"
+msgstr "Journal de l'escale"
+
+#, python-format
+msgid "Chain intact — %(n)s entries verified"
+msgstr "Chaîne intacte — %(n)s entrées vérifiées"
+
+#, python-format
+msgid "Chain broken at entry %(s)s"
+msgstr "Chaîne rompue à l'entrée %(s)s"
+
+msgid ""
+"Every act, refusal and alert, in order. Each entry carries the fingerprint "
+"of the previous one: no entry can be altered or removed without the break "
+"being detected."
+msgstr ""
+"Chaque acte, refus et alerte, dans l'ordre. Chaque entrée porte l'empreinte "
+"de la précédente : aucune entrée ne peut être modifiée ni supprimée sans que"
+" la rupture soit détectée."
+
+msgid "Time"
+msgstr "Heure"
+
+msgid "Who"
+msgstr "Qui"
+
+msgid "What"
+msgstr "Quoi"
+
+msgid "Fingerprint"
+msgstr "Empreinte"
+
+msgid "Access audit"
+msgstr "Journal des accès"
+
+msgid ""
+"Who viewed, downloaded or exported what — readable by the harbour master, "
+"management and security."
+msgstr ""
+"Qui a consulté, téléchargé ou exporté quoi — lisible par la capitainerie, la"
+" direction et la sûreté."
+
+msgid "Action"
+msgstr "Action"
+
+msgid "Detail"
+msgstr "Détail"
+
+msgid "Quantities are not visible to your role."
+msgstr "Les quantités ne sont pas visibles pour votre rôle."
+
+msgid "Quantities — ship, shore, surveyor"
+msgstr "Quantités — bord, terre, inspecteur"
+
+msgid ""
+"Each party enters its own figure. The platform computes the difference and "
+"never designates a reference value."
+msgstr ""
+"Chaque partie saisit son propre chiffre. La plateforme calcule les écarts et"
+" ne désigne jamais de valeur de référence."
+
+msgid "tolerance"
+msgstr "tolérance"
+
+msgid "Differences"
+msgstr "Écarts"
+
+msgid "outside tolerance"
+msgstr "hors tolérance"
+
+msgid "within tolerance"
+msgstr "dans la tolérance"
+
+msgid "ship or shore value missing — blocks closure"
+msgstr "valeur bord ou terre manquante — bloque la clôture"
+
+msgid "Party"
+msgstr "Partie"
+
+msgid "pre-filled from the validated bill of lading"
+msgstr "pré-rempli depuis le connaissement validé"
+
+msgid "Quantity"
+msgstr "Quantité"
+
+msgid "Density"
+msgstr "Densité"
+
+msgid "Enter my value"
+msgstr "Saisir ma valeur"
+
+msgid "Contest this quantity"
+msgstr "Contester cette quantité"
+
+msgid "While this dispute is not closed, the bill of lading cannot be issued."
+msgstr ""
+"Tant que cette contestation n'est pas close, le connaissement ne peut pas "
+"être émis."
+
+msgid "No measurement opened."
+msgstr "Aucune mesure ouverte."
+
+msgid "Manifold pressure (bar)"
+msgstr "Pression au manifold (bar)"
+
+msgid "Rate (m³/h)"
+msgstr "Débit (m³/h)"
+
+msgid "Temperature (°C)"
+msgstr "Température (°C)"
+
+msgid "Entered by"
+msgstr "Saisi par"
+
+msgid "automatic"
+msgstr "automatique"
+
+msgid "deferred"
+msgstr "différée"
+
+msgid "No reading yet."
+msgstr "Aucun relevé pour l'instant."
+
+msgid "Open a measurement"
+msgstr "Ouvrir une mesure"
+
+msgctxt "verb"
+msgid "Open"
+msgstr "Ouvrir"
+
+msgid "Add a pumping reading"
+msgstr "Ajouter un relevé de pompage"
+
+msgid "Add"
+msgstr "Ajouter"
+
+msgid "Roles on this call"
+msgstr "Rôles sur cette escale"
+
+msgid ""
+"Rights come from the role an organisation holds on the call, dated and "
+"revocable. Revoking a role removes the access at once and keeps everything "
+"the organisation entered."
+msgstr ""
+"Les droits viennent du rôle qu'une organisation tient sur l'escale, daté et "
+"révocable. Retirer un rôle supprime l'accès immédiatement et conserve tout "
+"ce que l'organisation a saisi."
+
+msgid ""
+"When several terminals or providers take part, the one designated for the "
+"shore side records the shore milestones and figure and countersigns for the "
+"shore."
+msgstr ""
+"Quand plusieurs terminaux ou prestataires participent, celui qui est désigné"
+" pour le côté terre enregistre les jalons et le chiffre terre et contresigne"
+" au nom de la terre."
+
+msgid "Organisation"
+msgstr "Organisation"
+
+msgid "Since"
+msgstr "Depuis"
+
+msgid "port default"
+msgstr "défaut du port"
+
+msgid "speaks for the shore side"
+msgstr "parle au nom du côté terre"
+
+msgid "Designate for the shore side"
+msgstr "Désigner pour le côté terre"
+
+msgid "revoked"
+msgstr "retiré"
+
+msgid "Revoke the role"
+msgstr "Retirer le rôle"
+
+msgid "Invite an organisation"
+msgstr "Inviter une organisation"
+
+msgid "Invite"
+msgstr "Inviter"
+
+msgid ""
+"The master has no account: hand over a link or a code limited to this call, "
+"valid until departure. Countersignatures and signatures are nominative."
+msgstr ""
+"Le capitaine n'a pas de compte : remettez-lui un lien ou un code limité à "
+"cette escale, valable jusqu'au départ. Contresignatures et signatures sont "
+"nominatives."
+
+#, python-format
+msgid "Access for %(n)s — shown once"
+msgstr "Accès pour %(n)s — affiché une seule fois"
+
+msgid "Link:"
+msgstr "Lien :"
+
+msgid "Code:"
+msgstr "Code :"
+
+msgid "QR code of the link"
+msgstr "QR code du lien"
+
+msgid "Master's name"
+msgstr "Nom du capitaine"
+
+msgid "Handed over by"
+msgstr "Remis par"
+
+msgid "QR code"
+msgstr "QR code"
+
+msgid "This vessel"
+msgstr "Ce navire"
+
+msgid "Delivery note"
+msgstr "Note de remise"
+
+msgid "Issue the access"
+msgstr "Délivrer l'accès"
+
+msgid "expires"
+msgstr "expire"
+
+msgid "last used"
+msgstr "dernière utilisation"
+
+msgid "Access of the parties without an account"
+msgstr "Accès des parties sans compte"
+
+msgid ""
+"At the declaration, every party is notified with its own way in. A terminal,"
+" surveyor, owner, provider or marine service that has no account receives a "
+"link by e-mail, valid until the closure of the call; the holder gives their "
+"name at first use. Deciding roles always keep an account with a second "
+"factor. You can issue or revoke such a link here."
+msgstr ""
+"À la déclaration, chaque partie est notifiée avec son propre moyen d'accès. "
+"Un terminal, un inspecteur, un armateur, un prestataire ou un service "
+"nautique sans compte reçoit un lien par courriel, valable jusqu'à la clôture"
+" de l'escale ; le titulaire donne son nom à la première utilisation. Les "
+"rôles qui décident gardent toujours un compte avec second facteur. Vous "
+"pouvez émettre ou révoquer un tel lien ici."
+
+msgid "Holder's name (optional: asked at first use)"
+msgstr "Nom du titulaire (facultatif : demandé à la première utilisation)"
+
+msgid "name asked at first use"
+msgstr "nom demandé à la première utilisation"
+
+#| msgid "Issue the departure clearance"
+msgid "issued at the declaration"
+msgstr "émis à la déclaration"
+
+msgid "until closure, at the latest"
+msgstr "jusqu'à la clôture, au plus tard"
+
+#| msgid "The NOR is visible to every party of the call."
+msgid "No link issued: every party of this call has an account."
+msgstr "Aucun lien émis : toutes les parties de cette escale ont un compte."
+
+msgid "Show every task I can see"
+msgstr "Afficher toutes les tâches que je peux voir"
+
+msgid "Only my tasks"
+msgstr "Seulement mes tâches"
+
+msgid ""
+"Tasks are assigned to roles, never to persons. Each role sees its own tasks;"
+" the agency and the harbour master see them all."
+msgstr ""
+"Les tâches sont assignées à des rôles, jamais à des personnes. Chaque rôle "
+"voit ses propres tâches ; l'agence et la capitainerie les voient toutes."
+
+#, python-format
+msgid "Not applicable: %(reason)s"
+msgstr "Sans objet : %(reason)s"
+
+msgid "co-signs"
+msgstr "cosigne"
+
+msgid "joint signature"
+msgstr "signature conjointe"
+
+msgid "signed:"
+msgstr "signé :"
+
+msgid "Through its request"
+msgstr "Par sa demande"
+
+msgid "Record the milestone"
+msgstr "Enregistrer le jalon"
+
+msgid "Provide the document"
+msgstr "Fournir le document"
+
+msgid "Mark done"
+msgstr "Marquer comme faite"
+
+msgid "Note (optional)"
+msgstr "Note (facultative)"
+
+msgid "Reason (mandatory, traced)"
+msgstr "Motif (obligatoire, tracé)"
+
+msgid "Mark not applicable"
+msgstr "Déclarer sans objet"
+
+msgid "No task for your roles."
+msgstr "Aucune tâche pour vos rôles."
+
+msgid "Add an ad hoc task"
+msgstr "Ajouter une tâche ad hoc"
+
+msgid ""
+"Explicitly marked, never blocking: a blocking task must come from the port's"
+" templates."
+msgstr ""
+"Signalée comme telle, jamais bloquante : une tâche bloquante doit provenir "
+"des gabarits du port."
+
+msgid "Task (French)"
+msgstr "Tâche (français)"
+
+msgid "Task (English)"
+msgstr "Tâche (anglais)"
+
+msgid "Anchor"
+msgstr "Point d'ancrage"
+
+msgid "none"
+msgstr "aucun"
+
+msgid "Offset (hours, negative = before)"
+msgstr "Décalage (heures, négatif = avant)"
+
+msgid "Add the task"
+msgstr "Ajouter la tâche"
+
+msgid ""
+"Check that an authorization issued by the port exists and is in force, "
+"without access to the call file."
+msgstr ""
+"Vérifiez qu'une autorisation délivrée par le port existe et est en vigueur, "
+"sans accès au dossier de l'escale."
+
+msgid "Code"
+msgstr "Code"
+
+msgid "Verification code"
+msgstr "Code de vérification"
+
+msgid "Verify"
+msgstr "Vérifier"
+
+msgid "In force"
+msgstr "En vigueur"
+
+msgid "Not in force"
+msgstr "Pas en vigueur"
+
+msgid "Issued by"
+msgstr "Délivrée par"
+
+msgid "Validity"
+msgstr "Validité"
+
+msgid "No authorization matches this code."
+msgstr "Aucune autorisation ne correspond à ce code."
+
+msgid ""
+"Armed guards, escorts, security plans and incidents. Stored apart, encrypted"
+" with their own keys, never on a dashboard or in an export. Every access is "
+"logged by name."
+msgstr ""
+"Gardes armés, escortes, plans et incidents de sûreté. Conservés à part, "
+"chiffrés avec leurs propres clés, jamais sur un tableau de bord ni dans un "
+"export. Chaque accès est journalisé nominativement."
+
+msgid "Access log"
+msgstr "Journal des accès"
+
+msgid "Decision due"
+msgstr "Décision attendue"
+
+msgid "Nothing filed in the security space."
+msgstr "Aucun dépôt dans l'espace sûreté."
+
+msgid "filed by"
+msgstr "déposé par"
+
+msgid "Request"
+msgstr "Demande"
+
+msgid "Attachments"
+msgstr "Pièces jointes"
+
+msgid "Add (encrypted)"
+msgstr "Ajouter (chiffré)"
+
+msgid "Decide and set the modalities"
+msgstr "Décider et fixer les modalités"
+
+msgid "Record this decision?"
+msgstr "Enregistrer cette décision ?"
+
+msgid "Modalities or reason"
+msgstr "Modalités ou motif"
+
+msgid "Confirmations"
+msgstr "Confirmations"
+
+msgid "Anti-intrusion measures"
+msgstr "Mesures anti-intrusion"
+
+msgid "Access log of the security space"
+msgstr "Journal des accès de l'espace sûreté"
+
+msgid ""
+"Every access, by name, chained: an alteration would be detected. Accesses by"
+" a role other than the security authority are notified to it."
+msgstr ""
+"Chaque accès, nominatif, chaîné : une altération serait détectée. Les accès "
+"par un autre rôle que l'autorité de sûreté lui sont notifiés."
+
+msgid "Person"
+msgstr "Personne"
+
+msgid "Item"
+msgstr "Dossier"
+
+msgid "Notified"
+msgstr "Notifié"
+
+msgid "yes"
+msgstr "oui"

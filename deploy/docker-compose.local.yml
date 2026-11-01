@@ -1,0 +1,11 @@
+# FLUXAA Port — complément pour une installation LOCALE DE DÉMONSTRATION (poste de travail,
+# https://localhost/). À utiliser avec le fichier principal :
+#
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+#
+# Sous Windows, DEMARRER.cmd (racine du dépôt) fait tout cela. Seule différence avec la
+# production : le frontal lit Caddyfile.local (certificat local, pas d'en-tête HSTS).
+services:
+  caddy:
+    volumes:
+      - ./Caddyfile.local:/etc/caddy/Caddyfile:ro

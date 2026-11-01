@@ -1,0 +1,5 @@
+# Développement et tests (la suite de tests utilise PostgreSQL : voir fluxaa/settings_test.py).
+-r requirements.txt
+pytest>=8
+pytest-django>=4.8
+ruff>=0.6

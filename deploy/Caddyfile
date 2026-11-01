@@ -1,0 +1,31 @@
+# FLUXAA Port — frontal HTTPS (Caddy 2).
+#
+# Le certificat de {$DOMAIN} est obtenu et renouvelé automatiquement (Let's Encrypt) : le DNS
+# (enregistrement A, et AAAA en IPv6) doit pointer vers ce serveur et les ports 80 et 443 doivent
+# être joignables depuis Internet. Installation sans accès entrant depuis Internet : voir
+# docs/DEPLOIEMENT.md (directive « tls »).
+#
+# Pas de journal d'accès : certaines adresses portent un jeton d'accès (lien capitaine /bord/…).
+
+{$DOMAIN} {
+	encode gzip
+
+	# Au-delà, réponse 413 sans solliciter l'application (Django accepte 30 Mo par requête ;
+	# les pièces sont limitées à FLUXAA_MAX_UPLOAD_MB, 25 Mo par défaut).
+	request_body {
+		max_size 30MB
+	}
+
+	header {
+		# Appliqué au moment d'écrire la réponse : remplace les en-têtes équivalents envoyés
+		# par Django au lieu de les dupliquer.
+		defer
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+		Permissions-Policy "camera=(self), geolocation=()"
+		-Server
+	}
+
+	reverse_proxy web:8000
+}

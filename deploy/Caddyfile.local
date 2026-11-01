@@ -1,0 +1,26 @@
+# FLUXAA Port — frontal HTTPS d'une installation LOCALE DE DÉMONSTRATION (https://localhost/).
+#
+# Utilisé par deploy/docker-compose.local.yml à la place de Caddyfile. Différences avec la
+# production : certificat émis par l'autorité locale de Caddy (pas de Let's Encrypt, donc pas de
+# DNS ni d'accès entrant), et pas d'en-tête Strict-Transport-Security — sur « localhost », il
+# bloquerait durablement le navigateur si le certificat local cessait d'être reconnu.
+# Les autres réglages sont ceux de la production.
+
+{$DOMAIN} {
+	tls internal
+	encode gzip
+
+	request_body {
+		max_size 30MB
+	}
+
+	header {
+		defer
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+		Permissions-Policy "camera=(self), geolocation=()"
+		-Server
+	}
+
+	reverse_proxy web:8000
+}

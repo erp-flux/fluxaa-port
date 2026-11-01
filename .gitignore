@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Django : fichiers produits ou déposés à l'exécution
+media/
+staticfiles/
+*.sqlite3
+
+# Secrets et sauvegardes : ne jamais versionner
+.env
+backups/
+
+# Éditeurs et systèmes
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Installation locale de démonstration (Windows) : fichiers générés par DEMARRER.cmd
+COMPTES-DEMO.txt
+deploy/windows/*.log
+deploy/docker-compose.ports.yml

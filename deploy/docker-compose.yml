@@ -1,0 +1,121 @@
+# FLUXAA Port — pile de production (Docker Compose v2).
+#
+# À lancer depuis ce dossier (deploy/) :
+#   cp .env.example .env        puis renseigner .env (voir docs/DEPLOIEMENT.md)
+#   docker compose up -d --build
+#
+# Services :
+#   db        PostgreSQL 16 : base principale « fluxaa » et base de sûreté N4 « fluxaa_secure »
+#             (rôles créés au premier démarrage par postgres-init/01-init.sh). Non exposé.
+#   web       Django + gunicorn. Au démarrage : migrations, droits, traductions, statiques, catalogues.
+#   scheduler traitements périodiques (contre-signatures tacites, alertes, expirations, résumés,
+#             webhooks) toutes les 60 s.
+#   caddy     frontal HTTPS (certificat automatique) : seul service publié, ports 80 et 443.
+name: fluxaa
+
+x-logging: &default-logging
+  # Journaux Docker plafonnés (5 × 10 Mo par conteneur) : évite de remplir le disque.
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-app: &app
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile
+  image: fluxaa-port:local
+  restart: unless-stopped
+  env_file: .env
+  logging: *default-logging
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD doit être défini dans deploy/.env}
+      # Lus uniquement par postgres-init/01-init.sh, au premier démarrage (volume pgdata vide).
+      FLUXAA_OWNER_PASSWORD: ${FLUXAA_OWNER_PASSWORD:?FLUXAA_OWNER_PASSWORD doit être défini dans deploy/.env}
+      FLUXAA_APP_PASSWORD: ${FLUXAA_APP_PASSWORD:?FLUXAA_APP_PASSWORD doit être défini dans deploy/.env}
+      FLUXAA_SECURE_APP_PASSWORD: ${FLUXAA_SECURE_APP_PASSWORD:?FLUXAA_SECURE_APP_PASSWORD doit être défini dans deploy/.env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # Interrogation en TCP : pendant l'initialisation, le serveur temporaire n'écoute que sur
+      # le socket local, la base n'est donc déclarée prête qu'une fois les rôles créés.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d postgres -q"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    stop_grace_period: 60s
+    logging: *default-logging
+
+  web:
+    <<: *app
+    command: ["web"]
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - media:/app/media
+      # Dossier de sauvegardes de l'hôte (propriétaire UID/GID 10001), voir scripts/backup.sh.
+      - ${BACKUP_HOST_DIR:-./backups}:/backups
+    healthcheck:
+      # /healthz vérifie l'accès à la base ; l'en-tête Host doit figurer dans DJANGO_ALLOWED_HOSTS.
+      test: ["CMD", "python", "-c", "import os, urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8000/healthz', headers={'Host': os.environ['DOMAIN']}), timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+    stop_grace_period: 30s
+
+  scheduler:
+    <<: *app
+    command: ["scheduler"]
+    depends_on:
+      db:
+        condition: service_healthy
+      # Démarre après « web », donc après l'application des migrations.
+      web:
+        condition: service_healthy
+    volumes:
+      - media:/app/media
+
+  # Tableau AIS (facultatif) : écoute d'une source de positions pour un port. Désactivé tant que le
+  # profil « ais » n'est pas demandé : docker compose --profile ais up -d. Adapter la source
+  # (--udp, --tcp ou --aisstream) et le port : DEPLOIEMENT.md §15.
+  ais:
+    <<: *app
+    profiles: ["ais"]
+    command: ["ais", "${AIS_PORT:-SLFNA}", "--aisstream"]
+    depends_on:
+      web:
+        condition: service_healthy
+    ports:
+      - "10110:10110/udp"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3 (facultatif côté pare-feu)
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN doit être défini dans deploy/.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    logging: *default-logging
+
+volumes:
+  pgdata:
+  media:
+  caddy_data:
+  caddy_config:

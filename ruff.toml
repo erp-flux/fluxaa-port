@@ -1,0 +1,11 @@
+# Contrôle du code : « ruff check . » (outil listé dans requirements-dev.txt).
+# Règles retenues : erreurs de syntaxe et d'exécution (E4, E7, E9), pyflakes (F), avertissements (W),
+# ordre des imports (I). Les versions récentes de ruff élargissent leur sélection par défaut : la
+# sélection est donc fixée ici pour que le résultat ne dépende pas de la version installée.
+line-length = 120
+target-version = "py312"
+src = ["."]
+extend-exclude = ["media", "staticfiles"]
+
+[lint]
+select = ["E4", "E7", "E9", "F", "W", "I"]
