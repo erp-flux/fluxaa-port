@@ -1,0 +1,25 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "Verify an authorization" %}{% endblock %}
+{% block content %}
+<div class="loginbox" style="max-width:560px">
+  <h1>{% trans "Verify an authorization" %}</h1>
+  <p class="muted">{% trans "Check that an authorization issued by the port exists and is in force, without access to the call file." %}</p>
+  <form method="get" action="{% url 'registry:verify' %}" class="actions"><label class="sr-only" for="vcode">{% trans "Code" %}</label>
+    <input id="vcode" name="code" value="{{ code }}" placeholder="{% trans 'Verification code' %}" style="font-family:var(--mono);max-width:240px" required><button class="btn">{% trans "Verify" %}</button></form>
+  {% if searched %}
+    {% if info %}
+    <div class="section" style="margin-top:16px">
+      <p>{% if info.valid_now %}<span class="chip done">{% trans "In force" %}</span>{% elif info.cancelled %}<span class="chip contested">{% trans "Cancelled" %}</span>{% else %}<span class="chip na">{% trans "Not in force" %}</span>{% endif %}</p>
+      <dl>
+        <dt class="label">{% trans "Authorization" %}</dt><dd class="mono">{{ info.number }}</dd>
+        <dt class="label">{% trans "Type" %}</dt><dd>{% if LANGUAGE_CODE == 'en' %}{{ info.type_en }}{% else %}{{ info.type_fr }}{% endif %}</dd>
+        <dt class="label">{% trans "Port" %}</dt><dd>{{ info.port }}</dd>
+        <dt class="label">{% trans "Vessel" %}</dt><dd>{{ info.vessel }} — IMO {{ info.imo }}</dd>
+        <dt class="label">{% trans "Issued by" %}</dt><dd>{{ info.issuer_role }}</dd>
+        <dt class="label">{% trans "Validity" %}</dt><dd><time>{{ info.valid_from|date:"d/m/Y H:i" }}</time> → <time>{{ info.valid_until|date:"d/m/Y H:i" }}</time> UTC</dd>
+      </dl>
+    </div>
+    {% else %}<div class="flash error" style="margin-top:16px">{% trans "No authorization matches this code." %}</div>{% endif %}
+  {% endif %}
+</div>
+{% endblock %}

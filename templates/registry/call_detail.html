@@ -1,0 +1,58 @@
+{% extends "base.html" %}{% load l10n i18n tz fluxaa %}
+{% block title %}{{ call.vessel.name }} — {{ call.reference }}{% endblock %}
+{% block content %}
+<div class="callhead">
+  <div class="top">
+    <div>
+      <div class="ref">{{ call.reference }}{% if call.voyage_number %} — voy. {{ call.voyage_number }}{% endif %}</div>
+      <h1 class="vessel">{{ call.vessel.name }}</h1>
+      <div class="muted">IMO <span class="num">{{ call.vessel.imo }}</span>{% if call.vessel.flag %} — {{ call.vessel.flag }}{% endif %}{% if call.vessel.vessel_type %} — {{ call.vessel.vessel_type }}{% endif %}
+        — {{ call.agency }} — {% if call.berth %}<b>{{ call.berth.code }}</b> {{ call.berth.name }}{% else %}{{ call.get_requested_berth_kind_display }}{% endif %}</div>
+      {% if full and call.product %}<div class="small">{{ call.product }}{% if call.quantity %} — <span class="num">{{ call.quantity|floatformat:"-3g" }}</span> {{ call.quantity_unit }}{% endif %}</div>{% endif %}
+    </div>
+    <div class="actions">
+      <span class="chip status st-{{ call.status }}">{{ call.get_status_display }}</span>
+      {% for code in call.template_codes %}<span class="code" title="{% trans 'Call template' %}">{{ code }}</span>{% endfor %}
+      {% if linked %}<a class="small" href="{% url 'registry:call_detail' linked.pk %}">{% blocktrans with name=linked.vessel.name %}Partner: {{ name }}{% endblocktrans %}</a>{% endif %}
+      <a class="btn secondary small" href="{% url 'registry:field_app' call.pk %}">{% trans "Field app" %}</a>
+      {% if full %}<a class="btn secondary small" href="{% url 'registry:statement_preview' call.pk %}" target="_blank" rel="noopener">{% trans "Statement of facts" %}</a>{% endif %}
+      <a class="btn secondary small" href="{% url 'registry:form_list' call.pk %}">{% trans "Forms" %}</a>
+      {% if "COM" in actor.roles or "DIR" in actor.roles %}<a class="btn secondary small" href="{% url 'registry:export_call' call.pk %}">{% trans "Export" %}</a>{% endif %}
+    </div>
+  </div>
+
+  {% if strip %}
+  <div class="strip" aria-label="{% trans 'Passage strip of the call' %}">
+    <div class="strip-track">
+      {% for s in strip.segments %}<div class="seg {{ s.kind }}" style="left:{{ s.left|unlocalize }}%;width:{{ s.width|unlocalize }}%" title="{{ s.label }}"></div>{% endfor %}
+    </div>
+    {% if strip.now is not None %}<div class="strip-now{% if strip.now_end %} end{% endif %}" style="left:{{ strip.now|unlocalize }}%" data-label="{% trans 'now' %}"></div>{% endif %}
+    <div class="strip-marks">
+      {% for m in strip.marks %}<div class="mark{% if m.end %} end{% endif %}" style="left:{{ m.left|unlocalize }}%"><b>{{ m.label }}{% if m.estimate %} <span class="muted">est.</span>{% endif %}</b><time>{{ m.time|date:"d/m H:i" }}</time></div>{% endfor %}
+    </div>
+    <div class="strip-legend" aria-hidden="true">
+      <span><i style="background:repeating-linear-gradient(90deg,#BFD3DD 0 6px,#CCDDE5 6px 12px)"></i>{% trans "waiting" %}</span>
+      <span><i style="background:#9CB6C4"></i>{% trans "alongside" %}</span>
+      <span><i style="background:var(--st-done)"></i>{% trans "transfer" %}</span>
+      <span><i style="background:repeating-linear-gradient(45deg,var(--st-hold) 0 3px,#7E67AE 3px 6px)"></i>{% trans "interruption" %}</span>
+      <span><i style="background:var(--water)"></i>{% trans "to come" %}</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <dl class="anchors">
+    <div><dt>{% if call.ata %}{% trans "Arrival" %}{% else %}ETA{% endif %}</dt><dd class="{% if not call.ata %}estimate{% endif %}">{% if call.ata %}{{ call.ata|date:"d/m H:i" }}{% else %}{{ call.eta|date:"d/m H:i" }}{% endif %}</dd></div>
+    <div><dt>NOR</dt><dd>{{ call.nor_at|date:"d/m H:i"|default:"—" }}</dd></div>
+    <div><dt>{% if call.atb %}{% trans "All fast" %}{% else %}ETB{% endif %}</dt><dd class="{% if not call.atb and call.etb %}estimate{% endif %}">{% if call.atb %}{{ call.atb|date:"d/m H:i" }}{% else %}{{ call.etb|date:"d/m H:i"|default:"—" }}{% endif %}</dd></div>
+    <div><dt>T0</dt><dd>{{ call.t0|date:"d/m H:i"|default:"—" }}</dd></div>
+    <div><dt>T1</dt><dd>{{ call.t1|date:"d/m H:i"|default:"—" }}</dd></div>
+    <div><dt>{% if call.atd %}{% trans "Departure" %}{% else %}ETD{% endif %}</dt><dd class="{% if not call.atd and call.etd %}estimate{% endif %}">{% if call.atd %}{{ call.atd|date:"d/m H:i" }}{% else %}{{ call.etd|date:"d/m H:i"|default:"—" }}{% endif %}</dd></div>
+  </dl>
+
+  <nav class="tabs" aria-label="{% trans 'Sections of the call' %}">
+    {% for key, label in tabs %}<a href="?tab={{ key }}" {% if tab == key %}aria-current="page"{% endif %}>{{ label }}{% if key == "taches" and counts.taches %}<span class="count">{{ counts.taches }}</span>{% endif %}{% if key == "contestations" and counts.contestations %}<span class="count">{{ counts.contestations }}</span>{% endif %}</a>{% endfor %}
+  </nav>
+</div>
+
+{% with "registry/tabs/"|add:tab|add:".html" as tab_template %}{% include tab_template %}{% endwith %}
+{% endblock %}

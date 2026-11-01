@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "Notifications" %}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{% trans "Notifications" %}</h1><p>{% trans "Always derived from an act or a deadline of a call — never typed by hand." %}</p></div>
+  <form method="post" class="actions">{% csrf_token %}<button class="btn secondary">{% trans "Mark all as read" %}</button></form></div>
+<section class="section">
+  <ul class="calllist">{% for n in notes %}
+    <li><div>{% if not n.read_at %}<b>{% endif %}<a href="{{ n.url|default:'#' }}">{{ n.title }}</a>{% if not n.read_at %}</b>{% endif %}
+      <div class="small muted"><time>{{ n.created_at|date:"d/m/Y H:i" }}</time>{% if n.email_sent_at %} — {% trans "sent by e-mail" %}{% endif %}{% if n.sms_sent_at %} — SMS{% endif %}</div></div>
+      <div>{% if n.blocking %}<span class="chip escalated">{% trans "Blocking" %}</span>{% endif %}</div></li>
+  {% empty %}<li class="empty">{% trans "No notification." %}</li>{% endfor %}</ul>
+</section>
+{% endblock %}

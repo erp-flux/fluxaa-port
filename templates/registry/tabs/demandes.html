@@ -1,0 +1,82 @@
+{% load i18n fluxaa %}
+<div class="split">
+  <section class="section">
+    <div class="section-head"><h2>{% trans "Requests and authorizations" %}</h2>
+      <span class="small muted">{% trans "The requesting role never decides. Every approval produces an authorization with an expiry and a public verification code." %}</span></div>
+    {% for r in requests %}
+    <article id="r{{ r.pk }}" style="border-top:1px solid var(--line);padding:12px 0">
+      <div class="section-head" style="margin:0">
+        <div><b>{{ r.type.label }}</b> <span class="code">{{ r.reference }}</span> <span class="conf">{{ r.confidentiality }}</span>
+          <div class="small muted">{% trans "Requested by" %} <span class="role">{{ r.requester_role }}</span>{% if r.submitted_at %} — <time>{{ r.submitted_at|date:"d/m H:i" }}</time>{% endif %}
+          {% if r.type.decision_roles %} — {% trans "decides:" %} {% for d in r.type.decision_roles %}<span class="role">{{ d }}</span> {% endfor %}{% endif %}
+          {% if r.type.executor_role %} — {% trans "carries out:" %} <span class="role">{{ r.type.executor_role }}</span>{% if r.provider_org %} {{ r.provider_org.name }}{% endif %}{% endif %}</div></div>
+        <span class="chip {% if r.status == 'APPROVED' or r.status == 'APPROVED_COND' or r.status == 'EXECUTED' or r.status == 'SCHEDULED' %}done{% elif r.status == 'REFUSED' or r.status == 'CANCELLED' or r.status == 'EXPIRED' %}contested{% else %}pending{% endif %}">{{ r.get_status_display }}</span>
+      </div>
+      {% if r.data %}<dl class="facts">{% for label, value in r|request_fields %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endfor %}</dl>{% endif %}
+      {% if r.decision %}<p class="small">{% blocktrans with d=r.get_decision_display %}Decision: <b>{{ d }}</b>{% endblocktrans %} — <span class="role">{{ r.decision_role }}</span> <time>{{ r.decided_at|date:"d/m H:i" }}</time>
+        {% if r.decision_conditions %}<br>{% blocktrans with c=r.decision_conditions %}Conditions: {{ c }}{% endblocktrans %}{% endif %}
+        {% if r.reason_visible %}<br>{% blocktrans with reason=r.decision_reason %}Reason: {{ reason }}{% endblocktrans %}{% elif r.decision_reason %}<br><span class="muted">{% trans "Reason restricted to the agency, the owner and the instructing service." %}</span>{% endif %}</p>{% endif %}
+      {% if r.auth %}{% with state=r.auth|auth_state %}<p class="small">{% trans "Authorization" %} <span class="code">{{ r.auth.number }}</span> <span class="chip {{ state|auth_state_class }}">{{ state|auth_state_label }}</span> — {% trans "valid until" %} <time>{{ r.auth.valid_until|date:"d/m/Y H:i" }}</time>{% if r.auth.berth %} — {{ r.auth.berth.code }}{% endif %}
+        — {% trans "verification code" %} <a class="code" href="{% url 'registry:verify_code' r.auth.verification_code %}">{{ r.auth.verification_code }}</a></p>{% endwith %}{% endif %}
+      <div class="actions">
+        {% if r.can_decide %}
+        <details class="action"><summary>{% trans "Decide" %}{% if not strong %} ({% trans "second factor required" %}){% endif %}</summary><div>
+          <form method="post" action="{% url 'registry:call_action' call.pk 'request_decide' %}" class="form" data-confirm="{% trans 'Record this decision? It binds the port.' %}">{% csrf_token %}
+            <input type="hidden" name="request_id" value="{{ r.pk }}"><input type="hidden" name="back" value="?tab=demandes#r{{ r.pk }}">
+            <div><label for="dec{{ r.pk }}">{% trans "Decision" %}</label><select id="dec{{ r.pk }}" name="decision">
+              <option value="APPROVED">{% trans "Approve" %}</option><option value="APPROVED_COND">{% trans "Approve with conditions" %}</option>
+              <option value="INFO_REQUIRED">{% trans "Ask for more information" %}</option><option value="REFUSED">{% trans "Refuse" %}</option></select></div>
+            {% if r.type.assigns_berth %}<div><label for="berth{{ r.pk }}">{% trans "Berth or area assigned" %}</label><select id="berth{{ r.pk }}" name="berth">{% for b in berths %}<option value="{{ b.pk }}">{{ b.code }} — {{ b.name }}</option>{% endfor %}</select></div>{% endif %}
+            <div class="row"><div><label for="vf{{ r.pk }}">{% trans "Effective from" %}</label><input type="datetime-local" id="vf{{ r.pk }}" name="valid_from"></div>
+              <div><label for="vu{{ r.pk }}">{% trans "Valid until" %} <span class="hint">({% blocktrans with h=r.type.validity_hours %}default: {{ h }} h{% endblocktrans %})</span></label><input type="datetime-local" id="vu{{ r.pk }}" name="valid_until"></div></div>
+            <div><label for="cond{{ r.pk }}">{% trans "Conditions" %}</label><input id="cond{{ r.pk }}" name="conditions"></div>
+            <div><label for="rea{{ r.pk }}">{% trans "Reason (mandatory for a refusal or a request for information)" %}</label><textarea id="rea{{ r.pk }}" name="reason"></textarea></div>
+            <button class="btn">{% trans "Record the decision" %}</button></form></div></details>
+        {% if r.status == "SUBMITTED" %}<form method="post" action="{% url 'registry:call_action' call.pk 'request_review' %}" class="inline">{% csrf_token %}<input type="hidden" name="request_id" value="{{ r.pk }}"><input type="hidden" name="back" value="?tab=demandes#r{{ r.pk }}"><button class="btn small secondary">{% trans "Take under review" %}</button></form>{% endif %}
+        {% endif %}
+        {% if r.can_execute %}
+        <details class="action"><summary>{% trans "Confirm the service" %}</summary><div>
+          <form method="post" action="{% url 'registry:call_action' call.pk 'request_schedule' %}" class="form">{% csrf_token %}<input type="hidden" name="request_id" value="{{ r.pk }}"><input type="hidden" name="back" value="?tab=demandes#r{{ r.pk }}">
+            <div><label for="sch{{ r.pk }}">{% trans "Scheduled for" %}</label><input type="datetime-local" id="sch{{ r.pk }}" name="scheduled_for" required></div><button class="btn small">{% trans "Confirm the booking" %}</button></form>
+          <form method="post" action="{% url 'registry:call_action' call.pk 'request_execute' %}" class="form" style="margin-top:8px">{% csrf_token %}<input type="hidden" name="request_id" value="{{ r.pk }}"><input type="hidden" name="back" value="?tab=demandes#r{{ r.pk }}">
+            <button class="btn small secondary">{% trans "Mark as carried out" %}</button></form></div></details>
+        {% endif %}
+        {% if r.can_assign_provider %}<details class="action"><summary>{% trans "Name the provider" %}</summary><div><form method="post" action="{% url 'registry:call_action' call.pk 'request_provider' %}" class="form">{% csrf_token %}<input type="hidden" name="request_id" value="{{ r.pk }}"><input type="hidden" name="back" value="?tab=demandes#r{{ r.pk }}">
+          <div><label for="prov{{ r.pk }}">{% trans "Provider who carries out the service" %}</label><select id="prov{{ r.pk }}" name="provider" required>{% for o in r.provider_choices %}<option value="{{ o.pk }}">{{ o.name }}</option>{% endfor %}</select></div>
+          <button class="btn small">{% trans "Name the provider" %}</button></form></div></details>{% endif %}
+        {% if r.can_resubmit %}<form method="post" action="{% url 'registry:call_action' call.pk 'request_submit' %}" class="inline">{% csrf_token %}<input type="hidden" name="request_id" value="{{ r.pk }}"><button class="btn small">{% trans "Submit again" %}</button></form>{% endif %}
+        {% if r.can_cancel %}<details class="action"><summary>{% trans "Cancel" %}</summary><div><form method="post" action="{% url 'registry:call_action' call.pk 'request_cancel' %}" class="form">{% csrf_token %}<input type="hidden" name="request_id" value="{{ r.pk }}"><input name="reason" required aria-label="{% trans 'Reason' %}" placeholder="{% trans 'Reason' %}"><button class="btn small danger">{% trans "Cancel the request" %}</button></form></div></details>{% endif %}
+      </div>
+    </article>
+    {% empty %}<p class="empty">{% trans "No request visible to your roles." %}</p>{% endfor %}
+  </section>
+  <aside>
+    {% if creatable %}
+    <section class="section">
+      <h2>{% trans "New request" %}</h2>
+      <form method="get" class="form"><input type="hidden" name="tab" value="demandes">
+        <div><label for="rtype">{% trans "Type" %}</label><select id="rtype" name="type" data-autosubmit><option value="">—</option>{% for t in creatable %}<option value="{{ t.code }}" {% if selected_type and selected_type.code == t.code %}selected{% endif %}>{{ t.label }}</option>{% endfor %}</select></div>
+        <noscript><button class="btn secondary small">{% trans "Choose" %}</button></noscript>
+      </form>
+      {% if selected_type %}
+      <form method="post" action="{% url 'registry:call_action' call.pk 'request_create' %}" class="form" style="margin-top:12px">{% csrf_token %}
+        <input type="hidden" name="type" value="{{ selected_type.code }}">
+        {% if selected_type.description_fr %}<p class="small muted">{% if LANGUAGE_CODE == 'en' %}{{ selected_type.description_en }}{% else %}{{ selected_type.description_fr }}{% endif %}</p>{% endif %}
+        {% for f in form_fields %}
+        <div>{% if f.type == "boolean" %}<label class="checks"><span><input type="checkbox" name="{{ f.key }}"> {{ f.label }}</span></label>
+          {% else %}<label for="f_{{ f.key }}">{{ f.label }}{% if f.required %} *{% endif %}</label>
+          {% if f.type == "textarea" %}<textarea id="f_{{ f.key }}" name="{{ f.key }}" {% if f.required %}required{% endif %}></textarea>
+          {% elif f.type == "select" %}<select id="f_{{ f.key }}" name="{{ f.key }}" {% if f.required %}required{% endif %}><option value="">—</option>{% for v, l in f.choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select>
+          {% elif f.type == "datetime" %}<input type="datetime-local" id="f_{{ f.key }}" name="{{ f.key }}" {% if f.required %}required{% endif %}>
+          {% elif f.type == "number" or f.type == "integer" %}<input type="number" step="any" id="f_{{ f.key }}" name="{{ f.key }}" {% if f.required %}required{% endif %}>
+          {% else %}<input id="f_{{ f.key }}" name="{{ f.key }}" {% if f.required %}required{% endif %}>{% endif %}{% endif %}
+        </div>
+        {% endfor %}
+        {% if providers %}<div><label for="f_provider">{% trans "Provider who carries out the service" %} *</label><select id="f_provider" name="provider" required><option value="">—</option>{% for o in providers %}<option value="{{ o.pk }}">{{ o.name }}</option>{% endfor %}</select></div>{% endif %}
+        <button class="btn">{% trans "Submit the request" %}</button>
+      </form>
+      {% endif %}
+    </section>
+    {% endif %}
+  </aside>
+</div>

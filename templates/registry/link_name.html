@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "Your name" %}{% endblock %}
+{% block content %}
+<div class="loginbox">
+  <h1>{% trans "Your name" %}</h1>
+  <p>{% blocktrans with org=link.organization role=role ref=link.call.reference %}This access was issued to {{ org }} as {{ role }} on call {{ ref }}. Every entry, signature and countersignature on the platform is nominative: enter your full name before you start. It will be shown next to what you record.{% endblocktrans %}</p>
+  <form method="post" class="form">{% csrf_token %}
+    <div><label for="name">{% trans "Full name" %}</label><input id="name" name="name" required minlength="3" maxlength="160" autocomplete="name"></div>
+    <button class="btn big">{% trans "Open the call" %}</button>
+  </form>
+</div>
+{% endblock %}

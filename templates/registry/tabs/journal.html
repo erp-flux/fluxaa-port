@@ -1,0 +1,21 @@
+{% load i18n fluxaa %}
+<section class="section">
+  <div class="section-head"><h2>{% trans "Journal of the call" %}</h2>
+    {% if chain %}<span>{% if chain.ok %}<span class="chip done">{% blocktrans with n=chain.count %}Chain intact — {{ n }} entries verified{% endblocktrans %}</span>{% else %}<span class="chip contested">{% blocktrans with s=chain.broken_at %}Chain broken at entry {{ s }}{% endblocktrans %}</span>{% endif %}</span>{% endif %}</div>
+  <p class="small muted">{% trans "Every act, refusal and alert, in order. Each entry carries the fingerprint of the previous one: no entry can be altered or removed without the break being detected." %}</p>
+  <div class="tablewrap"><table class="grid">
+    <tr><th>#</th><th>{% trans "Time" %}</th><th>{% trans "Who" %}</th><th>{% trans "What" %}</th><th>{% trans "Fingerprint" %}</th></tr>
+    {% for e in entries %}<tr><td class="num">{{ e.seq }}</td><td><time>{{ e.at|date:"d/m H:i:s" }}</time></td><td>{{ e.actor_label }}{% if e.actor_role %} <span class="role">{{ e.actor_role }}</span>{% endif %}</td>
+      <td>{% if e.action == "holdpoint.refused" %}<span class="chip hold">{% trans "refused" %}</span> {% endif %}{{ e.summary }}</td><td class="hashshort" title="{{ e.hash }}">{{ e.hash|short_hash:12 }}</td></tr>
+    {% empty %}<tr><td colspan="5" class="empty">—</td></tr>{% endfor %}
+  </table></div>
+</section>
+{% if audit %}
+<section class="section">
+  <h2>{% trans "Access audit" %}</h2>
+  <p class="small muted">{% trans "Who viewed, downloaded or exported what — readable by the harbour master, management and security." %}</p>
+  <div class="tablewrap"><table class="grid"><tr><th>#</th><th>{% trans "Time" %}</th><th>{% trans "Who" %}</th><th>{% trans "Action" %}</th><th>{% trans "Detail" %}</th></tr>
+    {% for a in audit %}<tr><td class="num">{{ a.seq }}</td><td><time>{{ a.at|date:"d/m H:i:s" }}</time></td><td>{{ a.actor_label }}</td><td>{{ a.action }}</td><td class="small">{{ a.object_kind }} {{ a.detail }}</td></tr>{% endfor %}
+  </table></div>
+</section>
+{% endif %}

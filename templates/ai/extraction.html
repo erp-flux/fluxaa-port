@@ -1,0 +1,48 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "Check the values read by the assistant" %} — {{ call.reference }}{% endblock %}
+{% block content %}
+<p class="small"><a href="{% url 'registry:call_detail' call.pk %}?tab=documents">← {{ call.vessel.name }} — {{ call.reference }}</a></p>
+<div class="section-head"><h1>{% trans "Check the values read by the assistant" %}</h1></div>
+<p class="muted" style="max-width:72ch">{% blocktrans with doc=review.document.display_title v=review.document.version %}The assistant has read “{{ doc }}” (v{{ v }}). Nothing has been recorded: each value below is pre-filled and stays a proposal until you validate it. Correct a value or untick it to leave it out.{% endblocktrans %}</p>
+
+{% if imo_mismatch %}<div class="refusal" role="alert"><b>{% trans "The IMO number read in the document differs from the vessel of this call." %}</b> {% trans "Check that the right document was provided before validating anything." %}</div>{% endif %}
+
+{% if review.status != "PROPOSED" %}
+<section class="section"><p>{% if review.status == "APPLIED" %}<span class="chip done">{% trans "Validated" %}</span>{% else %}<span class="chip na">{% trans "Dismissed" %}</span>{% endif %}
+  {{ review.validated_label }} — <time>{{ review.validated_at|date:"d/m/Y H:i" }}</time></p></section>
+{% endif %}
+
+<form method="post" class="section">{% csrf_token %}
+  {% if review.kind == "CERTIFICATES" %}
+  <div class="tablewrap"><table class="grid">
+    <tr><th>{% trans "Keep" %}</th><th>{% trans "Certificate" %}</th><th>{% trans "Number" %}</th><th>{% trans "Expiry (YYYY-MM-DD)" %}</th><th>{% trans "Read in the document" %}</th></tr>
+    {% for c in certificates %}
+    <tr><td><input type="hidden" name="row" value="{{ forloop.counter0 }}"><input type="checkbox" name="keep_{{ forloop.counter0 }}" value="1" checked {% if not editable %}disabled{% endif %} aria-label="{% trans 'Keep' %}"></td>
+      <td><span class="prefill-tag">{% trans "pre-filled" %}</span><input class="prefilled" name="name_{{ forloop.counter0 }}" value="{{ c.name }}" {% if not editable %}readonly{% endif %}></td>
+      <td><input class="prefilled" name="number_{{ forloop.counter0 }}" value="{{ c.number|default:'' }}" {% if not editable %}readonly{% endif %}></td>
+      <td><input class="prefilled" name="expiry_{{ forloop.counter0 }}" value="{{ c.expiry_date|default:'' }}" inputmode="numeric" {% if not editable %}readonly{% endif %}></td>
+      <td class="small muted">{{ c.evidence|default:"—" }}</td></tr>
+    {% empty %}<tr><td colspan="5" class="empty">{% trans "The assistant found no certificate in this document." %}</td></tr>{% endfor %}
+  </table></div>
+  {% else %}
+  <div class="tablewrap"><table class="grid">
+    <tr><th>{% trans "Keep" %}</th><th>{% trans "Field" %}</th><th>{% trans "Value read" %}</th>{% if review.kind == "Q88" %}<th>{% trans "Current vessel record" %}</th>{% endif %}<th>{% trans "Read in the document" %}</th></tr>
+    {% for f in fields %}
+    <tr><td>{% if f.applicable %}<input type="checkbox" name="keep" value="{{ f.key }}" {% if f.value and f.value != f.current %}checked{% endif %} {% if not editable %}disabled{% endif %} aria-label="{% trans 'Keep' %} {{ f.label }}">{% else %}<span class="small muted" title="{% trans 'Shown for cross-checking only' %}">—</span>{% endif %}</td>
+      <td><label for="v_{{ f.key }}">{{ f.label }}</label></td>
+      <td>{% if f.value %}<span class="prefill-tag">{% trans "pre-filled" %}</span>{% endif %}<input id="v_{{ f.key }}" class="{% if f.value %}prefilled{% endif %}" name="value_{{ f.key }}" value="{{ f.value }}" {% if not editable or not f.applicable %}readonly{% endif %}></td>
+      {% if review.kind == "Q88" %}<td class="small">{{ f.current|default:"—" }}</td>{% endif %}
+      <td class="small muted">{{ f.evidence|default:"—" }}</td></tr>
+    {% endfor %}
+  </table></div>
+  {% endif %}
+  {% if editable %}
+  <p class="hint" style="margin-top:12px">{% if review.kind == "Q88" %}{% trans "Validating updates the vessel record with the ticked values, under your name, and writes it in the call journal." %}{% elif review.kind == "CERTIFICATES" %}{% trans "Validating records these expiry dates for this document; the review of the call will compare them with the departure." %}{% else %}{% trans "Validating records these values; the quantity can then pre-fill your bill of lading figure in Measurements, which you still enter yourself." %}{% endif %}</p>
+  <div class="actions">
+    <button class="btn" name="decision" value="validate">{% trans "Validate the ticked values" %}</button>
+    <button class="btn quiet" name="decision" value="dismiss" formnovalidate>{% trans "Dismiss the proposal" %}</button>
+  </div>
+  {% endif %}
+</form>
+<p class="small muted">{% blocktrans with model=review.run.model at=review.run.created_at|date:"d/m/Y H:i" %}Read by {{ model }} on {{ at }}. The assistant never decides, signs or records anything by itself (EF-17).{% endblocktrans %}</p>
+{% endblock %}

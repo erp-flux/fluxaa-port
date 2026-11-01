@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "Second factor" %}{% endblock %}
+{% block content %}
+<div class="loginbox">
+  <h1>{% trans "Confirm with your second factor" %}</h1>
+  <p class="muted">{% trans "Decisions and access to restricted areas require a recent two-factor check." %}</p>
+  <form method="post" class="form">{% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <div><label for="code">{% trans "Six-digit code" %}</label><input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" required autofocus></div>
+    <button class="btn">{% trans "Confirm" %}</button>
+  </form>
+</div>
+{% endblock %}

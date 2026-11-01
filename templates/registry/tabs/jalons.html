@@ -1,0 +1,54 @@
+{% load i18n fluxaa %}
+<div class="split">
+  <section class="section">
+    <div class="section-head"><h2>{% trans "Contradictory timeline" %}</h2>
+      <span class="small muted">{% trans "One emitter per milestone; the other parties countersign or contest. Silence becomes a tacit countersignature after the port's delay — never an agreement." %}</span></div>
+    {% if milestone_rows %}
+    <div class="tablewrap"><table class="grid">
+      <tr><th>{% trans "Declared time" %}</th><th>{% trans "Milestone" %}</th><th>{% trans "Emitter" %}</th><th>{% trans "Countersignatures" %}</th><th></th></tr>
+      {% for row in milestone_rows %}{% with m=row.m %}
+      <tr id="m{{ m.pk }}">
+        <td><time>{{ m.declared_at|date:"d/m H:i" }}</time><div class="small muted" title="{% trans 'System time' %}">{% trans "sys." %} <time>{{ m.recorded_at|date:"d/m H:i" }}</time></div></td>
+        <td><b>{{ m.type.label }}</b>
+          {% if m.cause %}<div class="small">{{ m.cause.label }}{% if m.cause_reason %} — {{ m.cause_reason }}{% endif %}</div>{% endif %}
+          {% if m.note %}<div class="small muted">{{ m.note }}</div>{% endif %}
+          <div>{% if m.deferred %}<span class="chip deferred">{% trans "deferred entry" %}</span>{% endif %}
+            {% if m.is_rectification %}<span class="chip contested">{% trans "rectification" %}</span>{% endif %}
+            {% if m.is_conflict %}<span class="chip contested">{% trans "competing entry — dispute opened" %}</span>{% endif %}
+            {% if m.source == "SYSTEM" %}<span class="chip na">{% trans "recorded by the platform" %}</span>{% endif %}</div></td>
+        <td>{% with who=m.emitter_label|label_parts %}{{ who.0 }}{% if who.1 %}<div class="small muted">{{ who.1 }}</div>{% endif %}{% endwith %}<div class="small"><span class="role" title="{{ m.emitter_role|role_name }}">{{ m.emitter_role }}</span></div></td>
+        <td>{% for role, state in row.states.items %}<span class="chip {{ state|state_class }}">{{ role }} — {{ state|state_label }}</span> {% empty %}<span class="small muted">—</span>{% endfor %}</td>
+        <td class="actions">
+          {% if row.can_countersign %}<form method="post" action="{% url 'registry:call_action' call.pk 'countersign' %}" class="inline">{% csrf_token %}<input type="hidden" name="milestone_id" value="{{ m.pk }}"><input type="hidden" name="back" value="?tab=jalons#m{{ m.pk }}"><button class="btn small">{% trans "Countersign" %}</button></form>{% endif %}
+          {% if row.can_contest %}<details class="action"><summary>{% trans "Contest" %}</summary><div>
+            <form method="post" action="{% url 'registry:call_action' call.pk 'countersign' %}" class="form">{% csrf_token %}<input type="hidden" name="milestone_id" value="{{ m.pk }}"><input type="hidden" name="contest" value="1"><input type="hidden" name="back" value="?tab=jalons#m{{ m.pk }}">
+              <div><label for="ct{{ m.pk }}">{% trans "Grounds (mandatory)" %}</label><textarea id="ct{{ m.pk }}" name="comment" required></textarea></div><button class="btn small danger">{% trans "Contest" %}</button></form></div></details>{% endif %}
+        </td>
+      </tr>
+      {% endwith %}{% endfor %}
+    </table></div>
+    {% else %}<p class="empty">{% trans "No milestone yet." %}</p>{% endif %}
+  </section>
+  <aside>
+    {% if recordable %}
+    <section class="section">
+      <h2>{% trans "Record a milestone" %}</h2>
+      <form method="post" action="{% url 'registry:call_action' call.pk 'milestone' %}" class="form">{% csrf_token %}<input type="hidden" name="back" value="?tab=jalons">
+        <div><label for="mtype">{% trans "Milestone" %}</label>
+          <select id="mtype" name="type" required>{% for t in recordable %}<option value="{{ t.code }}" {% if t.hold_point %}data-hold="1"{% endif %}>{{ t.label }}</option>{% endfor %}</select></div>
+        <div><label for="declared_at">{% trans "Declared time (port time)" %}</label><input type="datetime-local" id="declared_at" name="declared_at" data-default-now required></div>
+        <div><label for="cause">{% trans "Cause — for an interruption (closed list)" %}</label>
+          <select id="cause" name="cause" data-reason-for="reasonbox"><option value="">—</option>{% for c in causes %}<option value="{{ c.code }}" data-requires-reason="{% if c.requires_reason %}1{% else %}0{% endif %}">{{ c.label }}</option>{% endfor %}</select></div>
+        <div id="reasonbox" hidden><label for="cause_reason">{% trans "Reason (mandatory for “Other”)" %}</label><input id="cause_reason" name="cause_reason"></div>
+        {% if open_stops %}<div><label for="related">{% trans "Interruption that ends" %}</label><select id="related" name="related_id"><option value="">—</option>{% for s in open_stops %}<option value="{{ s.pk }}">{{ s.declared_at|date:"d/m H:i" }} — {{ s.cause.label }}</option>{% endfor %}</select></div>{% endif %}
+        <div><label for="mnote">{% trans "Note" %}</label><input id="mnote" name="note"></div>
+        <label class="checks"><span><input type="checkbox" name="paper" value="1"> {% trans "Re-entry from the paper fallback procedure (marked as deferred)" %}</span></label>
+        <button class="btn">{% trans "Record" %}</button>
+        <p class="hint">{% trans "Some milestones are guarded by hold points: the platform refuses them, names the missing task and keeps the refusal in the journal." %}</p>
+      </form>
+    </section>
+    {% endif %}
+    <section class="section"><h2>{% trans "In the field" %}</h2><p class="small">{% trans "On the jetty, use the field app: it works without connection and synchronises later with both timestamps." %}</p>
+      <a class="btn secondary" href="{% url 'registry:field_app' call.pk %}">{% trans "Open the field app" %}</a></section>
+  </aside>
+</div>

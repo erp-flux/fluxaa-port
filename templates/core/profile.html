@@ -1,0 +1,34 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "My account" %}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{{ user.full_name }}</h1><p>{{ user.email }} — {{ user.organization }}</p></div></div>
+<div class="cols">
+  <section class="section">
+    <h2>{% trans "Roles" %}</h2>
+    <ul>{% for r in USER_ROLES %}<li><span class="role">{{ r }}</span></li>{% endfor %}</ul>
+    <p class="small muted">{% trans "Rights are carried by the role your organisation holds on each call, never by the person." %}</p>
+  </section>
+  <section class="section">
+    <h2>{% trans "Notifications" %}</h2>
+    <form method="post" class="form">{% csrf_token %}<input type="hidden" name="action" value="digest">
+      <label class="checks"><span><input type="checkbox" name="notify_digest_only" {% if user.notify_digest_only %}checked{% endif %}> {% trans "Daily summary for normal tasks" %}</span></label>
+      <p class="hint">{% trans "Blocking tasks and escalations are always sent at once: they cannot be muted." %}</p>
+      <button class="btn secondary">{% trans "Save" %}</button>
+    </form>
+  </section>
+  <section class="section">
+    <h2>{% trans "Two-factor authentication" %}</h2>
+    {% if user.mfa_enabled %}<p><span class="chip done">{% trans "Active" %}</span></p>{% else %}
+    <p><span class="chip pending">{% trans "Not active" %}</span></p><a class="btn secondary" href="{% url 'core:mfa_setup' %}">{% trans "Activate" %}</a>{% endif %}
+  </section>
+  <section class="section">
+    <h2>{% trans "API token" %}</h2>
+    <p class="small">{% trans "For integrations with your own systems. Send it as: Authorization: Bearer <token>." %}</p>
+    {% if token %}<p class="mono" style="word-break:break-all">{{ token }}</p>{% endif %}
+    <form method="post" class="actions">{% csrf_token %}
+      <button class="btn secondary" name="action" value="token">{% if has_token %}{% trans "Replace the token" %}{% else %}{% trans "Create a token" %}{% endif %}</button>
+      {% if has_token %}<button class="btn danger" name="action" value="revoke">{% trans "Revoke" %}</button>{% endif %}
+    </form>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,132 @@
+{% load tz %}<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Rapport des faits / Statement of facts — {{ call.reference }}</title>
+<style>
+  :root { --ink:#1f2326; --muted:#5d666d; --line:#c9cfd4; --soft:#f3f5f6; --tacit:#3d5a80; --contest:#8a4b00; --deferred:#5b3f8c; }
+  * { box-sizing: border-box; }
+  body { font-family: "Poppins", "Segoe UI", Arial, sans-serif; color: var(--ink); margin: 24px; font-size: 11.5px; line-height: 1.45; }
+  h1 { font-size: 18px; margin: 0 0 4px; letter-spacing: .02em; }
+  h2 { font-size: 13px; margin: 22px 0 6px; padding-bottom: 3px; border-bottom: 1.5px solid var(--ink); }
+  .en { color: var(--muted); font-weight: 400; }
+  .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px 16px; margin-top: 12px; }
+  .meta div { border-left: 2px solid var(--line); padding-left: 8px; }
+  .meta b { display: block; font-size: 10px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  th, td { border: 1px solid var(--line); padding: 4px 6px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); font-size: 10px; text-transform: uppercase; letter-spacing: .03em; }
+  .num { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; white-space: nowrap; }
+  .tag { display: inline-block; padding: 0 5px; border: 1px solid currentColor; border-radius: 3px; font-size: 10px; margin: 1px 2px 1px 0; }
+  .tacit { color: var(--tacit); } .contested { color: var(--contest); } .deferred { color: var(--deferred); }
+  .legend { margin-top: 10px; padding: 8px 10px; background: var(--soft); font-size: 10.5px; }
+  .hash { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 10px; word-break: break-all; color: var(--muted); }
+  .sign { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 18px; }
+  .sign div { border-top: 1px solid var(--ink); padding-top: 4px; min-height: 60px; }
+  @media print { body { margin: 10mm; } h2 { break-after: avoid; } tr { break-inside: avoid; } }
+</style>
+</head>
+<body>
+{% timezone "UTC" %}
+<h1>RAPPORT DES FAITS <span class="en">/ STATEMENT OF FACTS</span></h1>
+<div>{{ call.port.name }} ({{ call.port.code }}) — {{ call.reference }} — généré depuis le registre FLUXAA Port <span class="en">/ generated from the FLUXAA Port registry</span> — {{ generated_at|date:"d/m/Y H:i" }} UTC</div>
+
+<div class="meta">
+  <div><b>Navire / Vessel</b>{{ vessel.name }} — IMO {{ vessel.imo }}{% if vessel.flag %} — {{ vessel.flag }}{% endif %}</div>
+  <div><b>Voyage</b>{{ call.voyage_number|default:"—" }}</div>
+  <div><b>Agence / Agency</b>{{ call.agency }}</div>
+  <div><b>Poste / Berth</b>{% if call.berth %}{{ call.berth.code }} — {{ call.berth.name_fr }}{% else %}—{% endif %}</div>
+  <div><b>Produit / Product</b>{{ call.product|default:"—" }}</div>
+  <div><b>Quantité déclarée / Declared qty</b><span class="num">{% if call.quantity %}{{ call.quantity|floatformat:"-3g" }}{% else %}—{% endif %} {{ call.quantity_unit }}</span></div>
+  <div><b>Arrivée / Arrival</b><span class="num">{{ call.ata|date:"d/m/Y H:i"|default:"—" }}</span></div>
+  <div><b>Appareillage / Departure</b><span class="num">{{ call.atd|date:"d/m/Y H:i"|default:"—" }}</span></div>
+</div>
+
+<h2>Parties <span class="en">/ Parties</span></h2>
+<table>
+  <tr><th>Rôle / Role</th><th>Organisation</th></tr>
+  {% for p in parties %}<tr><td>{{ p.get_role_display }} ({{ p.role }})</td><td>{{ p.organization.name }}</td></tr>{% endfor %}
+</table>
+
+{% if stages|length > 1 %}
+<h2>Étapes de l'escale <span class="en">/ Stages of the call</span></h2>
+<table>
+  <tr><th>#</th><th>Zone / poste <span class="en">/ Area / berth</span></th><th>Opérations</th><th>À couple / amarré<br><span class="en">Alongside (UTC)</span></th><th>Quitté<br><span class="en">Left (UTC)</span></th><th>État / State</th></tr>
+  {% for s in stages %}<tr><td class="num">{{ s.order }}</td><td>{{ s.get_berth_kind_display }}{% if s.berth %} — {{ s.berth.code }} {{ s.berth.name_fr }}{% endif %}</td><td>{{ s.operations|join:", " }}</td><td class="num">{% if s.atb %}{{ s.atb|date:"d/m/Y H:i" }}{% else %}—{% endif %}</td><td class="num">{% if s.atd %}{{ s.atd|date:"d/m/Y H:i" }}{% else %}—{% endif %}</td><td>{{ s.get_status_display }}{% if s.cancel_reason %} — {{ s.cancel_reason }}{% endif %}</td></tr>{% endfor %}
+</table>
+{% endif %}
+
+<h2>Chronologie contradictoire <span class="en">/ Contradictory timeline</span></h2>
+<table>
+  <tr><th>Événement / Event</th><th>Heure déclarée<br><span class="en">Declared (UTC)</span></th><th>Heure système<br><span class="en">System (UTC)</span></th><th>Émetteur / Emitter</th><th>Contresignatures / Countersignatures</th><th>Mentions</th></tr>
+  {% for row in milestones %}{% with m=row.m %}
+  <tr>
+    <td>{% if stages|length > 1 and m.stage %}<span class="tag">{{ m.stage.order }}</span> {% endif %}{{ m.type.label_fr }}<br><span class="en">{{ m.type.label_en }}</span>{% if m.cause %}<br>Cause : {{ m.cause.label_fr }} <span class="en">/ {{ m.cause.label_en }}</span>{% if m.cause_reason %} — {{ m.cause_reason }}{% endif %}{% endif %}</td>
+    <td class="num">{{ m.declared_at|date:"d/m/Y H:i" }}</td>
+    <td class="num">{{ m.recorded_at|date:"d/m/Y H:i" }}{% if m.device_recorded_at %}<br><span class="en">appareil / device {{ m.device_recorded_at|date:"d/m H:i" }}</span>{% endif %}</td>
+    <td>{{ m.emitter_label }} ({{ m.emitter_role }})</td>
+    <td>{% for role, state in row.states.items %}
+      {% if state == "TACIT" %}<span class="tag tacit">{{ role }} : tacite / tacit</span>
+      {% elif state == "CONTESTED" %}<span class="tag contested">{{ role }} : contesté / contested</span>
+      {% elif state == "COUNTERSIGNED" %}<span class="tag">{{ role }} : contresigné / countersigned</span>
+      {% else %}<span class="tag">{{ role }} : en attente / pending</span>{% endif %}
+    {% empty %}—{% endfor %}</td>
+    <td>{% if m.deferred %}<span class="tag deferred">saisie différée / deferred entry</span>{% endif %}
+        {% if m.is_rectification %}<span class="tag">rectification — {{ m.rectification_reason }}</span>{% endif %}
+        {% if m.is_conflict %}<span class="tag contested">saisie concurrente / competing entry</span>{% endif %}
+        {% if m.source == "PAPER" %}<span class="tag deferred">procédure papier / paper fallback</span>{% endif %}</td>
+  </tr>
+  {% endwith %}{% empty %}<tr><td colspan="6">—</td></tr>{% endfor %}
+</table>
+<div class="legend">
+  <b>Contresignature tacite</b> : aucune réponse dans le délai fixé par le port — le silence est qualifié, ce n'est <b>pas</b> un accord.
+  <span class="en"><b>Tacit countersignature</b>: no answer within the port's delay — silence is qualified, it is <b>not</b> an agreement.</span><br>
+  <b>Saisie différée</b> : enregistrement synchronisé après coup (hors ligne ou procédure papier) ; les deux horodatages sont conservés.
+  <span class="en"><b>Deferred entry</b>: synchronised afterwards (offline or paper fallback); both timestamps are kept.</span>
+</div>
+
+<h2>Interruptions <span class="en">/ Stoppages</span></h2>
+<table>
+  <tr><th>Début / Start</th><th>Fin / End</th><th>Durée / Duration (h)</th><th>Cause</th><th>Imputation</th><th>Établie contradictoirement / Jointly established</th></tr>
+  {% for r in interruptions %}
+  <tr><td class="num">{{ r.start.declared_at|date:"d/m/Y H:i" }}</td><td class="num">{{ r.end.declared_at|date:"d/m/Y H:i"|default:"en cours / ongoing" }}</td>
+      <td class="num">{{ r.duration_h|default:"—" }}</td><td>{{ r.cause.label_fr }} <span class="en">/ {{ r.cause.label_en }}</span></td>
+      <td>{{ r.attribution|default:"—" }}</td><td>{% if r.established %}oui / yes{% elif r.state == "TACIT" %}<span class="tacit">tacite / tacit</span>{% elif r.state == "CONTESTED" %}<span class="contested">contestée / contested</span>{% else %}non / no{% endif %}</td></tr>
+  {% empty %}<tr><td colspan="6">Aucune / None</td></tr>{% endfor %}
+</table>
+
+<h2>Time sheet</h2>
+<table>
+  <tr><th>Attente en rade / Waiting (h)</th><th>NOR → all fast (h)</th><th>Accostage → début / Berthing → start (h)</th><th>Transfert brut / Gross transfer (h)</th><th>Arrêts / Stops (h)</th><th>Transfert net / Net transfer (h)</th><th>Fin → appareillage / End → departure (h)</th><th>Séjour / Stay (h)</th></tr>
+  <tr class="num"><td>{{ time_sheet.waiting_h|default:"—" }}</td><td>{{ time_sheet.nor_to_berth_h|default:"—" }}</td><td>{{ time_sheet.berth_to_start_h|default:"—" }}</td><td>{{ time_sheet.transfer_gross_h|default:"—" }}</td><td>{{ time_sheet.stops_h }}</td><td>{{ time_sheet.transfer_net_h|default:"—" }}</td><td>{{ time_sheet.end_to_departure_h|default:"—" }}</td><td>{{ time_sheet.stay_h|default:"—" }}</td></tr>
+</table>
+<p class="en">Les durées sont calculées depuis le registre ; le calcul des staries reste hors V1. / Durations are computed from the registry; laytime calculation is outside V1.</p>
+
+<h2>Alertes émises <span class="en">/ Alerts emitted</span></h2>
+<table>
+  <tr><th>Heure / Time (UTC)</th><th>Alerte / Alert</th></tr>
+  {% for a in alerts %}<tr><td class="num">{{ a.emitted_at|date:"d/m/Y H:i" }}</td><td>{{ a.message_fr }}<br><span class="en">{{ a.message_en }}</span></td></tr>
+  {% empty %}<tr><td colspan="2">Aucune / None</td></tr>{% endfor %}
+</table>
+
+<h2>Contestations ouvertes <span class="en">/ Open disputes</span></h2>
+<table>
+  <tr><th>Référence</th><th>Objet / Subject</th><th>Ouverte par / Opened by</th><th>État / Status</th></tr>
+  {% for d in open_disputes %}<tr><td class="num">{{ d.reference }}</td><td>{{ d.subject }}</td><td>{{ d.opened_label }} ({{ d.opened_role }})</td><td>{{ d.get_status_display }}</td></tr>
+  {% empty %}<tr><td colspan="4">Aucune / None</td></tr>{% endfor %}
+</table>
+
+{% if remarks %}
+<h2>Remarques de l'agence <span class="en">/ Agency remarks</span></h2>
+<p>{{ remarks|linebreaksbr }}</p>
+<p class="en">{% if remarks_assisted %}Projet préparé avec l'assistant IA, relu et validé par {{ remarks_by }}. / Drafted with the AI assistant, reviewed and validated by {{ remarks_by }}.{% else %}Rédigées par {{ remarks_by }}. / Written by {{ remarks_by }}.{% endif %}</p>
+{% endif %}
+
+<h2>Intégrité <span class="en">/ Integrity</span></h2>
+<p>Dernière écriture du journal de l'escale <span class="en">/ last journal entry of the call</span> : n° {{ registry_seq }} — empreinte <span class="en">/ hash</span></p>
+<p class="hash">{{ registry_hash|default:"—" }}</p>
+<p class="en">Les signatures électroniques du présent document sont enregistrées dans le registre et vérifiables par son empreinte SHA-256. / The electronic signatures of this document are recorded in the registry and verifiable through its SHA-256 fingerprint.</p>
+<div class="sign"><div>Agence / Agency</div><div>Capitaine / Master</div><div>Terminal</div></div>
+{% endtimezone %}
+</body>
+</html>

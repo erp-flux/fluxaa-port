@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "Assistant" %}{% endblock %}
+{% block content %}
+<div class="section-head"><div><h1>{% trans "Assistant of the port" %}</h1>
+  <p class="muted" style="max-width:76ch">{% blocktrans %}The assistant reads the registry as you see it — calls under way and expected, decisions waiting, late tasks, disputes, the AIS board, the indicators — and writes in plain words. It cites the calls it draws on, says when the registry does not show something, and never approves, signs, closes or corrects anything: people decide. Nothing it writes is recorded in a call; the request itself is traced.{% endblocktrans %}</p></div></div>
+
+<section class="section">
+  <div class="section-head tight"><h2>{% trans "Brief of the port" %}</h2>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="brief">
+      <button class="btn small">{% if brief %}{% trans "Refresh the brief" %}{% else %}{% trans "Prepare the brief" %}{% endif %}</button></form></div>
+  {% if brief %}
+    <p class="small muted">{% blocktrans with t=brief.created_at|date:"d/m H:i" %}Written at {{ t }} from the registry at that moment; a later change in a call is not in it.{% endblocktrans %}</p>
+    <div class="assistant-answer">{{ brief.output.text }}</div>
+  {% else %}
+    <p class="hint">{% trans "What is alongside, what is expected, what waits for a decision, what is late or disputed, and what the AIS picture says — in a page, when you ask for it." %}</p>
+  {% endif %}
+</section>
+
+<section class="section" id="question">
+  <h2>{% trans "Ask the registry" %}</h2>
+  <form method="post" class="form">{% csrf_token %}<input type="hidden" name="action" value="ask">
+    <label for="question">{% trans "Your question" %}</label>
+    <textarea id="question" name="question" maxlength="{{ max_chars }}" required rows="3" placeholder="{% trans 'Which calls have a decision waiting for more than four hours? Which vessel is expected next, and is it heard on AIS?' %}">{{ question }}</textarea>
+    <div class="actions"><button class="btn small">{% trans "Ask" %}</button>
+      <span class="small muted">{% trans "Answered from the calls you may open, the AIS board and the indicators of the last 90 days. Earlier periods: statistics page." %}</span></div>
+  </form>
+  {% if answer %}
+    <div class="assistant-answer">{{ answer.output.text }}</div>
+    <p class="small muted">{% blocktrans with t=answer.created_at|date:"d/m H:i" %}Answered at {{ t }}.{% endblocktrans %}</p>
+  {% endif %}
+</section>
+
+{% if inventory %}
+<section class="section">
+  <details><summary class="small">{% trans "What the assistant was given" %}</summary>
+    <p class="small muted">{% trans "Each request is recorded with the fingerprint of the data sent and the list of the objects it was built from (roles only, never a person; nothing from the security domain)." %}</p>
+    <p class="small">{% for item in inventory %}<span class="code">{{ item }}</span> {% endfor %}</p>
+  </details>
+</section>
+{% endif %}
+{% endblock %}

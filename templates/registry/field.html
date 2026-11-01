@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+{% load i18n static %}
+{% comment %}
+  Field application (CDC EF-14, ENF-6): installable, works offline, camera and touch signature.
+  Context: `call` (reference, vessel.name, pk). Everything else comes from the field bundle API and is
+  kept on the device by static/js/field.js; the service worker (/sw.js) keeps this page for offline use.
+  Every string used by the script is in #field-i18n (English msgids, JSON-escaped with escapejs).
+{% endcomment %}
+{% block title %}{% trans "Field app" %} — {{ call.vessel.name }} ({{ call.reference }}){% endblock %}
+{% block content %}
+<div class="field" id="field-app">
+  <header class="fieldhead">
+    <div>
+      <p class="fref"><span class="ref">{{ call.reference }}</span> <span id="f-callstatus"></span></p>
+      <h1 class="vessel">{{ call.vessel.name }}</h1>
+      <p class="small muted" id="f-roles" hidden></p>
+    </div>
+    <a class="btn big quiet" href="{% url 'registry:call_detail' call.pk %}">{% trans "Back to the call" %}</a>
+  </header>
+
+  <noscript><p class="flash error">{% trans "The field app needs JavaScript to keep your entries on this device." %}</p></noscript>
+
+  <section class="fieldbar" id="f-status" aria-label="{% trans 'Synchronisation status' %}">
+    <p class="chips">
+      <span class="chip pending" id="f-net">{% trans "Connecting…" %}</span>
+      <span class="chip tacit" id="f-data" hidden></span>
+      <span class="chip pending" id="f-queue-count"></span>
+      <span class="chip contested" id="f-refused-count" hidden></span>
+    </p>
+    <button type="button" class="btn big" id="f-sync">{% trans "Synchronise now" %}</button>
+    <p class="when" id="f-last-sync"></p>
+    <p class="fieldbar-result" id="f-result" role="status" aria-live="polite" aria-atomic="true"></p>
+  </section>
+
+  <div class="fnotices" id="f-notices"></div>
+
+  <nav class="fieldnav" aria-label="{% trans 'Sections of the field app' %}">
+    <a href="#f-milestones">{% trans "Milestones" %}</a>
+    <a href="#f-countersign">{% trans "To countersign" %} <span class="count" id="f-nav-cs"></span></a>
+    <a href="#f-pumping" id="f-nav-pumping" hidden>{% trans "Pumping log" %}</a>
+    <a href="#f-tasks">{% trans "My tasks" %} <span class="count" id="f-nav-tasks"></span></a>
+    <a href="#f-queue">{% trans "On this device" %} <span class="count" id="f-nav-queue"></span></a>
+  </nav>
+
+  {# ------------------------------------------------------------------ record a milestone #}
+  <section class="section" id="f-milestones" aria-labelledby="f-milestones-title">
+    <h2 id="f-milestones-title" tabindex="-1">{% trans "Record a milestone" %}</h2>
+    <div class="fopen" id="f-open-block" hidden>
+      <h3>{% trans "Open interruptions" %}</h3>
+      <ul class="flist" id="f-open-list"></ul>
+    </div>
+    <div class="typegrid" id="f-types" hidden></div>
+    <p class="fempty" id="f-types-empty">{% trans "Loading…" %}</p>
+    <p class="fmsg" id="f-ms-done" role="status"></p>
+
+    <form class="fform" id="f-ms-form" aria-labelledby="f-ms-title" novalidate hidden>
+      <h3 id="f-ms-title" tabindex="-1"></h3>
+      <div id="f-ms-notes" hidden></div>
+      <div>
+        <label for="f-ms-time">{% trans "Declared time" %}</label>
+        <div class="timefield">
+          <input type="datetime-local" id="f-ms-time" name="declared_at" step="60" required aria-describedby="f-ms-time-hint">
+          <button type="button" class="btn big secondary" data-now="f-ms-time">{% trans "Now" %}</button>
+        </div>
+        <p class="hint" id="f-ms-time-hint"></p>
+      </div>
+      <div id="f-ms-cause-row" hidden>
+        <label for="f-ms-cause">{% trans "Cause" %}</label>
+        <select id="f-ms-cause" name="cause">
+          <option value="">{% trans "Choose a cause" %}</option>
+        </select>
+      </div>
+      <div id="f-ms-reason-row" hidden>
+        <label for="f-ms-reason">{% trans "Reason" %}</label>
+        <input type="text" id="f-ms-reason" name="cause_reason" maxlength="300" autocomplete="off" aria-describedby="f-ms-reason-hint">
+        <p class="hint" id="f-ms-reason-hint">{% trans "This cause requires a reason." %}</p>
+      </div>
+      <fieldset id="f-ms-related-row" hidden>
+        <legend>{% trans "Interruption that ends" %}</legend>
+        <div class="choices" id="f-ms-related"></div>
+        <p class="fempty" id="f-ms-related-empty" hidden>{% trans "No open interruption to close." %}</p>
+      </fieldset>
+      <div>
+        <label for="f-ms-note">{% trans "Note" %} <span class="hint">{% trans "(optional)" %}</span></label>
+        <textarea id="f-ms-note" name="note" rows="2" maxlength="2000"></textarea>
+      </div>
+      <div>
+        <label for="f-ms-photo">{% trans "Photo" %} <span class="hint">{% trans "(optional)" %}</span></label>
+        <input type="file" id="f-ms-photo" name="photo" accept="image/*" capture="environment" aria-describedby="f-ms-photo-status">
+        <p class="hint" id="f-ms-photo-status" role="status"></p>
+        <div class="photo-preview" id="f-ms-photo-preview" hidden>
+          <img id="f-ms-photo-img" alt="{% trans 'Preview of the photo' %}">
+          <button type="button" class="btn big secondary" id="f-ms-photo-remove">{% trans "Remove the photo" %}</button>
+        </div>
+      </div>
+      <p class="fmsg error" id="f-ms-error" role="alert" hidden></p>
+      <div class="factions">
+        <button type="submit" class="btn big" id="f-ms-submit">{% trans "Record" %}</button>
+        <button type="button" class="btn big secondary" id="f-ms-cancel">{% trans "Cancel" %}</button>
+      </div>
+    </form>
+  </section>
+
+  {# ------------------------------------------------------------------ to countersign #}
+  <section class="section" id="f-countersign" aria-labelledby="f-countersign-title">
+    <h2 id="f-countersign-title" tabindex="-1">{% trans "To countersign" %}</h2>
+    <p class="hint">{% trans "Countersigning confirms a milestone recorded by its emitter. Contesting opens a dispute: the milestone itself is never changed." %}</p>
+    <ul class="flist" id="f-cs-list"></ul>
+    <p class="fempty" id="f-cs-empty">{% trans "Loading…" %}</p>
+    <p class="fmsg" id="f-cs-done" role="status"></p>
+  </section>
+
+  {# ------------------------------------------------------------------ pumping log #}
+  <section class="section" id="f-pumping" aria-labelledby="f-pumping-title" hidden>
+    <h2 id="f-pumping-title" tabindex="-1">{% trans "Pumping log" %}</h2>
+    <form class="fform" id="f-pump-form" novalidate>
+      <div>
+        <label for="f-pump-time">{% trans "Time of the reading" %}</label>
+        <div class="timefield">
+          <input type="datetime-local" id="f-pump-time" name="declared_at" step="60" required aria-describedby="f-pump-time-hint">
+          <button type="button" class="btn big secondary" data-now="f-pump-time">{% trans "Now" %}</button>
+        </div>
+        <p class="hint" id="f-pump-time-hint"></p>
+      </div>
+      <div class="frow">
+        <div>
+          <label for="f-pump-pressure">{% trans "Manifold pressure" %} <span class="hint">(bar)</span></label>
+          <input type="text" inputmode="decimal" autocomplete="off" id="f-pump-pressure" name="pressure_bar">
+        </div>
+        <div>
+          <label for="f-pump-rate">{% trans "Flow rate" %} <span class="hint">(m³/h)</span></label>
+          <input type="text" inputmode="decimal" autocomplete="off" id="f-pump-rate" name="rate_m3h">
+        </div>
+        <div>
+          <label for="f-pump-temp">{% trans "Temperature" %} <span class="hint">(°C)</span></label>
+          <input type="text" inputmode="decimal" autocomplete="off" id="f-pump-temp" name="temperature_c">
+        </div>
+      </div>
+      <p class="fmsg error" id="f-pump-error" role="alert" hidden></p>
+      <div class="factions">
+        <button type="submit" class="btn big" id="f-pump-submit">{% trans "Add the reading" %}</button>
+      </div>
+      <p class="fmsg" id="f-pump-done" role="status"></p>
+    </form>
+  </section>
+
+  {# ------------------------------------------------------------------ my tasks (read only) #}
+  <section class="section" id="f-tasks" aria-labelledby="f-tasks-title">
+    <h2 id="f-tasks-title" tabindex="-1">{% trans "My tasks" %}</h2>
+    <p class="hint">{% trans "Read only: the pending tasks of your roles, by due time." %}</p>
+    <ul class="flist" id="f-task-list"></ul>
+    <p class="fempty" id="f-tasks-empty">{% trans "Loading…" %}</p>
+  </section>
+
+  {# ------------------------------------------------------------------ queue and results #}
+  <section class="section" id="f-queue" aria-labelledby="f-queue-title">
+    <h2 id="f-queue-title" tabindex="-1">{% trans "Entries on this device" %}</h2>
+    <p class="hint">{% trans "Each entry keeps the declared time of the fact and the time it was saved on this device; the registry adds its own time on receipt and marks late arrivals “deferred entry”. A competing entry never overwrites another one: the registry opens a dispute." %}</p>
+    <ol class="flist queue" id="f-queue-list"></ol>
+    <p class="fempty" id="f-queue-empty" hidden></p>
+    <div class="fothers" id="f-others" hidden></div>
+    <h3 id="f-results-title" tabindex="-1">{% trans "Results of the last synchronisations" %}</h3>
+    <ol class="flist queue" id="f-results-list"></ol>
+    <p class="fempty" id="f-results-empty" hidden></p>
+    <button type="button" class="btn big secondary" id="f-results-clear" hidden>{% trans "Clear the results" %}</button>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% url 'api:field-bundle' call.reference as bundle_url %}{% url 'api:sync' call.reference as sync_url %}{% url 'api:me' as me_url %}{% url 'core:login' as login_url %}{% url 'registry:master_entry' as master_url %}
+<script type="application/json" id="field-config">{% autoescape off %}{
+  "reference": "{{ call.reference|escapejs }}",
+  "bundleUrl": "{{ bundle_url|escapejs }}",
+  "syncUrl": "{{ sync_url|escapejs }}",
+  "meUrl": "{{ me_url|escapejs }}",
+  "owner": "{% if user.is_authenticated %}user:{{ user.email|lower|escapejs }}{% else %}master:{{ call.reference|escapejs }}:{{ actor.master.pk|default:''|escapejs }}{% endif %}",
+  "signInUrl": "{% if user.is_authenticated %}{{ login_url|escapejs }}?next={{ request.get_full_path|urlencode|escapejs }}{% else %}{{ master_url|escapejs }}{% endif %}"
+}{% endautoescape %}</script>
+<script type="application/json" id="field-i18n">{% autoescape off %}{
+  {% trans "Escalated" as s %}"alert_escalated": "{{ s|escapejs }}",
+  {% trans "Late" as s %}"alert_late": "{{ s|escapejs }}",
+  {% trans "Due soon" as s %}"alert_reminder": "{{ s|escapejs }}",
+  {% trans "already recorded" as s %}"already_chip": "{{ s|escapejs }}",
+  {% trans "Connection back: synchronising…" as s %}"back_online": "{{ s|escapejs }}",
+  {% trans "Already recorded on this device ({time}) and waiting to be sent. A new entry does not replace it: the registry will open a dispute." as s %}"already_local": "{{ s|escapejs }}",
+  {% trans "Already recorded in the registry ({time}). A new entry does not replace it: the registry will open a dispute." as s %}"already_server": "{{ s|escapejs }}",
+  {% trans "Blocking" as s %}"blocking": "{{ s|escapejs }}",
+  {% trans "Working from the data saved on this device on {time}: it may be out of date." as s %}"cached_data": "{{ s|escapejs }}",
+  {% trans "This call is closed: the registry will refuse new entries." as s %}"call_closed": "{{ s|escapejs }}",
+  {% trans "Cancel" as s %}"cancel": "{{ s|escapejs }}",
+  {% trans "{cause} — {reason}" as s %}"cause_reason": "{{ s|escapejs }}",
+  {% trans "Contest" as s %}"contest": "{{ s|escapejs }}",
+  {% trans "Grounds for the contest" as s %}"contest_comment": "{{ s|escapejs }}",
+  {% trans "Required. A dispute is opened with the emitter; the milestone itself is not changed." as s %}"contest_comment_hint": "{{ s|escapejs }}",
+  {% trans "Contest — {label}" as s %}"contest_of": "{{ s|escapejs }}",
+  {% trans "Contest “{label}” declared at {time}" as s %}"contest_q": "{{ s|escapejs }}",
+  {% trans "contest waiting to be sent" as s %}"contest_queued": "{{ s|escapejs }}",
+  {% trans "Contest of “{label}” saved on this device." as s %}"contest_saved": "{{ s|escapejs }}",
+  {% trans "Send the contest" as s %}"contest_send": "{{ s|escapejs }}",
+  {% trans "contest sent" as s %}"contest_sent": "{{ s|escapejs }}",
+  {% trans "Countersign" as s %}"countersign": "{{ s|escapejs }}",
+  {% trans "Confirm the countersignature" as s %}"countersign_confirm": "{{ s|escapejs }}",
+  {% trans "Countersignature — {label}" as s %}"countersign_of": "{{ s|escapejs }}",
+  {% trans "Countersign “{label}” declared at {time}?" as s %}"countersign_q": "{{ s|escapejs }}",
+  {% trans "Countersignature of “{label}” saved on this device." as s %}"countersign_saved": "{{ s|escapejs }}",
+  {% trans "Nothing awaits your countersignature." as s %}"cs_none": "{{ s|escapejs }}",
+  {% trans "countersignature waiting to be sent" as s %}"cs_queued": "{{ s|escapejs }}",
+  {% trans "countersignature sent" as s %}"cs_sent": "{{ s|escapejs }}",
+  {% trans "saved data of {time}" as s %}"data_saved_chip": "{{ s|escapejs }}",
+  {% trans "Declared {time}" as s %}"declared_at": "{{ s|escapejs }}",
+  {% trans "deferred entry" as s %}"deferred_chip": "{{ s|escapejs }}",
+  {% trans "saved on the device {time}" as s %}"device_short": "{{ s|escapejs }}",
+  {% trans "Time of this device ({offset}). It follows the clock until you change it." as s %}"device_time_hint": "{{ s|escapejs }}",
+  {% trans "Dismiss" as s %}"dismiss": "{{ s|escapejs }}",
+  {% trans "Due {time}" as s %}"due_at": "{{ s|escapejs }}",
+  {% trans "Due: {timing}" as s %}"due_timing": "{{ s|escapejs }}",
+  {% trans "Ends: {what} (started {time})" as s %}"ends_interruption": "{{ s|escapejs }}",
+  {% trans "The end cannot precede the start of the interruption." as s %}"err_before_start": "{{ s|escapejs }}",
+  {% trans "Choose a cause from the list." as s %}"err_cause": "{{ s|escapejs }}",
+  {% trans "State the grounds for the contest." as s %}"err_comment": "{{ s|escapejs }}",
+  {% trans "The declared time cannot be in the future." as s %}"err_future": "{{ s|escapejs }}",
+  {% trans "“{field}” must be a number." as s %}"err_number": "{{ s|escapejs }}",
+  {% trans "Enter at least one value." as s %}"err_pump_empty": "{{ s|escapejs }}",
+  {% trans "This cause requires a reason." as s %}"err_reason": "{{ s|escapejs }}",
+  {% trans "Choose the interruption that ends." as s %}"err_related": "{{ s|escapejs }}",
+  {% trans "The field app could not start on this device." as s %}"err_start": "{{ s|escapejs }}",
+  {% trans "This entry could not be saved on this device." as s %}"err_storage": "{{ s|escapejs }}",
+  {% trans "This entry could not be saved on this device: its storage may be full. Remove the photo and try again." as s %}"err_storage_photo": "{{ s|escapejs }}",
+  {% trans "Enter a valid date and time." as s %}"err_time": "{{ s|escapejs }}",
+  {% trans "Manifold pressure" as s %}"field_pressure": "{{ s|escapejs }}",
+  {% trans "Flow rate" as s %}"field_rate": "{{ s|escapejs }}",
+  {% trans "Temperature" as s %}"field_temperature": "{{ s|escapejs }}",
+  {% trans "hold point" as s %}"hold_point": "{{ s|escapejs }}",
+  {% trans "Guarded by a hold point: the registry refuses this milestone while its prerequisites are missing." as s %}"hold_point_hint": "{{ s|escapejs }}",
+  {% trans "Contest" as s %}"kind_contest": "{{ s|escapejs }}",
+  {% trans "Countersignature" as s %}"kind_countersign": "{{ s|escapejs }}",
+  {% trans "Measurement value" as s %}"kind_measurement_value": "{{ s|escapejs }}",
+  {% trans "Milestone" as s %}"kind_milestone": "{{ s|escapejs }}",
+  {% trans "Photo" as s %}"kind_photo": "{{ s|escapejs }}",
+  {% trans "Pumping log reading" as s %}"kind_pumping": "{{ s|escapejs }}",
+  {% trans "Task completed" as s %}"kind_task_complete": "{{ s|escapejs }}",
+  {% trans "Task signature" as s %}"kind_task_sign": "{{ s|escapejs }}",
+  {% trans "Last synchronisation: {time}" as s %}"last_sync": "{{ s|escapejs }}",
+  {% trans "on this device, not sent yet" as s %}"local_not_sent": "{{ s|escapejs }}",
+  {% trans "Milestone of {time}" as s %}"milestone_of": "{{ s|escapejs }}",
+  {% trans "Your roles on this call record no milestone in the field." as s %}"ms_none": "{{ s|escapejs }}",
+  {% trans "Offline" as s %}"net_offline": "{{ s|escapejs }}",
+  {% trans "Online" as s %}"net_online": "{{ s|escapejs }}",
+  {% trans "Connecting…" as s %}"net_starting": "{{ s|escapejs }}",
+  {% trans "Synchronising…" as s %}"net_syncing": "{{ s|escapejs }}",
+  {% trans "Server unreachable" as s %}"net_unreachable": "{{ s|escapejs }}",
+  {% trans "Not synchronised yet on this device" as s %}"never_synced": "{{ s|escapejs }}",
+  {% trans "The data of this call is not saved on this device yet: it is being loaded." as s %}"no_data": "{{ s|escapejs }}",
+  {% trans "The data of this call is not saved on this device: connect to the network once to load it." as s %}"no_data_offline": "{{ s|escapejs }}",
+  {% trans "No due time yet" as s %}"no_due": "{{ s|escapejs }}",
+  {% trans "no open interruption" as s %}"no_open_interruption": "{{ s|escapejs }}",
+  {% trans "Offline: entries are kept on this device and will be sent when the connection returns." as s %}"offline_kept": "{{ s|escapejs }}",
+  {% trans "in progress" as s %}"open_chip": "{{ s|escapejs }}",
+  {% trans "Entries of other calls are waiting on this device. Open their field app to send them:" as s %}"other_calls": "{{ s|escapejs }}",
+  {% trans "waiting: {n}" as s %}"other_calls_count": "{{ s|escapejs }}",
+  {% trans "Entries recorded on this device by another person: {n}. They stay here until that person signs in again." as s %}"other_person_entries": "{{ s|escapejs }}",
+  {% trans "This image cannot be read on this device." as s %}"photo_error": "{{ s|escapejs }}",
+  {% trans "Preparing the photo…" as s %}"photo_processing": "{{ s|escapejs }}",
+  {% trans "Photo ready: {w} × {h} px, {kb} kB." as s %}"photo_ready": "{{ s|escapejs }}",
+  {% trans "{w} × {h} px, {kb} kB" as s %}"photo_size": "{{ s|escapejs }}",
+  {% trans "Photo — {label} — {time}" as s %}"photo_title": "{{ s|escapejs }}",
+  {% trans "Wait until the photo is ready." as s %}"photo_wait": "{{ s|escapejs }}",
+  {% trans "Your session has expired or is no longer valid: sign in again. Your entries are kept on this device." as s %}"problem_auth": "{{ s|escapejs }}",
+  {% trans "This call is no longer available to you. Your entries are kept on this device." as s %}"problem_notfound": "{{ s|escapejs }}",
+  {% trans "This page was opened under another session. Reload it before recording anything." as s %}"problem_other_user": "{{ s|escapejs }}",
+  {% trans "To send: {n}" as s %}"queue_count": "{{ s|escapejs }}",
+  {% trans "No entry waiting: everything recorded on this device has been sent." as s %}"queue_empty": "{{ s|escapejs }}",
+  {% trans "Nothing to send" as s %}"queue_none": "{{ s|escapejs }}",
+  {% trans "Record the end" as s %}"record_end": "{{ s|escapejs }}",
+  {% trans "Recorded by {who}" as s %}"recorded_by": "{{ s|escapejs }}",
+  {% trans "Refused: {n}" as s %}"refused_count": "{{ s|escapejs }}",
+  {% trans "Refused by the registry: {message}" as s %}"refused_message": "{{ s|escapejs }}",
+  {% trans "Reload the page" as s %}"reload": "{{ s|escapejs }}",
+  {% trans "competing entry — dispute opened" as s %}"res_conflict": "{{ s|escapejs }}",
+  {% trans "Nothing was overwritten: the registry keeps both entries and opened a dispute for the parties to settle." as s %}"res_conflict_hint": "{{ s|escapejs }}",
+  {% trans "recorded" as s %}"res_ok": "{{ s|escapejs }}",
+  {% trans "No synchronisation result yet." as s %}"results_empty": "{{ s|escapejs }}",
+  {% trans "Send again" as s %}"retry": "{{ s|escapejs }}",
+  {% trans "“{label}” saved on this device at {time}; sending…" as s %}"saved_local": "{{ s|escapejs }}",
+  {% trans "“{label}” saved on this device at {time}. It will be sent when the connection returns." as s %}"saved_offline": "{{ s|escapejs }}",
+  {% trans "Available once the data of this call has been loaded." as s %}"section_needs_data": "{{ s|escapejs }}",
+  {% trans "Sign in again" as s %}"sign_in": "{{ s|escapejs }}",
+  {% trans "Signature area: draw with your finger" as s %}"signature_area": "{{ s|escapejs }}",
+  {% trans "Clear the signature" as s %}"signature_clear": "{{ s|escapejs }}",
+  {% trans "Draw in the box with a finger or a stylus. It is filed as a field photo along with your answer." as s %}"signature_hint": "{{ s|escapejs }}",
+  {% trans "Hand-drawn signature" as s %}"signature_label": "{{ s|escapejs }}",
+  {% trans "Hand-drawn signature (optional)" as s %}"signature_optional": "{{ s|escapejs }}",
+  {% trans "Signature — {action} — {time}" as s %}"signature_title": "{{ s|escapejs }}",
+  {% trans "another person" as s %}"st_foreign": "{{ s|escapejs }}",
+  {% trans "waiting to be sent" as s %}"st_pending": "{{ s|escapejs }}",
+  {% trans "refused" as s %}"st_refused": "{{ s|escapejs }}",
+  {% trans "sending…" as s %}"st_sending": "{{ s|escapejs }}",
+  {% trans "Started {time}" as s %}"started_at": "{{ s|escapejs }}",
+  {% trans "The storage of this device is full: the data of this call could not be saved for offline use." as s %}"storage_full": "{{ s|escapejs }}",
+  {% trans "This browser cannot keep entries on the device: keep this page open until they are sent." as s %}"storage_memory": "{{ s|escapejs }}",
+  {% trans "This browser cannot keep the field app for offline use: open it while connected." as s %}"sw_unavailable": "{{ s|escapejs }}",
+  {% trans "Competing entries (dispute opened): {n}." as s %}"sync_conflict": "{{ s|escapejs }}",
+  {% trans "Deferred entries: {n}." as s %}"sync_deferred": "{{ s|escapejs }}",
+  {% trans "Synchronised at {time}." as s %}"sync_done": "{{ s|escapejs }}",
+  {% trans "Synchronisation impossible: your session has expired. Entries are kept on this device." as s %}"sync_failed_auth": "{{ s|escapejs }}",
+  {% trans "No connection to the server: entries are kept on this device and will be sent later." as s %}"sync_failed_network": "{{ s|escapejs }}",
+  {% trans "Synchronisation impossible: this call is no longer available to you. Entries are kept on this device." as s %}"sync_failed_notfound": "{{ s|escapejs }}",
+  {% trans "The server could not process the synchronisation (error {status}). Entries are kept and will be sent again." as s %}"sync_failed_server": "{{ s|escapejs }}",
+  {% trans "Up to date at {time}: nothing to send." as s %}"sync_nothing": "{{ s|escapejs }}",
+  {% trans "Recorded: {n}." as s %}"sync_ok": "{{ s|escapejs }}",
+  {% trans "Refused: {n}, see the entries on this device." as s %}"sync_refused": "{{ s|escapejs }}",
+  {% trans "synchronised {time}" as s %}"synced_short": "{{ s|escapejs }}",
+  {% trans "No pending task for your roles." as s %}"tasks_none": "{{ s|escapejs }}",
+  {% trans "Too large to be accepted by the server." as s %}"too_large": "{{ s|escapejs }}",
+  {% trans "Times are those of this device ({device}); the port is on {port}." as s %}"tz_note": "{{ s|escapejs }}",
+  {% trans "Your roles on this call: {roles}" as s %}"your_roles": "{{ s|escapejs }}"
+}{% endautoescape %}</script>
+<script src="{% static 'js/field.js' %}" defer></script>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% load i18n tz %}
+{% block title %}{% trans "Security space" %}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div><h1>{% trans "Security space" %}</h1>
+  <p>{% trans "Armed guards, escorts, security plans and incidents. Stored apart, encrypted with their own keys, never on a dashboard or in an export. Every access is logged by name." %}</p></div>
+  <div class="actions"><a class="btn secondary" href="{% url 'secure:log' %}">{% trans "Access log" %}</a></div>
+</div>
+<section class="section">
+  {% if items %}
+  <div class="tablewrap"><table class="grid">
+    <tr><th>{% trans "Reference" %}</th><th>{% trans "Kind" %}</th><th>{% trans "Call" %}</th><th>{% trans "Vessel" %}</th><th>{% trans "Filed" %}</th><th>{% trans "Decision due" %}</th><th>{% trans "Status" %}</th></tr>
+    {% for i in items %}
+    <tr><td><a class="code" href="{% url 'secure:item' i.reference %}">{{ i.reference }}</a></td><td>{{ i.get_kind_display }}</td>
+        <td class="code">{{ i.call_reference }}</td><td>{{ i.vessel_name }}</td><td><time>{{ i.submitted_at|date:"d/m H:i" }}</time></td>
+        <td><time>{{ i.due_at|date:"d/m H:i"|default:"—" }}</time></td><td><span class="chip {% if i.status == 'SUBMITTED' %}pending{% elif i.status == 'REFUSED' %}contested{% else %}done{% endif %}">{{ i.get_status_display }}</span></td></tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="empty">{% trans "Nothing filed in the security space." %}</p>{% endif %}
+</section>
+{% endblock %}

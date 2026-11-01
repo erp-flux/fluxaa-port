@@ -1,0 +1,173 @@
+{% load i18n fluxaa assistant %}
+<div class="split">
+  <div>
+    {% if full %}
+    <section class="section" aria-labelledby="ready">
+      <div class="section-head"><h2 id="ready">{% trans "What the platform will refuse — and why" %}</h2>
+        <span class="small muted">{% trans "Hold points of the port: each transition opens only once its blocking tasks are done." %}</span></div>
+      <div class="tablewrap"><table class="grid">
+        {% for r in readiness %}
+        <tr><td style="width:34%"><b>{{ r.label }}</b></td>
+          <td>{% if r.ready %}<span class="chip done">{% trans "Open" %}</span>
+              {% else %}<span class="chip hold">{% trans "Held" %}</span>
+              <ul style="margin:6px 0 0;padding-left:18px">
+                {% for m in r.missing %}<li class="small"><span class="code">{{ m.task }}</span> {% if LANGUAGE_CODE == 'en' %}{{ m.title_en }}{% else %}{{ m.title_fr }}{% endif %} — <b>{{ m.role|role_name }}</b></li>{% endfor %}
+                {% for reason in r.reasons %}<li class="small">{{ reason }}</li>{% endfor %}
+              </ul>{% endif %}</td></tr>
+        {% endfor %}
+      </table></div>
+    </section>
+    {% endif %}
+
+    {% if assistant and assistant.can_review %}
+    <section class="section" id="assistant" aria-labelledby="assistant-title">
+      <div class="section-head"><h2 id="assistant-title">{% trans "Assisted review" %}</h2>
+        <form method="post" action="{% url 'ai:review' call.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{% url 'registry:call_detail' call.pk %}#assistant"><button class="btn small secondary">{% trans "Review the call with the assistant" %}</button></form></div>
+      <p class="small muted">{% trans "The assistant points out what deserves a check, from what your role can see. It never corrects the registry: you decide whether a finding becomes an alert." %}</p>
+      <ul class="calllist">
+        {% for f in assistant.rule_findings %}<li><div><span class="chip late">{% trans "rule check" %}</span> <b>{{ f.title }}</b><div class="small">{{ f.detail }}</div><div class="small muted">{{ f.references|join:" · " }}</div></div><div></div></li>{% endfor %}
+        {% for f in assistant.review.findings %}<li><div><span class="chip {% if f.severity == 'high' %}late{% elif f.severity == 'medium' %}reminder{% else %}na{% endif %}">{% if f.severity == 'high' %}{% trans "to check first" %}{% elif f.severity == 'medium' %}{% trans "to check" %}{% else %}{% trans "for information" %}{% endif %}</span> <b>{{ f.title }}</b><div class="small">{{ f.detail }}</div>{% if f.references %}<div class="small muted">{{ f.references|join:" · " }}</div>{% endif %}</div>
+          <div>{% if f.raised %}<span class="chip done">{% trans "alert raised" %}</span>{% else %}<form method="post" action="{% url 'ai:raise_alert' call.pk assistant.review.run.pk f.index %}" data-confirm="{% trans 'Raise this finding as an alert to the agency and the harbour master, under your name?' %}">{% csrf_token %}<input type="hidden" name="next" value="{% url 'registry:call_detail' call.pk %}#assistant"><button class="btn small quiet">{% trans "Raise as an alert" %}</button></form>{% endif %}</div></li>
+        {% empty %}{% if assistant.review %}<li><div class="small muted">{% trans "The assistant found nothing to point out." %}</div><div></div></li>{% endif %}{% endfor %}
+      </ul>
+      {% if assistant.review %}<p class="small muted">{% blocktrans with at=assistant.review.run.created_at|date:"d/m H:i" model=assistant.review.run.model %}Review of {{ at }} by {{ model }} — a proposal, not a record of the call.{% endblocktrans %}</p>{% endif %}
+    </section>
+    {% endif %}
+
+    <section class="section" aria-labelledby="mine">
+      <div class="section-head"><h2 id="mine">{% trans "Your open tasks on this call" %}</h2><a class="small" href="?tab=taches&mine=1">{% trans "All your tasks" %}</a></div>
+      {% if my_open_tasks %}
+      <ul class="calllist">{% for t in my_open_tasks %}
+        <li><div><span class="code">{{ t.code }}</span> {{ t.title }}<div class="small muted">{{ t.nature|nature_label }}{% if t.timing %} — {{ t.timing }}{% endif %}</div></div>
+          <div style="text-align:right">{% if t.due_at %}<time>{{ t.due_at|date:"d/m H:i" }}</time>{% endif %}
+            {% if t.alert_level != "NONE" %}<span class="chip {{ t.alert_level|alert_class }}">{{ t.alert_level|alert_label }}</span>{% endif %}
+            {% if t.is_blocking %}<span class="chip blocking">{% trans "Blocking" %}</span>{% endif %}</div></li>
+      {% endfor %}</ul>
+      {% else %}<p class="empty">{% trans "Nothing to do for your roles right now." %}</p>{% endif %}
+    </section>
+
+    {% if nor %}
+    <section class="section" aria-labelledby="nor">
+      <h2 id="nor">{% trans "Notice of readiness" %}</h2>
+      <p>{% blocktrans with t=nor.declared_at|date:"d/m/Y H:i" by=nor.emitter_label %}Tendered on {{ t }} by {{ by }}.{% endblocktrans %}</p>
+      <p>{% for role, state in nor_states.items %}<span class="chip {{ state|state_class }}">{{ role }} — {{ state|state_label }}</span> {% endfor %}</p>
+      <p class="small muted">{% trans "The NOR is visible to every party of the call." %}</p>
+    </section>
+    {% endif %}
+
+    {% if full and stages %}
+    <section class="section" aria-labelledby="stages-title">
+      <div class="section-head"><h2 id="stages-title">{% trans "Stages of the call" %}</h2>
+        <span class="small muted">{% trans "Roads, STS area, buoy, quay: one call may operate in several areas, in sequence." %}</span></div>
+      <div class="tablewrap"><table class="grid">
+        <tr><th>#</th><th>{% trans "Area / berth" %}</th><th>{% trans "Operations" %}</th><th>{% trans "Window" %}</th><th>{% trans "Alongside" %}</th><th>{% trans "Left" %}</th><th>{% trans "State" %}</th><th></th></tr>
+        {% for s in stages %}<tr>
+          <td class="num">{{ s.order }}</td>
+          <td>{{ s.get_berth_kind_display }}{% if s.berth %} — <span class="code">{{ s.berth.code }}</span>{% endif %}{% if s.reason %}<div class="small muted">{{ s.reason }}</div>{% endif %}</td>
+          <td>{% for code in s.operations %}<span class="code">{{ code }}</span> {% endfor %}</td>
+          <td class="small">{% if s.planned_from %}<time>{{ s.planned_from|date:"d/m H:i" }}</time>{% else %}—{% endif %} → {% if s.planned_to %}<time>{{ s.planned_to|date:"d/m H:i" }}</time>{% else %}—{% endif %}</td>
+          <td class="num">{% if s.atb %}{{ s.atb|date:"d/m H:i" }}{% else %}—{% endif %}</td>
+          <td class="num">{% if s.atd %}{{ s.atd|date:"d/m H:i" }}{% else %}—{% endif %}</td>
+          <td>{% if s.status == "CURRENT" %}<span class="chip done">{% trans "current" %}</span>{% elif s.status == "PLANNED" %}<span class="chip tacit">{% trans "planned" %}</span>{% elif s.status == "DONE" %}<span class="chip na">{% trans "done" %}</span>{% else %}<span class="chip contested">{% trans "cancelled" %}</span>{% if s.cancel_reason %}<div class="small muted">{{ s.cancel_reason }}</div>{% endif %}{% endif %}</td>
+          <td class="actions">{% if can_plan_stage and s.status == "PLANNED" %}<details class="action"><summary>{% trans "Cancel" %}</summary><div><form method="post" action="{% url 'registry:call_action' call.pk 'stage_cancel' %}" class="form">{% csrf_token %}<input type="hidden" name="stage_id" value="{{ s.pk }}"><input name="reason" required placeholder="{% trans 'Reason' %}" aria-label="{% trans 'Reason' %}"><button class="btn small danger">{% trans "Cancel the stage" %}</button></form></div></details>{% endif %}</td>
+        </tr>{% endfor %}
+      </table></div>
+      {% if can_plan_stage %}
+      <details class="action" style="margin-top:10px"><summary>{% trans "Plan the next stage" %}</summary><div>
+        <p class="small muted">{% trans "The tasks of the new operations are created at once, for every party. Leaving the current stage is recorded by the marine services (« Shifting — leaving the berth or area ») and needs a movement authorization in force; the berthing at the next stage then uses the usual milestones." %}</p>
+        <form method="post" action="{% url 'registry:call_action' call.pk 'stage_add' %}" class="form">{% csrf_token %}
+          <div class="row">
+            <div><label for="st_kind">{% trans "Operating area" %}</label><select id="st_kind" name="berth_kind">{% for k, lbl in berth_kinds %}<option value="{{ k }}">{{ lbl }}</option>{% endfor %}</select></div>
+            <div><label for="st_berth">{% trans "Berth / area (optional, assigned by the port)" %}</label><select id="st_berth" name="berth"><option value="">—</option>{% for b in berths %}<option value="{{ b.pk }}">{{ b.code }} — {{ b.name_fr }} ({{ b.get_kind_display }})</option>{% endfor %}</select></div>
+          </div>
+          <div><span class="label">{% trans "Operations at this stage" %}</span>{% for t in operation_templates %}<label class="inline"><input type="checkbox" name="operations" value="{{ t.code }}"> <span class="code">{{ t.code }}</span> {{ t.name_fr }}</label> {% endfor %}</div>
+          <div class="row">
+            <div><label for="st_from">{% trans "Planned from" %}</label><input id="st_from" type="datetime-local" name="planned_from"></div>
+            <div><label for="st_to">{% trans "Planned to" %}</label><input id="st_to" type="datetime-local" name="planned_to"></div>
+          </div>
+          <div><label for="st_reason">{% trans "Reason" %}</label><input id="st_reason" name="reason" maxlength="300" placeholder="{% trans 'e.g. lightering offshore, then discharge of the remainder at the quay' %}"></div>
+          <button class="btn secondary">{% trans "Plan the stage" %}</button>
+        </form></div></details>
+      {% endif %}
+    </section>
+    {% endif %}
+  </div>
+
+  <aside>
+    {% if is_age %}
+    <section class="section">
+      <h2>{% trans "Agency" %}</h2>
+      {% if call.status == "DRAFT" %}
+      <p class="small">{% trans "Declaring notifies every party and requests the green light. It requires the vessel dataset (M0:02), the certificates from the master (M0:03) and the sanctions screening (M0:05)." %}</p>
+      <form method="post" action="{% url 'registry:call_action' call.pk 'declare' %}" data-confirm="{% trans 'Declare the call and notify every party?' %}">{% csrf_token %}<button class="btn">{% trans "Declare the call" %}</button></form>
+      {% endif %}
+      {% if not call.is_terminal_state %}
+      <details class="action" style="margin-top:10px"><summary>{% trans "Revise the times" %}</summary><div>
+        <form method="post" action="{% url 'registry:call_action' call.pk 'estimates' %}" class="form">{% csrf_token %}
+          {% for field, label, value in estimate_fields %}<div><label for="e_{{ field }}">{{ label }}</label><input type="datetime-local" id="e_{{ field }}" name="{{ field }}" value="{{ value|date:'Y-m-d\TH:i' }}"></div>{% endfor %}
+          <div><label for="reason">{% trans "Reason" %}</label><input id="reason" name="reason"></div>
+          <button class="btn secondary">{% trans "Revise and recompute deadlines" %}</button></form></div></details>
+      {% endif %}
+      {% if call.status == "OPS_COMPLETE" or call.status == "DEPARTED" %}
+      <form method="post" action="{% url 'registry:call_action' call.pk 'statement' %}" id="statement" class="form" style="margin-top:10px">{% csrf_token %}
+        <div><label for="remarks">{% trans "Agency remarks (optional)" %}</label>
+          {% if assistant.remarks %}<span class="prefill-tag">{% trans "pre-filled by the assistant — review before generating" %}</span><input type="hidden" name="remarks_assisted" value="1">{% endif %}
+          <textarea id="remarks" name="remarks" {% if assistant.remarks %}class="prefilled"{% endif %}>{{ assistant.remarks }}</textarea>
+          <p class="hint">{% trans "The facts come from the registry; your remarks are added under your name, and the statement is then signed by the master and the terminal." %}</p></div>
+        <button class="btn secondary">{% trans "Generate the statement of facts" %}</button></form>
+      {% if assistant %}<form method="post" action="{% url 'ai:remarks' call.pk %}" style="margin-top:6px">{% csrf_token %}<input type="hidden" name="next" value="{% url 'registry:call_detail' call.pk %}#statement"><button class="btn small quiet">{% trans "Draft the remarks with the assistant" %}</button></form>{% endif %}
+      {% endif %}
+      {% if call.status == "DEPARTED" %}
+      <form method="post" action="{% url 'registry:call_action' call.pk 'close_request' %}" style="margin-top:10px" data-confirm="{% trans 'Ask the harbour master to close the call?' %}">{% csrf_token %}<button class="btn secondary">{% trans "Request closure" %}</button></form>
+      {% endif %}
+      {% if call.status == "DRAFT" or call.status == "DECLARED" or call.status == "ACCEPTED" or call.status == "PLANNED" %}
+      <details class="action" style="margin-top:10px"><summary>{% trans "Cancel the call" %}</summary><div>
+        <form method="post" action="{% url 'registry:call_action' call.pk 'cancel' %}" class="form" data-confirm="{% trans 'Cancel this call? This cannot be undone.' %}">{% csrf_token %}
+          <div><label for="cancel_reason">{% trans "Reason" %}</label><input id="cancel_reason" name="reason" required></div><button class="btn danger">{% trans "Cancel the call" %}</button></form></div></details>
+      {% endif %}
+      {% if not linked and not call.is_terminal_state %}
+      <details class="action" style="margin-top:10px"><summary>{% trans "Link a partner call (STS, double banking)" %}</summary><div>
+        <form method="post" action="{% url 'registry:call_action' call.pk 'link' %}" class="form">{% csrf_token %}
+          <div><label for="partner">{% trans "Reference of the partner call" %}</label><input id="partner" name="partner" placeholder="{{ call.port.code }}-{% now "Y" %}-0001" required></div>
+          <p class="small muted">{% trans "Your agency links its own calls; the harbour master links the calls of two different agencies." %}</p>
+          <div><label for="link_kind">{% trans "Link" %}</label><select id="link_kind" name="link_kind"><option value="STS">STS</option><option value="OUTER">{% trans "This vessel outside (double banking)" %}</option><option value="INNER">{% trans "This vessel inside (double banking)" %}</option></select></div>
+          <button class="btn secondary">{% trans "Link" %}</button></form></div></details>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if is_cap and call.status == "DEPARTED" %}
+    <section class="section"><h2>{% trans "Harbour master" %}</h2>
+      <form method="post" action="{% url 'registry:call_action' call.pk 'close' %}" data-confirm="{% trans 'Close the call? Refused while a dispute is open or the statement of facts is not signed.' %}">{% csrf_token %}<button class="btn">{% trans "Close the call" %}</button></form>
+    </section>{% endif %}
+    {% if is_cap and call.status == "CLOSED" %}
+    <section class="section"><h2>{% trans "Harbour master" %}</h2>
+      <form method="post" action="{% url 'registry:call_action' call.pk 'archive' %}">{% csrf_token %}<button class="btn secondary">{% trans "Archive" %}</button></form>
+    </section>{% endif %}
+
+    {% if full %}
+    <section class="section"><h2>{% trans "Parties" %}</h2>
+      {% regroup parties|dictsort:"organization.name" by organization as party_groups %}
+      <ul class="calllist">{% for g in party_groups %}<li><div>{{ g.grouper.name }}</div><div>{% for p in g.list %}<span class="role" title="{{ p.role|role_name }}">{{ p.role }}</span> {% endfor %}</div></li>{% endfor %}</ul>
+    </section>
+    {% endif %}
+
+    {% if "AGE" in actor.roles or "NAV" in actor.roles or "SUR" in actor.roles or "CAP" in actor.roles %}
+    {% if not call.is_terminal_state %}
+    <section class="section">
+      <h2>{% trans "Confidential security filing" %}</h2>
+      <p class="small">{% trans "Armed guards, escorts, security incidents: filed straight into the security space, encrypted. Nothing about it will appear in this call, its journal or any export." %}</p>
+      <details class="action"><summary>{% trans "File a security request" %}</summary><div>
+        <form method="post" action="{% url 'registry:call_action' call.pk 'secure_deposit' %}" class="form" data-confirm="{% trans 'File this request in the security space?' %}">{% csrf_token %}
+          <div><label for="s_kind">{% trans "Kind" %}</label><select id="s_kind" name="kind"><option value="ARMED_GUARDS">{% trans "Armed guards" %}</option><option value="ESCORT">{% trans "Naval escort" %}</option><option value="SECURITY_PLAN">{% trans "Security plan / declaration" %}</option><option value="INCIDENT">{% trans "Security incident" %}</option><option value="OTHER">{% trans "Other security matter" %}</option></select></div>
+          <div class="row"><div><label for="s_guards">{% trans "Number of guards" %}</label><input id="s_guards" name="guards" inputmode="numeric"></div>
+          <div><label for="s_company">{% trans "Company" %}</label><input id="s_company" name="company"></div></div>
+          <div class="row"><div><label for="s_embark">{% trans "Embarkation" %}</label><input type="datetime-local" id="s_embark" name="embark"></div>
+          <div><label for="s_disembark">{% trans "Disembarkation" %}</label><input type="datetime-local" id="s_disembark" name="disembark"></div></div>
+          <div><label for="s_escort">{% trans "Escort (route, duration)" %}</label><input id="s_escort" name="escort"></div>
+          <div><label for="s_details">{% trans "Details" %}</label><textarea id="s_details" name="details"></textarea></div>
+          <button class="btn secondary">{% trans "File confidentially" %}</button></form></div></details>
+    </section>
+    {% endif %}{% endif %}
+  </aside>
+</div>

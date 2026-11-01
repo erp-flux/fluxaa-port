@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "Access log" %}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{% trans "Access log of the security space" %}</h1>
+<p>{% trans "Every access, by name, chained: an alteration would be detected. Accesses by a role other than the security authority are notified to it." %}</p></div></div>
+<section class="section"><div class="tablewrap"><table class="grid">
+  <tr><th>#</th><th>{% trans "Time" %}</th><th>{% trans "Person" %}</th><th>{% trans "Role" %}</th><th>{% trans "Action" %}</th><th>{% trans "Item" %}</th><th>{% trans "Notified" %}</th></tr>
+  {% for e in entries %}<tr><td class="num">{{ e.seq }}</td><td><time>{{ e.at|date:"d/m/Y H:i:s" }}</time></td><td>{{ e.user_label }}</td><td class="code">{{ e.role }}</td><td>{{ e.action }}</td><td class="code">{{ e.item.reference|default:"—" }}</td><td>{% if e.notified %}<span class="chip done">{% trans "yes" %}</span>{% endif %}</td></tr>{% endfor %}
+</table></div></section>
+{% endblock %}

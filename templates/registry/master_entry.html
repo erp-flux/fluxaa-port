@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "Master's access" %}{% endblock %}
+{% block content %}
+<div class="loginbox">
+  <h1>{% trans "Access by code" %}</h1>
+  <p>{% trans "Master, terminal, surveyor, owner, provider or marine service without an account: enter the eight-character code you received. The access is limited to one call — until departure for the master, until closure for the other parties." %}</p>
+  <form method="post" class="form">{% csrf_token %}
+    <div><label for="code">{% trans "Access code" %}</label><input id="code" name="code" autocapitalize="characters" autocomplete="off" placeholder="XXXX-XXXX" required style="font-family:var(--mono);font-size:20px;letter-spacing:.08em"></div>
+    <button class="btn big">{% trans "Open my call" %}</button>
+  </form>
+</div>
+{% endblock %}

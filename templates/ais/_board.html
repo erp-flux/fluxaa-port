@@ -1,0 +1,57 @@
+{% load i18n l10n %}
+{% with box=data.box %}
+<section class="section ais">
+  <div class="section-head tight"><h2>{{ data.port.name }} — {% blocktrans count n=data.vessels|length %}{{ n }} vessel heard{% plural %}{{ n }} vessels heard{% endblocktrans %}</h2>
+    <span class="muted small">{% trans "at" %} <time datetime="{{ data.generated_at|date:'c' }}">{{ data.generated_at|date:"d/m H:i" }}</time>{% if box %} · {{ data.on_board }} {% trans "in the port waters" %}{% endif %} · {{ data.with_call }} {% trans "with a call" %}</span></div>
+  {% if box %}
+  <figure class="ais-map">
+    {% localize off %}<svg viewBox="0 0 {{ box.width }} {{ box.height }}" role="img" aria-labelledby="ais-title" preserveAspectRatio="xMidYMid meet">
+      <title id="ais-title">{% trans "Port waters: berths, areas and the vessels heard" %}</title>
+      <rect class="sea" x="0" y="0" width="{{ box.width }}" height="{{ box.height }}"/>
+      {% if data.port.map_image %}<image href="{% url 'ais:background' %}" x="0" y="0" width="{{ box.width }}" height="{{ box.height }}" preserveAspectRatio="none"/>{% endif %}
+      {% for b in data.berths %}
+      <g class="berth kind-{{ b.berth.kind }}">
+        {% if b.r %}<circle cx="{{ b.x }}" cy="{{ b.y }}" r="{{ b.r }}"/>{% else %}<rect x="{{ b.x|add:'-7' }}" y="{{ b.y|add:'-7' }}" width="14" height="14"/>{% endif %}
+        <text x="{{ b.x }}" y="{{ b.label_y }}" text-anchor="middle">{{ b.berth.code }}</text>
+      </g>{% endfor %}
+      {% for v in data.vessels %}{% if v.inside %}
+      <g class="vessel st-{{ v.klass }}" transform="translate({{ v.x }} {{ v.y }})">
+        <polygon points="0,-11 7,9 0,5 -7,9" transform="rotate({{ v.rotation }})"><title>{{ v.name }} — {{ v.observed_at|date:"H:i" }}</title></polygon>
+        <text x="11" y="{{ v.label_dy }}">{{ v.name }}</text>
+      </g>{% endif %}{% endfor %}
+    </svg>{% endlocalize %}
+    <figcaption class="small muted">
+      <span class="legend st-operation">▲ {% trans "alongside / in operation" %}</span>
+      <span class="legend st-expected">△ {% trans "expected, approaching" %}</span>
+      <span class="legend st-departed">▽ {% trans "departed" %}</span>
+      <span class="legend st-none">◇ {% trans "no call in this port" %}</span>
+      · {% trans "squares: berths · circles: anchorage and STS areas" %}
+      · {% blocktrans with s=box.lat_min n=box.lat_max w=box.lon_min e=box.lon_max %}box {{ s }}° to {{ n }}° N, {{ w }}° to {{ e }}° E{% endblocktrans %}
+    </figcaption>
+  </figure>
+  {% else %}
+  <p class="hint">{% trans "The map of the port waters is not configured yet: the port administrator enters the four limits of the box (and, if wished, a chart excerpt) in the settings of the port. Until then the board is a list." %}</p>
+  {% endif %}
+  {% if data.discrepancies %}
+  <div class="notice warn">
+    <strong>{% blocktrans count n=data.discrepancies|length %}{{ n }} discrepancy between the AIS picture and the registry{% plural %}{{ n }} discrepancies between the AIS picture and the registry{% endblocktrans %}</strong>
+    <ul class="plain">{% for d in data.discrepancies %}<li>{{ d.text }} <a href="{% url 'registry:call_detail' d.call.pk %}">{{ d.call.reference }}</a></li>{% endfor %}</ul>
+    <p class="small muted">{% trans "A discrepancy is a question for the harbour master and the agency: the registry keeps what its emitters declared, and only they can rectify it." %}</p>
+  </div>
+  {% endif %}
+  <div class="tablewrap"><table class="grid">
+    <tr><th>{% trans "Vessel" %}</th><th>{% trans "Call" %}</th><th>{% trans "Position" %}</th><th>{% trans "Speed / course" %}</th><th>{% trans "AIS status" %}</th><th>{% trans "Destination" %}</th><th>{% trans "Last report" %}</th></tr>
+    {% for v in data.vessels %}
+    <tr class="st-{{ v.klass }}">
+      <td><strong>{{ v.name }}</strong><br><span class="small muted">MMSI {{ v.mmsi }}{% if v.imo %} · IMO {{ v.imo }}{% endif %}</span></td>
+      <td>{% if v.call %}<a href="{% url 'registry:call_detail' v.call.pk %}">{{ v.call.reference }}</a><br><span class="chip status st-{{ v.call.status }}">{{ v.call.get_status_display }}</span>{% elif v.vessel %}<span class="muted">{% trans "known vessel, no current call" %}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td class="num">{{ v.position_text }}{% if box and not v.inside %} <span class="chip na">{% trans "outside the box" %}</span>{% endif %}</td>
+      <td class="num">{% if v.speed_kn is not None %}{{ v.speed_kn }} kn{% else %}—{% endif %} / {% if v.course_deg is not None %}{{ v.course_deg }}°{% else %}—{% endif %}</td>
+      <td>{{ v.nav_status_label|default:"—" }}</td>
+      <td>{{ v.destination|default:"—" }}</td>
+      <td><time datetime="{{ v.observed_at|date:'c' }}">{{ v.observed_at|date:"d/m H:i" }}</time> <span class="small muted">({{ v.age_minutes }} min)</span></td>
+    </tr>
+    {% empty %}<tr><td colspan="7" class="empty">{% trans "No position received over the period. Connect a receiver or a stream (deployment guide, §15)." %}</td></tr>{% endfor %}
+  </table></div>
+</section>
+{% endwith %}

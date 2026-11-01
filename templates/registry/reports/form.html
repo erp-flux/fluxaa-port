@@ -1,0 +1,106 @@
+{% load tz %}<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>{{ form.title.0 }} / {{ form.title.1 }} — {{ call.reference }}</title>
+<style>
+  :root { --ink:#1f2326; --muted:#5d666d; --line:#c9cfd4; --soft:#f3f5f6; --band:#e9eef2; }
+  * { box-sizing: border-box; }
+  body { font-family: "Poppins", "Segoe UI", Arial, sans-serif; color: var(--ink); margin: 24px; font-size: 11.5px; line-height: 1.45; }
+  .en { color: var(--muted); font-weight: 400; }
+  /* 1. header band — identical on every form */
+  .band { display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; border: 1.5px solid var(--ink); padding: 10px 12px; background: var(--band); }
+  .band h1 { font-size: 17px; margin: 0; letter-spacing: .02em; }
+  .band .std { font-size: 10.5px; margin-top: 3px; }
+  .band .num { text-align: right; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; }
+  .band .port { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px 16px; margin: 10px 0 4px; }
+  .meta div { border-left: 2px solid var(--line); padding-left: 8px; }
+  .meta b { display: block; font-size: 10px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; white-space: nowrap; }
+  /* 2. body — sections */
+  h2 { font-size: 12.5px; margin: 18px 0 6px; padding-bottom: 3px; border-bottom: 1.5px solid var(--ink); }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; }
+  .fields .f { border-bottom: 1px solid var(--line); padding: 2px 0 3px; min-height: 30px; }
+  .fields .f.wide { grid-column: 1 / -1; }
+  .fields .f b { display: block; font-size: 9.5px; text-transform: uppercase; color: var(--muted); font-weight: 600; letter-spacing: .02em; }
+  .fields .f .v { font-size: 11.5px; }
+  .fields .f .blank { display: block; height: 14px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  th, td { border: 1px solid var(--line); padding: 4px 6px; text-align: left; vertical-align: top; }
+  th { background: var(--soft); font-size: 10px; text-transform: uppercase; letter-spacing: .03em; }
+  td.blank { height: 22px; }
+  .check td.box { width: 54px; text-align: center; font-size: 13px; }
+  .check td.item { width: auto; }
+  .note { margin: 6px 0 0; padding: 6px 10px; background: var(--soft); font-size: 10.5px; }
+  .text p { margin: 4px 0; }
+  .intro { margin: 10px 0 0; font-size: 11px; }
+  /* 3. signatures — one column per signing role */
+  .sign { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-top: 22px; }
+  .sign div { border-top: 1px solid var(--ink); padding-top: 4px; min-height: 76px; }
+  .sign small { display: block; color: var(--muted); font-size: 10px; }
+  /* 4. sealed footer */
+  .seal { margin-top: 18px; padding-top: 6px; border-top: 1.5px solid var(--ink); font-size: 10px; color: var(--muted); display: grid; grid-template-columns: 1fr auto; gap: 12px; }
+  .hash { font-family: ui-monospace, Menlo, Consolas, monospace; word-break: break-all; }
+  @media print { body { margin: 10mm; } h2 { break-after: avoid; } tr, .f { break-inside: avoid; } .sign { break-inside: avoid; }
+    @page { size: {% if form.landscape %}A4 landscape{% else %}A4{% endif %}; margin: 10mm; } }
+</style>
+</head>
+<body>
+{% timezone "UTC" %}
+<div class="band">
+  <div>
+    <div class="port">{{ port.name }} ({{ port.code }}) — FLUXAA Port</div>
+    <h1>{{ form.title.0|upper }} <span class="en">/ {{ form.title.1 }}</span></h1>
+    <div class="std">Référence : {{ form.standard.0 }} <span class="en">/ Reference: {{ form.standard.1 }}</span></div>
+  </div>
+  <div class="num">N° {{ number }}<br>{{ generated_at|date:"d/m/Y H:i" }} UTC</div>
+</div>
+
+<div class="meta">
+  <div><b>Navire / Vessel</b>{{ vessel.name }} — IMO {{ vessel.imo }}{% if vessel.flag %} — {{ vessel.flag }}{% endif %}</div>
+  <div><b>Escale / Call</b><span class="mono">{{ call.reference }}</span>{% if call.voyage_number %} — voy. {{ call.voyage_number }}{% endif %}</div>
+  <div><b>Zone / poste — Area / berth</b>{{ where }}{% if multi_stage and stage %} <span class="en">(étape / stage {{ stage.order }})</span>{% endif %}</div>
+  <div><b>Arrivée / Arrival</b><span class="mono">{{ arrival }}</span></div>
+</div>
+{% if form.intro %}<p class="intro">{{ form.intro.0 }} <span class="en">/ {{ form.intro.1 }}</span></p>{% endif %}
+
+{% for s in sections %}
+<h2>{{ s.title.0 }} <span class="en">/ {{ s.title.1 }}</span></h2>
+{% if s.kind == "fields" %}
+<div class="fields">
+  {% for f in s.items %}<div class="f{% if f.wide %} wide{% endif %}"><b>{{ f.fr }} <span class="en">/ {{ f.en }}</span></b>{% if f.value %}<span class="v">{{ f.value }}</span>{% else %}<span class="blank"></span>{% endif %}</div>{% endfor %}
+</div>
+{% elif s.kind == "table" %}
+<table>
+  <tr>{% for c in s.columns %}<th>{{ c.0 }}<br><span class="en">{{ c.1 }}</span></th>{% endfor %}</tr>
+  {% for row in s.rows %}<tr>{% for cell in row %}<td{% if not cell %} class="blank"{% endif %}>{{ cell|default_if_none:"" }}</td>{% endfor %}</tr>{% endfor %}
+  {% for _ in s.blank %}<tr>{% for c in s.columns %}<td class="blank"></td>{% endfor %}</tr>{% endfor %}
+</table>
+{% elif s.kind == "checklist" %}
+<table class="check">
+  <tr><th>Point de contrôle <span class="en">/ Check</span></th>{% for c in s.columns %}<th>{{ c.0 }}<br><span class="en">{{ c.1 }}</span></th>{% endfor %}<th>Remarques <span class="en">/ Remarks</span></th></tr>
+  {% for item in s.items %}<tr><td class="item">{{ item.0 }}<br><span class="en">{{ item.1 }}</span></td>{% for c in s.columns %}<td class="box">☐</td>{% endfor %}<td class="blank"></td></tr>{% endfor %}
+</table>
+{% elif s.kind == "text" %}
+<div class="text">{% for p in s.paragraphs %}<p>{{ p.0 }}</p><p class="en">{{ p.1 }}</p>{% endfor %}</div>
+{% endif %}
+{% if s.note %}<p class="note">{{ s.note.0 }} <span class="en">/ {{ s.note.1 }}</span></p>{% endif %}
+{% endfor %}
+
+{% if form.confidentiality_note %}<p class="note">{{ form.confidentiality_note.0 }} <span class="en">/ {{ form.confidentiality_note.1 }}</span></p>{% endif %}
+
+<h2>Signatures</h2>
+<div class="sign">
+  {% for role, label, fr, en in signers %}<div>{{ fr }}<small>{{ en }} — {{ label }} ({{ role }})</small><small>Nom, date, heure / Name, date, time</small></div>{% endfor %}
+</div>
+
+<div class="seal">
+  <div>Document généré depuis le registre de l'escale <span class="en">/ generated from the call's registry</span>{% if generated_by %} — par / by {{ generated_by }}{% endif %}.
+    Dernière écriture du journal <span class="en">/ last journal entry</span> : n° {{ registry_seq }} — {{ signature_count }} signature(s) électronique(s) enregistrée(s) <span class="en">/ electronic signatures recorded</span>.<br>
+    <span class="hash">{{ registry_hash|default:"—" }}</span></div>
+  <div class="mono">{{ number }}</div>
+</div>
+{% endtimezone %}
+</body>
+</html>

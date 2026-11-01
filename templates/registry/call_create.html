@@ -1,0 +1,85 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "Announce a call" %}{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>{% trans "Announce a call" %}</h1>
+<p>{% trans "The call is created as a draft. The platform instantiates the tasks of every party from the port's templates; the parties are notified when you declare it." %}</p></div></div>
+<form method="post" class="form" style="max-width:980px">{% csrf_token %}
+  <fieldset>
+    <legend>{% trans "Vessel" %}</legend>
+    <div class="row">
+      <div><label for="vessel">{% trans "Registered vessel" %}</label>
+        <select id="vessel" name="vessel"><option value="">— {% trans "new vessel" %} —</option>
+          {% for v in vessels %}<option value="{{ v.pk }}" {% if data.vessel == v.pk|stringformat:'s' %}selected{% endif %}>{{ v.name }} — IMO {{ v.imo }}</option>{% endfor %}</select></div>
+    </div>
+    <details class="action" {% if not vessels %}open{% endif %}><summary>{% trans "Register a new vessel" %}</summary><div class="row">
+      <div><label for="new_imo">IMO</label><input id="new_imo" name="new_imo" inputmode="numeric" pattern="[0-9]{7}" value="{{ data.new_imo }}"></div>
+      <div><label for="new_name">{% trans "Name" %}</label><input id="new_name" name="new_name" value="{{ data.new_name }}"></div>
+      <div><label for="new_flag">{% trans "Flag" %}</label><input id="new_flag" name="new_flag" value="{{ data.new_flag }}"></div>
+      <div><label for="new_type">{% trans "Type" %}</label><input id="new_type" name="new_type" placeholder="{% trans 'Product tanker' %}" value="{{ data.new_type }}"></div>
+      <div><label for="new_dwt">DWT</label><input id="new_dwt" name="new_dwt" type="number" min="0" value="{{ data.new_dwt }}"></div>
+    </div></details>
+  </fieldset>
+
+  <fieldset>
+    <legend>{% trans "Where and what" %}</legend>
+    <div class="label">{% trans "Operating area" %}</div>
+    <div class="checks" role="radiogroup">
+      {% for value, label in kinds %}<label><input type="radio" name="kind" value="{{ value }}" required {% if data.kind == value %}checked{% endif %}> {{ label }}</label>{% endfor %}
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div><label for="requested_berth">{% trans "Requested berth or area (optional)" %}</label>
+        <select id="requested_berth" name="requested_berth"><option value="">—</option>
+        {% for b in berths %}<option value="{{ b.pk }}">{{ b.code }} — {{ b.name }} ({{ b.get_kind_display }})</option>{% endfor %}</select></div>
+    </div>
+    <div class="label" style="margin-top:10px">{% trans "Operations" %}</div>
+    <div class="checks">{% for t in operations %}<label title="{{ t.description_fr }}"><input type="checkbox" name="operations" value="{{ t.code }}"> <span class="code">{{ t.code }}</span> {{ t.name }}</label>{% endfor %}</div>
+    <div class="label" style="margin-top:10px">{% trans "Additional modules" %} <span class="hint">{% trans "The SPM module and the anchorage stay are added automatically when the area calls for them." %}</span></div>
+    <div class="checks">{% for t in modules %}<label><input type="checkbox" name="modules" value="{{ t.code }}"> <span class="code">{{ t.code }}</span> {{ t.name }}</label>{% endfor %}</div>
+    <div class="row" style="margin-top:10px">
+      <div><label for="linked_call">{% trans "Partner call (STS, double banking)" %}</label>
+        <select id="linked_call" name="linked_call"><option value="">—</option>{% for p in partners %}<option value="{{ p.pk }}">{{ p.reference }} — {{ p.vessel.name }}</option>{% endfor %}</select></div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>{% trans "Times" %} <span class="hint">({% trans "port time" %} {{ PORT.timezone }})</span></legend>
+    <div class="row">
+      <div><label for="eta">ETA *</label><input type="datetime-local" id="eta" name="eta" required value="{{ data.eta }}"></div>
+      <div><label for="etb">ETB</label><input type="datetime-local" id="etb" name="etb" value="{{ data.etb }}"></div>
+      <div><label for="ets">{% trans "Start of operations (est.)" %}</label><input type="datetime-local" id="ets" name="ets" value="{{ data.ets }}"></div>
+      <div><label for="etc">{% trans "Completion (est.)" %}</label><input type="datetime-local" id="etc" name="etc" value="{{ data.etc }}"></div>
+      <div><label for="etd">ETD</label><input type="datetime-local" id="etd" name="etd" value="{{ data.etd }}"></div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>{% trans "Cargo and voyage" %}</legend>
+    <div class="row">
+      <div><label for="product">{% trans "Product" %}</label><input id="product" name="product" value="{{ data.product }}" placeholder="{% trans 'Gasoil 10 ppm' %}"></div>
+      <div><label for="quantity">{% trans "Declared quantity" %}</label><input id="quantity" name="quantity" type="number" step="0.001" min="0" value="{{ data.quantity }}"></div>
+      <div><label for="quantity_unit">{% trans "Unit" %}</label><select id="quantity_unit" name="quantity_unit"><option value="MT">MT</option><option value="M3">m³ @15 °C</option><option value="BBL">bbl @60 °F</option></select></div>
+      <div><label for="voyage">{% trans "Voyage" %}</label><input id="voyage" name="voyage" value="{{ data.voyage }}"></div>
+      <div><label for="last_port">{% trans "Last port" %}</label><input id="last_port" name="last_port" value="{{ data.last_port }}"></div>
+      <div><label for="next_port">{% trans "Next port" %}</label><input id="next_port" name="next_port" value="{{ data.next_port }}"></div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>{% trans "Parties you invite" %}</legend>
+    <p class="hint">{% trans "The port authorities (harbour master, port authority, customs-immigration-health, security, marine services) are invited automatically." %}</p>
+    <div class="row">
+      {% for role, orgs_for_role in orgs.items %}
+      {% if role == 'COM' or role == 'PRE' %}
+      <fieldset class="picks"><legend>{% if role == 'COM' %}{% trans "Owner / charterer" %}{% else %}{% trans "Providers" %}{% endif %}</legend>
+        {% for o in orgs_for_role %}<label><input type="checkbox" name="party_{{ role }}" value="{{ o.pk }}"> {{ o.name }}</label>{% empty %}<span class="hint">{% trans "None registered in the port." %}</span>{% endfor %}</fieldset>
+      {% else %}
+      <div><label for="party_{{ role }}">{% if role == 'TER' %}{% trans "Terminal / depot" %}{% else %}{% trans "Surveyor & laboratory" %}{% endif %}</label>
+        <select id="party_{{ role }}" name="party_{{ role }}"><option value="">—</option>
+          {% for o in orgs_for_role %}<option value="{{ o.pk }}">{{ o.name }}</option>{% endfor %}</select></div>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </fieldset>
+  <div class="actions"><button class="btn">{% trans "Create the draft call" %}</button><a class="btn quiet" href="{% url 'registry:call_list' %}">{% trans "Cancel" %}</a></div>
+</form>
+{% endblock %}

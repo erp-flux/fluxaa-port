@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "Dashboard" %}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div><h1>{% trans "Port calls of tankers" %}</h1>
+  <p>{% blocktrans with port=PORT.name %}{{ port }} — quays, anchorage and offshore areas, as recorded in the registry.{% endblocktrans %}</p></div>
+  <div class="actions">
+    {% if "AGE" in USER_ROLES %}<a class="btn" href="{% url 'registry:call_create' %}">{% trans "Announce a call" %}</a>{% endif %}
+    <a class="btn secondary" href="{% url 'registry:call_list' %}">{% trans "All calls" %}</a>
+  </div>
+</div>
+<div id="board" hx-get="{% url 'registry:dashboard' %}" hx-trigger="every 60s" hx-swap="innerHTML">
+  {% include "registry/_dashboard_body.html" %}
+</div>
+{% endblock %}

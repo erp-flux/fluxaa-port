@@ -1,0 +1,60 @@
+{% load i18n fluxaa %}
+<section class="section">
+  <div class="section-head">
+    <h2>{% trans "Tasks" %}</h2>
+    <div class="actions small">
+      {% if only_mine %}<a href="?tab=taches">{% trans "Show every task I can see" %}</a>{% else %}<a href="?tab=taches&mine=1">{% trans "Only my tasks" %}</a>{% endif %}
+    </div>
+  </div>
+  <p class="small muted">{% trans "Tasks are assigned to roles, never to persons. Each role sees its own tasks; the agency and the harbour master see them all." %}</p>
+  {% for code, tasks in task_groups.items %}
+  <div class="tablewrap"><table class="grid" style="margin-bottom:14px">
+    <tr class="section-row"><td colspan="6">{{ code }}</td></tr>
+    <tr><th style="width:70px">#</th><th>{% trans "Task" %}</th><th>{% trans "Role" %}</th><th>{% trans "Due" %}</th><th>{% trans "State" %}</th><th>{% trans "Action" %}</th></tr>
+    {% for t in tasks %}
+    <tr id="t{{ t.pk }}">
+      <td class="code">{{ t.number }}</td>
+      <td>{{ t.title }}{% if t.section %}<div class="small muted">{{ t.section }}</div>{% endif %}
+        {% if t.na_reason %}<div class="small">{% blocktrans with reason=t.na_reason %}Not applicable: {{ reason }}{% endblocktrans %}</div>{% endif %}
+        {% if t.completion_note and t.status == "DONE" %}<div class="small muted">{{ t.completion_note }}</div>{% endif %}</td>
+      <td><span class="role">{{ t.role }}</span>{% for r in t.co_roles %} <span class="role" title="{% trans 'co-signs' %}">{{ r }}</span>{% endfor %}
+        {% if t.joint %}<div class="small muted">{% trans "joint signature" %}{% if t.signed_roles %} — {% trans "signed:" %} {{ t.signed_roles|join:", " }}{% endif %}</div>{% endif %}</td>
+      <td>{% if t.due_at %}<time>{{ t.due_at|date:"d/m H:i" }}</time><div class="small muted">{{ t.timing }}</div>{% else %}<span class="small muted">{{ t.timing|default:"—" }}</span>{% endif %}</td>
+      <td><span class="chip {{ t.status|task_status_class }}">{{ t.get_status_display }}</span>
+        {% if t.status == "PENDING" and t.alert_level != "NONE" %}<span class="chip {{ t.alert_level|alert_class }}">{{ t.alert_level|alert_label }}</span>{% endif %}
+        {% if t.is_blocking %}<span class="chip blocking">{% trans "Blocking" %}</span>{% endif %}</td>
+      <td class="actions">
+        {% if t.can_act %}
+          {% if t.request_type_code %}<a class="btn small secondary" href="?tab=demandes&type={{ t.request_type_code }}">{% trans "Through its request" %}</a>
+          {% elif t.milestone_codes %}<a class="btn small secondary" href="?tab=jalons">{% trans "Record the milestone" %}</a>
+          {% elif t.document_type_code %}<a class="btn small secondary" href="?tab=documents&task={{ t.pk }}&type={{ t.document_type_code }}">{% trans "Provide the document" %}</a>{% endif %}
+          {% if t.can_sign %}<form method="post" action="{% url 'registry:call_action' call.pk 'task_sign' %}" class="inline">{% csrf_token %}<input type="hidden" name="task_id" value="{{ t.pk }}"><input type="hidden" name="back" value="?tab=taches#t{{ t.pk }}"><button class="btn small">{% trans "Sign" %}</button></form>{% endif %}
+          {% if t.can_complete %}
+          <details class="action"><summary>{% if t.nature == "D" %}{% trans "Decide" %}{% else %}{% trans "Mark done" %}{% endif %}</summary><div>
+            <form method="post" action="{% url 'registry:call_action' call.pk 'task_complete' %}" class="form">{% csrf_token %}<input type="hidden" name="task_id" value="{{ t.pk }}"><input type="hidden" name="back" value="?tab=taches#t{{ t.pk }}">
+              <div><label for="note{{ t.pk }}">{% trans "Note (optional)" %}</label><input id="note{{ t.pk }}" name="note"></div><button class="btn small">{% trans "Confirm" %}</button></form></div></details>
+          {% endif %}
+        {% endif %}
+        {% if t.can_na %}
+        <details class="action"><summary>{% trans "Not applicable" %}</summary><div>
+          <form method="post" action="{% url 'registry:call_action' call.pk 'task_na' %}" class="form">{% csrf_token %}<input type="hidden" name="task_id" value="{{ t.pk }}">
+            <div><label for="na{{ t.pk }}">{% trans "Reason (mandatory, traced)" %}</label><input id="na{{ t.pk }}" name="reason" required></div><button class="btn small secondary">{% trans "Mark not applicable" %}</button></form></div></details>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table></div>
+  {% empty %}<p class="empty">{% trans "No task for your roles." %}</p>{% endfor %}
+</section>
+{% if is_age or is_cap %}
+<section class="section">
+  <details class="action"><summary>{% trans "Add an ad hoc task" %}</summary><div>
+    <p class="small muted">{% trans "Explicitly marked, never blocking: a blocking task must come from the port's templates." %}</p>
+    <form method="post" action="{% url 'registry:call_action' call.pk 'task_adhoc' %}" class="form">{% csrf_token %}<input type="hidden" name="back" value="?tab=taches">
+      <div class="row"><div><label for="ah_fr">{% trans "Task (French)" %}</label><input id="ah_fr" name="title_fr" required></div><div><label for="ah_en">{% trans "Task (English)" %}</label><input id="ah_en" name="title_en"></div></div>
+      <div class="row"><div><label for="ah_role">{% trans "Role" %}</label><select id="ah_role" name="role"><option>AGE</option><option>NAV</option><option>TER</option><option>CAP</option><option>APO</option><option>SVC</option><option>ADM</option><option>SUR</option><option>INS</option><option>PRE</option></select></div>
+        <div><label for="ah_anchor">{% trans "Anchor" %}</label><select id="ah_anchor" name="anchor"><option value="">{% trans "none" %}</option><option>ETA</option><option>ETB</option><option>ATB</option><option>T0</option><option>T1</option><option>ATD</option></select></div>
+        <div><label for="ah_off">{% trans "Offset (hours, negative = before)" %}</label><input id="ah_off" name="offset_hours" type="number" value="0"></div></div>
+      <button class="btn secondary">{% trans "Add the task" %}</button></form></div></details>
+</section>
+{% endif %}

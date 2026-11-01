@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "AIS board" %}{% endblock %}
+{% block content %}
+<div class="section-head"><div><h1>{% trans "AIS board" %}</h1>
+  <p class="muted" style="max-width:76ch">{% blocktrans with h=max_age_hours %}Positions broadcast by the vessels themselves, as received over the last {{ h }} hours. They inform, corroborate the declared arrival and departure (an alert, never a correction) and never replace a milestone entered by its emitter.{% endblocktrans %}</p></div>
+  <span class="muted small">{% trans "Refreshed every minute" %}</span></div>
+<div id="ais-board" hx-get="{% url 'ais:board' %}" hx-trigger="every 60s" hx-swap="innerHTML">
+  {% include "ais/_board.html" %}
+</div>
+{% endblock %}

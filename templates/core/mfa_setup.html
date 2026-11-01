@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "Two-factor authentication" %}{% endblock %}
+{% block content %}
+<div class="loginbox">
+  {% if replacing %}
+  <h1>{% trans "Replace your authenticator application" %}</h1>
+  <p>{% trans "To register a new application, first enter a code from the one you use now." %}</p>
+  {% else %}
+  <h1>{% trans "Activate two-factor authentication" %}</h1>
+  <p>{% trans "Your role takes decisions that bind the port: a second factor is required (authenticator application on your phone)." %}</p>
+  {% endif %}
+  <ol>
+    <li>{% trans "Scan this code with an authenticator application (Google Authenticator, Microsoft Authenticator, FreeOTP…)." %}</li>
+    <li>{% trans "Enter the six-digit code it shows." %}</li>
+  </ol>
+  <img src="{{ qr }}" alt="{% trans 'QR code to scan' %}" width="200" height="200">
+  <p class="small muted">{% trans "Key for manual entry:" %} <span class="mono">{{ secret }}</span></p>
+  <form method="post" class="form">{% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    {% if replacing %}<div><label for="current_code">{% trans "Code from your current application" %}</label><input id="current_code" name="current_code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" required></div>{% endif %}
+    <div><label for="code">{% if replacing %}{% trans "Code from the new application" %}{% else %}{% trans "Six-digit code" %}{% endif %}</label><input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" required></div>
+    <button class="btn">{% if replacing %}{% trans "Replace" %}{% else %}{% trans "Activate" %}{% endif %}</button>
+  </form>
+  {% if replacing %}<p class="small muted" style="margin-top:14px">{% trans "Phone lost or replaced? Your port administrator can reset your two-factor authentication; you will then register the new application at your next sign-in." %}</p>{% endif %}
+</div>
+{% endblock %}

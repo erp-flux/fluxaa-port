@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "Sign in" %}{% endblock %}
+{% block content %}
+<div class="loginbox">
+  <h1>{% trans "Sign in" %}</h1>
+  <p class="muted">{% trans "Operational registry of tanker calls — for the parties to each call." %}</p>
+  <form method="post" class="form">{% csrf_token %}
+    {% if throttled %}<div class="flash error">{% trans "Too many unsuccessful attempts. Wait up to fifteen minutes before trying again." %}</div>{% elif form.errors %}<div class="flash error">{% trans "E-mail or password incorrect." %}</div>{% endif %}
+    <div><label for="id_username">{% trans "E-mail" %}</label><input type="email" name="username" id="id_username" autocomplete="username" required autofocus></div>
+    <div><label for="id_password">{% trans "Password" %}</label><input type="password" name="password" id="id_password" autocomplete="current-password" required></div>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="btn">{% trans "Sign in" %}</button>
+  </form>
+  <hr style="border:0;border-top:1px solid var(--line);margin:22px 0">
+  <p class="small"><a href="{% url 'registry:master_entry' %}">{% trans "Master of a vessel? Enter the access code given by your agent." %}</a></p>
+  <p class="small"><a href="{% url 'registry:verify' %}">{% trans "Verify an authorization" %}</a></p>
+</div>
+{% endblock %}

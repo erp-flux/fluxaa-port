@@ -1,0 +1,7 @@
+{% load i18n l10n %}{% localize off %}<svg class="chart" viewBox="0 0 {{ chart.width }} {{ chart.height }}" role="img" aria-label="{% trans "Bar chart" %}{% if chart.unit %} ({{ chart.unit }}){% endif %}">
+  {% for g in chart.grid %}<line class="grid" x1="{{ chart.left }}" x2="{{ chart.right }}" y1="{{ g.y }}" y2="{{ g.y }}"/><text x="{{ chart.left|add:"-4" }}" y="{{ g.y|add:"4" }}" text-anchor="end">{{ g.value }}</text>{% endfor %}
+  <line class="axis" x1="{{ chart.left }}" x2="{{ chart.right }}" y1="{{ chart.baseline }}" y2="{{ chart.baseline }}"/>
+  {% for b in chart.bars %}<rect class="bar" x="{{ b.x }}" y="{{ b.y }}" width="{{ b.w }}" height="{{ b.h }}"><title>{{ b.label }}: {{ b.value|default_if_none:"—" }}{% if chart.unit %} {{ chart.unit }}{% endif %}</title></rect>
+  {% if b.value is not None and b.h > 0 %}<text class="value" x="{{ b.lx }}" y="{{ b.y|add:"-3" }}" text-anchor="middle">{{ b.value }}</text>{% endif %}
+  {% if forloop.counter0|divisibleby:chart.every %}<text x="{{ b.lx }}" y="{{ chart.baseline|add:"14" }}" text-anchor="middle">{{ b.label }}</text>{% endif %}{% endfor %}
+</svg>{% endlocalize %}

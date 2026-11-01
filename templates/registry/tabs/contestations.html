@@ -1,0 +1,33 @@
+{% load i18n fluxaa %}
+<div class="split">
+  <section class="section">
+    <div class="section-head"><h2>{% trans "Disputes" %}</h2>
+      <span class="small muted">{% trans "A dispute never stops the operation and the platform never decides: the parties answer and close it, with or without agreement. An open dispute prevents the closure of the call." %}</span></div>
+    {% for d in disputes %}
+    <article id="c{{ d.pk }}" style="border-top:1px solid var(--line);padding:12px 0">
+      <div class="section-head" style="margin:0"><div><b>{{ d.subject }}</b> <span class="code">{{ d.reference }}</span>
+        <div class="small muted">{% trans "Opened by" %} {{ d.opened_label }} <span class="role">{{ d.opened_role }}</span>{% if d.counterpart_role %} — {% trans "counterpart" %} <span class="role">{{ d.counterpart_role }}</span>{% endif %} — <time>{{ d.opened_at|date:"d/m H:i" }}</time>{% if d.auto_created %} — {% trans "opened by the platform (competing entries)" %}{% endif %}</div></div>
+        <span class="chip {% if d.status == 'OPEN' %}contested{% elif d.status == 'ANSWERED' %}pending{% else %}done{% endif %}">{{ d.get_status_display }}</span></div>
+      {% if d.content_visible %}
+      <ul class="timeline" style="margin-top:10px">{% for e in d.entries.all %}<li><div class="small muted">{{ e.get_kind_display }} — {{ e.author_label }} ({{ e.role }}) — <time>{{ e.at|date:"d/m H:i" }}</time></div>{{ e.text|linebreaksbr }}</li>{% endfor %}</ul>
+      {% else %}<p class="small muted">{% trans "The statements are bilateral: they are visible to the two parties and to the harbour master." %}</p>{% endif %}
+      <div class="actions">
+        {% if d.can_respond %}<details class="action"><summary>{% trans "Respond" %}</summary><div><form method="post" action="{% url 'registry:call_action' call.pk 'dispute_respond' %}" class="form">{% csrf_token %}<input type="hidden" name="dispute_id" value="{{ d.pk }}"><input type="hidden" name="back" value="?tab=contestations#c{{ d.pk }}"><textarea name="text" required aria-label="{% trans 'Response' %}"></textarea><button class="btn small">{% trans "Send the response" %}</button></form></div></details>{% endif %}
+        {% if d.can_close %}<details class="action"><summary>{% trans "Close" %}</summary><div><form method="post" action="{% url 'registry:call_action' call.pk 'dispute_close' %}" class="form">{% csrf_token %}<input type="hidden" name="dispute_id" value="{{ d.pk }}"><input type="hidden" name="back" value="?tab=contestations#c{{ d.pk }}">
+          {% if d.close_agreement %}<div class="checks"><label><input type="radio" name="agreed" value="1" required> {% trans "with agreement" %}</label><label><input type="radio" name="agreed" value="0"> {% trans "without agreement" %}</label></div>{% else %}<input type="hidden" name="agreed" value="0"><p class="small muted">{% trans "The harbour master records that the dispute ends without agreement: an agreement belongs to the parties." %}</p>{% endif %}
+          <textarea name="text" required aria-label="{% trans 'How it ends' %}" placeholder="{% trans 'How it ends' %}"></textarea><button class="btn small secondary">{% trans "Close the dispute" %}</button></form></div></details>{% endif %}
+      </div>
+    </article>
+    {% empty %}<p class="empty">{% trans "No dispute." %}</p>{% endfor %}
+  </section>
+  <aside>{% if can_open_dispute %}
+    <section class="section"><h2>{% trans "Open a dispute" %}</h2>
+      <p class="small muted">{% trans "To contest a milestone, use “Contest” on the timeline: the dispute is then tied to it." %}</p>
+      <form method="post" action="{% url 'registry:call_action' call.pk 'dispute_open' %}" class="form">{% csrf_token %}<input type="hidden" name="back" value="?tab=contestations">
+        <div><label for="dkind">{% trans "Concerns" %}</label><select id="dkind" name="target_kind"><option value="OTHER">{% trans "Another subject (times, documents, services…)" %}</option><option value="MEASUREMENT">{% trans "The quantities — the bill of lading stays locked until the dispute is closed" %}</option></select></div>
+        <div><label for="dsub">{% trans "Subject" %}</label><input id="dsub" name="subject" required></div>
+        <div><label for="dcp2">{% trans "Counterpart" %}</label><select id="dcp2" name="counterpart_role"><option value="">—</option><option>AGE</option><option>NAV</option><option>TER</option><option>INS</option><option>SVC</option><option>CAP</option><option>APO</option><option>PRE</option></select></div>
+        <div><label for="dst">{% trans "Statement" %}</label><textarea id="dst" name="statement" required></textarea></div>
+        <button class="btn secondary">{% trans "Open the dispute" %}</button></form></section>{% endif %}
+  </aside>
+</div>

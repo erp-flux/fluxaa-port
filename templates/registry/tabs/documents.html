@@ -1,0 +1,63 @@
+{% load i18n fluxaa assistant %}
+<div class="split">
+  <section class="section">
+    <div class="section-head"><h2>{% trans "Documents" %}</h2>
+      <span class="small muted">{% trans "Each file is fingerprinted (SHA-256). A signed document is frozen: a change creates a new version, the old one stays readable." %}</span></div>
+    {% if documents %}
+    <div class="tablewrap"><table class="grid">
+      <tr><th>{% trans "Document" %}</th><th>{% trans "Issuer" %}</th><th>{% trans "State" %}</th><th>{% trans "Signatures" %}</th><th></th></tr>
+      {% for d in documents %}
+      <tr id="d{{ d.pk }}">
+        <td><a href="{% url 'registry:document_download' call.pk d.pk %}?inline=1" target="_blank" rel="noopener">{{ d.display_title }}</a> <span class="code">v{{ d.version }}</span> <span class="conf">{{ d.confidentiality }}</span>
+          <div class="small muted">{% if d.has_own_title %}{{ d.type.label }} — {% endif %}{{ d.original_name }} — <span class="hashshort" title="SHA-256 {{ d.sha256 }}">{{ d.sha256|short_hash:12 }}…</span></div>
+          {% if d.deferred %}<span class="chip deferred">{% trans "deferred entry" %}</span>{% endif %}</td>
+        <td>{% with who=d.issuer_label|label_parts %}{{ who.0 }}{% if who.1 %}<div class="small muted">{{ who.1 }}</div>{% endif %}{% endwith %}<div class="small"><span class="role" title="{{ d.issuer_role|role_name }}">{{ d.issuer_role }}</span> <time>{{ d.issued_at|date:"d/m H:i" }}</time></div></td>
+        <td><span class="chip {% if d.status == 'SIGNED' %}done{% elif d.status == 'CANCELLED' or d.status == 'REPLACED' %}na{% else %}pending{% endif %}">{{ d.get_status_display }}</span></td>
+        <td>{% for s in d.signatures.all %}<div class="small">✓ {{ s.signer_label }} ({{ s.role }})</div>{% endfor %}
+          {% if d.required_signers %}<div class="small muted">{% trans "required:" %} {{ d.required_signers|join:", " }}</div>{% endif %}</td>
+        <td class="actions">
+          <a class="btn small secondary" href="{% url 'registry:document_download' call.pk d.pk %}">{% trans "Download" %}</a>
+          {% if assistant and d|extractable:actor %}{% with pending=assistant.reviews|get_item:d.pk %}{% if pending %}<a class="btn small" href="{% url 'ai:extraction' call.pk pending.pk %}">{% trans "Check the values read" %}</a>{% else %}<form method="post" action="{% url 'ai:extract' call.pk d.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{% url 'registry:call_detail' call.pk %}?tab=documents"><button class="btn small quiet" title="{% trans 'The assistant proposes values; nothing is recorded until you validate them.' %}">{% trans "Read with the assistant" %}</button></form>{% endif %}{% endwith %}{% endif %}
+          {% if d.can_sign %}<details class="action"><summary>{% trans "Sign" %}</summary><div>
+            <form method="post" action="{% url 'registry:call_action' call.pk 'document_sign' %}" class="form">{% csrf_token %}<input type="hidden" name="document_id" value="{{ d.pk }}"><input type="hidden" name="back" value="?tab=documents#d{{ d.pk }}">
+              <input type="hidden" name="signature_image" id="sigval{{ d.pk }}">
+              <label for="sig{{ d.pk }}">{% trans "Hand-drawn signature (optional)" %}</label><canvas class="sigpad" id="sig{{ d.pk }}" data-target="sigval{{ d.pk }}"></canvas>
+              <div class="actions"><button type="button" class="btn quiet small" data-clear="sig{{ d.pk }}">{% trans "Clear" %}</button><button class="btn small">{% trans "Sign the document" %}</button></div>
+              <p class="hint">{% trans "Your signature is attached to this exact version (its SHA-256 fingerprint)." %}</p></form></div></details>{% endif %}
+          {% if d.can_replace %}<details class="action"><summary>{% trans "New version" %}</summary><div>
+            <form method="post" action="{% url 'registry:call_action' call.pk 'document_upload' %}" enctype="multipart/form-data" class="form">{% csrf_token %}
+              <input type="hidden" name="previous_id" value="{{ d.pk }}"><input type="hidden" name="type" value="{{ d.type.code }}"><input type="hidden" name="back" value="?tab=documents">
+              <input type="file" name="file" required aria-label="{% trans 'File' %}"><button class="btn small">{% trans "Publish the new version" %}</button></form></div></details>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table></div>
+    {% else %}<p class="empty">{% trans "No document visible to your roles." %}</p>{% endif %}
+  </section>
+  <aside>
+    {% if forms %}
+    <section class="section">
+      <h2>{% trans "Standard forms" %}</h2>
+      <p class="small muted">{% trans "Generated from the registry in one structure (ISGOTT, OCIMF, IMO FAL / ISPS, MARPOL, API MPMS): preview, print, file in the call." %}</p>
+      <ul class="plain small">{% for f in forms %}<li><a href="{% url 'registry:form_preview' call.pk f.code %}" target="_blank" rel="noopener">{{ f.title.0 }}</a> <span class="muted">/ {{ f.title.1 }}</span></li>{% endfor %}</ul>
+      <a class="btn small secondary" href="{% url 'registry:form_list' call.pk %}">{% trans "All the forms of the call" %}</a>
+    </section>
+    {% endif %}
+    {% if doc_types %}
+    <section class="section">
+      <h2>{% trans "Provide a document" %}</h2>
+      <form method="post" action="{% url 'registry:call_action' call.pk 'document_upload' %}" enctype="multipart/form-data" class="form">{% csrf_token %}<input type="hidden" name="back" value="?tab=documents">
+        {% if doc_tasks %}<div><label for="dtask">{% trans "For the task" %}</label><select id="dtask" name="task_id"><option value="">—</option>
+          {% for t in doc_tasks %}<option value="{{ t.pk }}" {% if preselect_task == t.pk|stringformat:'s' %}selected{% endif %}>{{ t.code }} — {{ t.title|truncatechars:70 }}</option>{% endfor %}</select></div>{% endif %}
+        <div><label for="dtype">{% trans "Type" %}</label><select id="dtype" name="type" required>{% for t in doc_types %}<option value="{{ t.code }}" {% if preselect_type == t.code %}selected{% endif %}>{{ t.label }}</option>{% endfor %}</select></div>
+        <div><label for="dtitle">{% trans "Title (optional)" %}</label><input id="dtitle" name="title"></div>
+        <div class="row"><div><label for="dconf">{% trans "Confidentiality" %}</label><select id="dconf" name="confidentiality"><option value="">{% trans "type default" %}</option><option value="N1">N1 — {% trans "all parties" %}</option><option value="N2">N2 — {% trans "restricted" %}</option><option value="N3">N3 — {% trans "bilateral" %}</option></select></div>
+          <div><label for="dcp">{% trans "Counterpart (N3)" %}</label><select id="dcp" name="counterpart_role"><option value="">—</option><option>AGE</option><option>NAV</option><option>TER</option><option>COM</option><option>INS</option><option>CAP</option></select></div></div>
+        <div><label for="dfile">{% trans "File" %}</label><input type="file" id="dfile" name="file" required></div>
+        <button class="btn">{% trans "Issue the document" %}</button>
+        <p class="hint">{% trans "The bill of lading cannot be issued before the principal's written documentary instructions and an agreed quantity — no role can lift this lock." %}</p>
+      </form>
+    </section>
+    {% endif %}
+  </aside>
+</div>

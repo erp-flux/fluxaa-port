@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+{# Replaces drf-spectacular's page: no third-party fonts (the reader's address is not sent to any other site) and no inline script, so the page complies with the platform's Content Security Policy. #}
+<html lang="en">
+  <head>
+    <title>{{ title|default:"FLUXAA Port API" }}</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+  </head>
+  <body style="margin:0;padding:0">
+    <redoc spec-url="{{ schema_url }}"></redoc>
+    <script src="{{ redoc_standalone }}"></script>
+  </body>
+</html>

@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "Calls" %}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div><h1>{% trans "Calls" %}</h1><p>{% trans "Calls on which your organisation holds a role." %}</p></div>
+  <div class="actions">{% if can_create %}<a class="btn" href="{% url 'registry:call_create' %}">{% trans "Announce a call" %}</a>{% endif %}</div>
+</div>
+<form method="get" class="actions" style="margin-bottom:14px" role="search">
+  <label class="sr-only" for="q">{% trans "Search" %}</label>
+  <input type="search" id="q" name="q" value="{{ q }}" placeholder="{% trans 'Vessel, IMO or reference' %}" style="max-width:320px">
+  <select name="scope" aria-label="{% trans 'Scope' %}" style="max-width:200px"><option value="active" {% if scope == 'active' %}selected{% endif %}>{% trans "Current calls" %}</option><option value="all" {% if scope == 'all' %}selected{% endif %}>{% trans "All, archives included" %}</option></select>
+  <button class="btn secondary">{% trans "Filter" %}</button>
+</form>
+<section class="section">
+  {% if calls %}
+  <div class="tablewrap"><table class="grid">
+    <tr><th>{% trans "Reference" %}</th><th>{% trans "Vessel" %}</th><th>{% trans "Operating area" %}</th><th>ETA / ATA</th><th>ETD / ATD</th><th>{% trans "Status" %}</th></tr>
+    {% for c in calls %}
+    <tr><td><a class="code" href="{% url 'registry:call_detail' c.pk %}">{{ c.reference }}</a></td>
+      <td><a href="{% url 'registry:call_detail' c.pk %}">{{ c.vessel.name }}</a><div class="small muted">IMO {{ c.vessel.imo }}</div></td>
+      <td>{{ c.get_requested_berth_kind_display }}{% if c.berth %} — {{ c.berth.code }}{% endif %}</td>
+      <td><time>{% if c.ata %}{{ c.ata|date:"d/m/Y H:i" }}{% else %}{{ c.eta|date:"d/m/Y H:i" }} <span class="muted">est.</span>{% endif %}</time></td>
+      <td><time>{% if c.atd %}{{ c.atd|date:"d/m/Y H:i" }}{% elif c.etd %}{{ c.etd|date:"d/m/Y H:i" }} <span class="muted">est.</span>{% else %}—{% endif %}</time></td>
+      <td><span class="chip status st-{{ c.status }}">{{ c.get_status_display }}</span></td></tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="empty">{% if can_create %}{% trans "No call yet. Announce the first one: the platform creates every task of the call for each party." %}{% else %}{% trans "No call involves your organisation for the moment." %}{% endif %}</p>{% endif %}
+</section>
+{% endblock %}

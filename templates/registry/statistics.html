@@ -1,0 +1,134 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "Statistics" %}{% endblock %}
+{% block content %}
+<div class="section-head"><div><h1>{% trans "Statistics of the port" %}</h1>
+  <p class="muted" style="max-width:76ch">{% blocktrans with p=port.name %}{{ p }}. Every figure is recomputed from the registry when this page opens; nothing is stored or adjusted. Months are those of the ETA for calls and of the event for decisions, disputes and signatures. Draft calls are not counted.{% endblocktrans %}</p></div>
+  <form method="get" class="period">
+    {% if ports %}<label for="port" class="sr-only">{% trans "Port" %}</label>
+      <select id="port" name="port">{% for p in ports %}<option value="{{ p.code }}" {% if p.pk == port.pk %}selected{% endif %}>{{ p.code }} — {{ p.name }}</option>{% endfor %}</select>{% endif %}
+    <label for="from" class="small">{% trans "From" %}</label><input id="from" type="date" name="from" value="{{ from }}">
+    <label for="to" class="small">{% trans "to" %}</label><input id="to" type="date" name="to" value="{{ to }}">
+    <button class="btn small secondary">{% trans "Show" %}</button>
+    <a class="btn small secondary" href="?from={{ from }}&amp;to={{ to }}{% if ports %}&amp;port={{ port.code }}{% endif %}&amp;format=csv">{% trans "CSV" %}</a>
+  </form></div>
+
+<section class="section">
+  <div class="stat-tiles">
+    <div><strong>{{ data.totals.calls }}</strong><span>{% trans "calls over the period" %}</span></div>
+    <div><strong>{{ data.totals.completed }}</strong><span>{% trans "completed (departed, closed)" %}</span></div>
+    <div><strong>{{ data.totals.cancelled }}</strong><span>{% trans "cancelled or rejected" %}</span></div>
+    <div><strong>{{ data.totals.quantity_mt|floatformat:0 }}</strong><span>{% trans "tonnes declared (MT only)" %}</span></div>
+    <div><strong>{{ data.totals.waiting_h|default_if_none:"—" }}</strong><span>{% trans "h waiting at anchorage, average" %}{% if data.totals.waiting_median_h is not None %} · {% trans "median" %} {{ data.totals.waiting_median_h }}{% endif %}</span></div>
+    <div><strong>{{ data.totals.transfer_h|default_if_none:"—" }}</strong><span>{% trans "h net transfer time, average" %}</span></div>
+    <div><strong>{{ data.totals.stay_h|default_if_none:"—" }}</strong><span>{% trans "h in port (arrival to departure), average" %}</span></div>
+    <div><strong>{{ data.totals.decision_h|default_if_none:"—" }}</strong><span>{% trans "h to decide a request, average" %} ({{ data.totals.decisions }})</span></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>{% trans "Calls and quantities per month" %}</h2>
+  <div class="charts">
+    <figure><figcaption class="small">{% trans "Calls (ETA in the month)" %}</figcaption>{% include "registry/_bar_chart.html" with chart=charts.calls %}</figure>
+    <figure><figcaption class="small">{% trans "Quantity declared (tonnes)" %}</figcaption>{% include "registry/_bar_chart.html" with chart=charts.quantity %}</figure>
+    <figure><figcaption class="small">{% trans "Average waiting at anchorage (h)" %}</figcaption>{% include "registry/_bar_chart.html" with chart=charts.waiting %}</figure>
+    <figure><figcaption class="small">{% trans "Average net transfer time (h)" %}</figcaption>{% include "registry/_bar_chart.html" with chart=charts.transfer %}</figure>
+  </div>
+  <details><summary class="small">{% trans "Monthly table" %}</summary>
+  <div class="tablewrap"><table class="grid">
+    <tr><th>{% trans "Month" %}</th><th>{% trans "Calls" %}</th><th>{% trans "Completed" %}</th><th>{% trans "Cancelled" %}</th><th>{% trans "Tonnes" %}</th><th>{% trans "Waiting (h)" %}</th><th>{% trans "Net transfer (h)" %}</th><th>{% trans "In port (h)" %}</th></tr>
+    {% for m in data.monthly %}<tr><td><span class="code">{{ m.month }}</span></td><td class="num">{{ m.calls }}</td><td class="num">{{ m.completed }}</td><td class="num">{{ m.cancelled }}</td><td class="num">{{ m.quantity_mt|floatformat:0 }}</td><td class="num">{{ m.waiting_h|default_if_none:"—" }}</td><td class="num">{{ m.transfer_h|default_if_none:"—" }}</td><td class="num">{{ m.stay_h|default_if_none:"—" }}</td></tr>{% endfor %}
+  </table></div></details>
+</section>
+
+<section class="section">
+  <h2>{% trans "What the port handled" %}</h2>
+  <div class="cols">
+    <div><h3>{% trans "By operation model" %}</h3>
+      <div class="tablewrap"><table class="grid"><tr><th>{% trans "Operation" %}</th><th>{% trans "Calls" %}</th></tr>
+      {% for name, n in data.operations %}<tr><td>{{ name }}</td><td class="num">{{ n }}</td></tr>{% empty %}<tr><td colspan="2" class="empty">{% trans "No call over the period." %}</td></tr>{% endfor %}</table></div></div>
+    <div><h3>{% trans "By area requested" %}</h3>
+      <div class="tablewrap"><table class="grid"><tr><th>{% trans "Area" %}</th><th>{% trans "Calls" %}</th></tr>
+      {% for name, n in data.areas %}<tr><td>{{ name }}</td><td class="num">{{ n }}</td></tr>{% empty %}<tr><td colspan="2" class="empty">{% trans "No call over the period." %}</td></tr>{% endfor %}</table></div></div>
+    <div><h3>{% trans "By product (tonnes declared)" %}</h3>
+      <div class="tablewrap"><table class="grid"><tr><th>{% trans "Product" %}</th><th>{% trans "Tonnes" %}</th></tr>
+      {% for name, q in data.products %}<tr><td>{{ name }}</td><td class="num">{{ q|floatformat:0 }}</td></tr>{% empty %}<tr><td colspan="2" class="empty">{% trans "No quantity declared." %}</td></tr>{% endfor %}</table></div></div>
+  </div>
+  <div><h3>{% trans "Berths and areas" %}</h3>
+      <div class="tablewrap"><table class="grid"><tr><th>{% trans "Berth" %}</th><th>{% trans "Calls" %}</th><th>{% trans "Hours alongside" %}</th><th>{% trans "Occupancy" %}</th></tr>
+      {% for b in data.berths %}<tr><td><span class="code">{{ b.berth.code }}</span> <span class="small muted">{{ b.berth.get_kind_display }}</span></td><td class="num">{{ b.calls }}</td><td class="num">{{ b.hours }}</td><td class="num">{% if b.rate_pct is not None %}{{ b.rate_pct }} %{% else %}—{% endif %}</td></tr>{% empty %}<tr><td colspan="4" class="empty">{% trans "No berth configured." %}</td></tr>{% endfor %}</table></div>
+      <p class="hint">{% trans "Occupancy: hours between actual berthing and departure over the hours of the period, for quays and jetties only." %}</p></div>
+</section>
+
+<section class="section">
+  <h2>{% trans "Interruptions and dead time" %}</h2>
+  <div class="stat-tiles">
+    <div><strong>{{ data.totals.interruptions }}</strong><span>{% trans "interruptions recorded" %}</span></div>
+    <div><strong>{{ data.totals.interruption_hours }}</strong><span>{% trans "hours of interruption" %}</span></div>
+    <div><strong>{% if data.totals.established_pct is not None %}{{ data.totals.established_pct }} %{% else %}—{% endif %}</strong><span>{% trans "of dead time with a cause established contradictorily" %}</span></div>
+  </div>
+  <div class="cols">
+    <div><div class="tablewrap"><table class="grid"><tr><th>{% trans "Cause" %}</th><th>{% trans "Attributable to" %}</th><th>{% trans "Count" %}</th><th>{% trans "Hours" %}</th></tr>
+      {% for c in data.causes %}<tr><td>{{ c.cause }}</td><td><span class="role">{{ c.attribution|default:"—" }}</span></td><td class="num">{{ c.count }}</td><td class="num">{{ c.hours }}</td></tr>{% empty %}<tr><td colspan="4" class="empty">{% trans "No interruption over the period." %}</td></tr>{% endfor %}</table></div></div>
+    <div><div class="tablewrap"><table class="grid"><tr><th>{% trans "Attributable to" %}</th><th>{% trans "Hours" %}</th></tr>
+      {% for who, h in data.attribution %}<tr><td><span class="role">{{ who }}</span></td><td class="num">{{ h }}</td></tr>{% empty %}<tr><td colspan="2" class="empty">{% trans "No interruption over the period." %}</td></tr>{% endfor %}</table></div>
+      <p class="hint">{% trans "Attribution is that of the cause chosen when the interruption was declared, as the port configured it; a contested interruption keeps its declared cause until the dispute is closed." %}</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>{% trans "Decisions of the authorities" %}</h2>
+  <div class="tablewrap"><table class="grid">
+    <tr><th>{% trans "Request type" %}</th><th>{% trans "Decided by" %}</th><th>{% trans "Decisions" %}</th><th>{% trans "Refused" %}</th><th>{% trans "With conditions" %}</th><th>{% trans "Average (h)" %}</th><th>{% trans "Median (h)" %}</th><th>{% trans "Longest (h)" %}</th></tr>
+    {% for d in data.decisions %}<tr><td>{{ d.type }}</td><td><span class="role">{{ d.roles }}</span></td><td class="num">{{ d.count }}</td><td class="num">{{ d.refused }}</td><td class="num">{{ d.conditions }}</td><td class="num">{{ d.avg_h|default_if_none:"—" }}</td><td class="num">{{ d.median_h|default_if_none:"—" }}</td><td class="num">{{ d.max_h }}</td></tr>
+    {% empty %}<tr><td colspan="8" class="empty">{% trans "No decision over the period." %}</td></tr>{% endfor %}
+  </table></div>
+  <p class="hint">{% trans "Time from submission to decision, requests decided in the period. The figure describes the flow of requests, not a person: a long delay often means a file that waited for documents." %}</p>
+</section>
+
+<section class="section">
+  <h2>{% trans "Disputes and countersignatures" %}</h2>
+  <div class="cols">
+    <div class="stat-tiles">
+      <div><strong>{{ data.disputes.opened }}</strong><span>{% trans "disputes opened" %}</span></div>
+      <div><strong>{{ data.disputes.open }}</strong><span>{% trans "still open" %}</span></div>
+      <div><strong>{{ data.disputes.agreed }}</strong><span>{% trans "closed in agreement" %}</span></div>
+      <div><strong>{{ data.disputes.not_agreed }}</strong><span>{% trans "closed without agreement" %}</span></div>
+      <div><strong>{{ data.disputes.auto }}</strong><span>{% trans "opened automatically (conflicting entries)" %}</span></div>
+      <div><strong>{{ data.disputes.days_to_close|default_if_none:"—" }}</strong><span>{% trans "days to close, average" %}</span></div>
+    </div>
+    <div class="stat-tiles">
+      <div><strong>{{ data.countersign.total }}</strong><span>{% trans "countersignature answers" %}</span></div>
+      <div><strong>{{ data.countersign.countersigned }}</strong><span>{% trans "countersigned" %}</span></div>
+      <div><strong>{{ data.countersign.tacit }}</strong><span>{% trans "tacit (no answer in time)" %}{% if data.countersign.tacit_pct is not None %} · {{ data.countersign.tacit_pct }} %{% endif %}</span></div>
+      <div><strong>{{ data.countersign.contested }}</strong><span>{% trans "contested" %}{% if data.countersign.contested_pct is not None %} · {{ data.countersign.contested_pct }} %{% endif %}</span></div>
+    </div>
+  </div>
+  {% if data.disputes.by_kind %}<p class="small muted">{% trans "Disputes by subject:" %} {% for kind, n in data.disputes.by_kind.items %}<span class="chip na">{{ kind }} · {{ n }}</span> {% endfor %}</p>{% endif %}
+</section>
+
+<section class="section">
+  <h2>{% trans "Entries, documents and alerts" %}</h2>
+  <div class="stat-tiles">
+    <div><strong>{{ data.totals.milestones }}</strong><span>{% trans "milestones recorded" %}</span></div>
+    <div><strong>{{ data.totals.deferred }}</strong><span>{% trans "entered late (offline, paper)" %}</span></div>
+    <div><strong>{{ data.totals.documents }}</strong><span>{% trans "documents filed" %}</span></div>
+    <div><strong>{{ data.totals.alerts }}</strong><span>{% trans "alerts emitted" %}</span></div>
+  </div>
+  <div class="cols">
+    <div><h3>{% trans "Milestones by source" %}</h3><div class="tablewrap"><table class="grid"><tr><th>{% trans "Source" %}</th><th>{% trans "Milestones" %}</th></tr>
+      {% for source, n in data.sources.items %}<tr><td><span class="code">{{ source }}</span></td><td class="num">{{ n }}</td></tr>{% empty %}<tr><td colspan="2" class="empty">{% trans "No milestone over the period." %}</td></tr>{% endfor %}</table></div></div>
+    <div><h3>{% trans "Alerts by kind" %}</h3><div class="tablewrap"><table class="grid"><tr><th>{% trans "Kind" %}</th><th>{% trans "Alerts" %}</th></tr>
+      {% for kind, n in data.alerts.items %}<tr><td><span class="code">{{ kind }}</span></td><td class="num">{{ n }}</td></tr>{% empty %}<tr><td colspan="2" class="empty">{% trans "No alert over the period." %}</td></tr>{% endfor %}</table></div></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>{% trans "Tasks done on time, per role" %}</h2>
+  <div class="tablewrap"><table class="grid">
+    <tr><th>{% trans "Role" %}</th><th>{% trans "Tasks done" %}</th><th>{% trans "On time" %}</th><th>{% trans "Blocking tasks" %}</th><th>{% trans "Blocking on time" %}</th></tr>
+    {% for t in data.tasks %}<tr><td><span class="role">{{ t.role }}</span></td><td class="num">{{ t.done }}</td><td class="num">{{ t.on_time }}{% if t.on_time_pct is not None %} ({{ t.on_time_pct }} %){% endif %}</td><td class="num">{{ t.blocking }}</td><td class="num">{{ t.blocking_on_time }}{% if t.blocking_on_time_pct is not None %} ({{ t.blocking_on_time_pct }} %){% endif %}</td></tr>
+    {% empty %}<tr><td colspan="5" class="empty">{% trans "No task completed over the period." %}</td></tr>{% endfor %}
+  </table></div>
+  <p class="hint">{% trans "Roles, never people: these figures judge the templates and the deadlines the port configured (EF-10.2). The calibration page shows the alerts they generate." %}</p>
+</section>
+{% endblock %}

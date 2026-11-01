@@ -1,0 +1,68 @@
+{% load l10n i18n tz fluxaa %}
+<section aria-labelledby="plan-title" style="margin-bottom:18px">
+  <div class="section-head"><h2 id="plan-title">{% trans "Berth plan — 72 hours" %}</h2>
+    <span class="small muted">{% trans "Solid: actual. Outlined: estimated. Filled green: transfer under way." %} {% trans "Refreshed every minute." %}</span></div>
+  <div class="plan" role="table" aria-label="{% trans 'Berth plan' %}">
+    <div class="plan-head" role="row"><div class="plan-label" role="columnheader">{% trans "Berth / area" %}</div>
+      <div class="plan-scale" role="columnheader">{% for s in plan.scale %}<span style="left:{{ s.left|unlocalize }}%">{{ s.time|date:"d/m H\h" }}</span>{% endfor %}</div></div>
+    {% for row in plan.rows %}
+    <div class="plan-row" role="row">
+      <div class="plan-label" role="rowheader">{% if row.berth %}<b>{{ row.berth.code }}</b><small>{{ row.berth.name }}</small>{% else %}<b>{% trans "Not yet assigned" %}</b>{% endif %}</div>
+      <div class="plan-lane" role="cell">
+        <span class="plan-now" style="left:{{ plan.now|unlocalize }}%" aria-hidden="true"></span>
+        {% for bar in row.bars %}
+        <a class="plan-bar {% if bar.op %}op{% elif not bar.estimate %}actual{% endif %} {% if bar.late %}late{% endif %}"
+           style="left:{{ bar.left|unlocalize }}%;width:{{ bar.width|unlocalize }}%{% if bar.waiting %};border-style:dashed{% endif %}"
+           href="{% url 'registry:call_detail' bar.call.pk %}"
+           title="{{ bar.call.vessel.name }} — {{ bar.call.get_status_display }}{% if bar.waiting %} ({% trans 'waiting in the roads' %}){% endif %}">
+          {% if bar.width >= 5 %}{{ bar.call.vessel.name }}{% if bar.late %} ▲{% endif %}{% else %}<span class="sr-only">{{ bar.call.vessel.name }}</span>{% endif %}</a>
+        {% empty %}<span class="sr-only">{% trans "Free" %}</span>{% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section aria-label="{% trans 'Indicators' %}" style="margin-bottom:18px">
+  <div class="section-head"><h2>{% blocktrans with d=kpis.period_days %}Indicators — last {{ d }} days{% endblocktrans %}</h2>
+    <span class="small muted">{% trans "Each figure is recomputed from the registry; security records are never counted." %}</span></div>
+  <div class="tide">
+    {% for k in kpis.kpis %}<div title="{% trans 'Source calls:' %} {{ k.sources|join:', '|default:'—' }}"><strong>{{ k.value|default_if_none:"—" }}</strong><span>{% if LANGUAGE_CODE == 'en' %}{{ k.label_en }}{% else %}{{ k.label_fr }}{% endif %}</span></div>{% endfor %}
+  </div>
+</section>
+
+<div class="cols">
+  {% for key, label, calls in groups %}
+  <section class="section" aria-labelledby="g-{{ key }}">
+    <div class="section-head tight"><h2 id="g-{{ key }}">{{ label }}</h2><span class="num muted">{{ calls|length }}</span></div>
+    {% if calls %}
+    <ul class="calllist">
+      {% for c in calls %}
+      <li>
+        <div><a href="{% url 'registry:call_detail' c.pk %}">{{ c.vessel.name }}</a>
+          <div class="small muted"><span class="code">{{ c.reference }}</span> — {{ c.get_requested_berth_kind_display }}{% if c.berth %} — {{ c.berth.code }}{% endif %}</div></div>
+        <div style="text-align:right">
+          <span class="chip status st-{{ c.status }}">{{ c.get_status_display }}</span>{% if c.escalated %} <span class="chip escalated">{% trans "Escalated" %}</span>{% endif %}
+          <div class="small muted">{% if c.atd %}ATD <time>{{ c.atd|date:"d/m H:i" }}</time>{% elif c.atb %}ATB <time>{{ c.atb|date:"d/m H:i" }}</time>{% elif c.ata %}ATA <time>{{ c.ata|date:"d/m H:i" }}</time>{% else %}ETA <time>{{ c.eta|date:"d/m H:i" }}</time>{% endif %}</div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="empty">{% trans "None." %}</p>{% endif %}
+  </section>
+  {% endfor %}
+</div>
+
+<section class="section" aria-labelledby="mytasks">
+  <div class="section-head"><h2 id="mytasks">{% trans "Your next tasks" %}</h2>{% if draft_count %}<span class="small"><a href="{% url 'registry:call_list' %}">{% blocktrans count n=draft_count %}{{ n }} draft call not yet declared{% plural %}{{ n }} draft calls not yet declared{% endblocktrans %}</a></span>{% endif %}</div>
+  {% if my_tasks %}
+  <div class="tablewrap"><table class="grid">
+    <tr><th>{% trans "Due" %}</th><th>{% trans "Call" %}</th><th>{% trans "Task" %}</th><th>{% trans "Role" %}</th><th>{% trans "State" %}</th></tr>
+    {% for t in my_tasks %}
+    <tr><td><time>{{ t.due_at|date:"d/m H:i" }}</time></td><td><a href="{% url 'registry:call_detail' t.call.pk %}?tab=taches">{{ t.call.vessel.name }}</a></td>
+      <td><span class="code">{{ t.code }}</span> {{ t.title }}</td><td><span class="role">{{ t.role }}</span></td>
+      <td>{% if t.alert_level != "NONE" %}<span class="chip {{ t.alert_level|alert_class }}">{{ t.alert_level|alert_label }}</span>{% endif %}{% if t.is_blocking %} <span class="chip blocking">{% trans "Blocking" %}</span>{% endif %}</td></tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="empty">{% trans "Nothing is waiting for your roles." %}</p>{% endif %}
+</section>

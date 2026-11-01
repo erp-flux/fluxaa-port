@@ -1,0 +1,14 @@
+{% load i18n %}
+<div class="refusal" role="alert">
+  <h3>{% trans "Refused by the platform — hold point" %}</h3>
+  <p>{{ refusal.head }}</p>
+  {% if refusal.missing %}
+  <ul>
+    {% for m in refusal.missing %}
+    <li><span class="code">{{ m.task }}</span> {{ m.title }} — <b>{{ m.roles }}</b> — {% blocktrans with action=m.action %}expected action: {{ action }}{% endblocktrans %}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% for r in refusal.reasons %}<p>{{ r }}</p>{% endfor %}
+  <p class="small muted">{% trans "This refusal is recorded in the call journal, readable by the harbour master." %}</p>
+</div>

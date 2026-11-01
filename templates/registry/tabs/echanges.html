@@ -1,0 +1,25 @@
+{% load i18n fluxaa assistant %}
+<div class="split">
+  <section class="section">
+    <div class="section-head"><h2>{% trans "Correspondence" %}</h2><span class="small muted">{% trans "Every exchange is attached to the call and, if possible, to an object. There is no free messaging." %}</span></div>
+    {% for t in threads %}
+    <article id="fil-{{ t.pk }}" style="border-top:1px solid var(--line);padding:12px 0">
+      <div class="section-head" style="margin:0"><b>{{ t.subject }}</b><span><span class="conf">{{ t.confidentiality }}</span> {% for r in t.participant_roles %}<span class="role">{{ r }}</span> {% endfor %}</span></div>
+      {% if assistant %}{% with summary=assistant.summaries|get_item:t.pk %}{% if summary %}<div class="assistant-note"><span class="prefill-tag">{% trans "summary by the assistant — check against the messages" %}</span><p>{{ summary|linebreaksbr }}</p></div>{% endif %}{% endwith %}
+      <form method="post" action="{% url 'ai:summarize' call.pk t.pk %}" style="margin-top:6px">{% csrf_token %}<input type="hidden" name="next" value="{% url 'registry:call_detail' call.pk %}?tab=echanges#fil-{{ t.pk }}"><button class="btn small quiet">{% trans "Summarise with the assistant" %}</button></form>{% endif %}
+      <ul class="timeline" style="margin-top:10px">{% for m in t.messages.all %}<li><div class="small muted">{{ m.author_label }} ({{ m.role }}) — <time>{{ m.sent_at|date:"d/m H:i" }}</time></div>{{ m.body|linebreaksbr }}</li>{% endfor %}</ul>
+      {% if can_write and not call.is_terminal_state %}<form method="post" action="{% url 'registry:call_action' call.pk 'thread_post' %}" class="actions">{% csrf_token %}<input type="hidden" name="thread_id" value="{{ t.pk }}"><input type="hidden" name="back" value="?tab=echanges#fil-{{ t.pk }}">
+        <input name="body" required aria-label="{% trans 'Message' %}" placeholder="{% trans 'Reply…' %}" style="flex:1;min-width:220px"><button class="btn small">{% trans "Send" %}</button></form>{% endif %}
+    </article>
+    {% empty %}<p class="empty">{% trans "No exchange yet." %}</p>{% endfor %}
+  </section>
+  <aside>{% if can_write and not call.is_terminal_state %}
+    <section class="section"><h2>{% trans "New exchange" %}</h2>
+      <form method="post" action="{% url 'registry:call_action' call.pk 'thread_create' %}" class="form">{% csrf_token %}<input type="hidden" name="back" value="?tab=echanges">
+        <div><label for="tsub">{% trans "Subject" %}</label><input id="tsub" name="subject" required></div>
+        <fieldset><legend>{% trans "With" %}</legend><div class="checks">{% for code, label in all_roles %}<label title="{{ label }}"><input type="checkbox" name="participants" value="{{ code }}"> {{ code }}</label>{% endfor %}</div></fieldset>
+        <div><label for="tconf">{% trans "Confidentiality" %}</label><select id="tconf" name="confidentiality"><option value="N2">N2 — {% trans "restricted to the participants" %}</option><option value="N3">N3 — {% trans "bilateral (one other party)" %}</option><option value="N1">N1 — {% trans "every party of the call" %}</option></select></div>
+        <div><label for="tbody">{% trans "Message" %}</label><textarea id="tbody" name="body" required></textarea></div>
+        <button class="btn secondary">{% trans "Send" %}</button></form></section>{% endif %}
+  </aside>
+</div>

@@ -1,0 +1,58 @@
+{% load i18n fluxaa %}
+{% if measurements_hidden %}<section class="section"><p class="empty">{% trans "Quantities are not visible to your role." %}</p></section>{% else %}
+<div class="split">
+  <div>
+    <section class="section">
+      <div class="section-head"><h2>{% trans "Quantities — ship, shore, surveyor" %}</h2>
+        <span class="small muted">{% trans "Each party enters its own figure. The platform computes the difference and never designates a reference value." %}</span></div>
+      {% for row in measure_rows %}{% with m=row.m %}
+      <article style="border-top:1px solid var(--line);padding:12px 0" id="q{{ m.pk }}">
+        <div class="section-head" style="margin:0"><b>{{ m.get_kind_display }}</b> <span class="small muted">{{ m.product }} — {{ m.unit }} — {% trans "tolerance" %} {{ m.tolerance_pct }} %</span></div>
+        <div class="tablewrap"><table class="grid"><tr><th>{% trans "Ship" %}</th><th>{% trans "Shore" %}</th><th>{% trans "Surveyor" %}</th><th>{% trans "Differences" %}</th></tr>
+          <tr>
+            <td>{% with v=row.values|get:"SHIP" %}{% if v %}<span class="num">{{ v.value|floatformat:"-3g" }}</span>{% if v.temperature_c is not None or v.density is not None %}<span class="small muted"> — {% if v.temperature_c is not None %}{{ v.temperature_c|floatformat:"-2" }} °C{% endif %}{% if v.density is not None %} — d {{ v.density|floatformat:"-4" }}{% endif %}</span>{% endif %}<div class="small muted">{{ v.entered_label }}</div>{% else %}<span class="muted">—</span>{% endif %}{% endwith %}</td>
+            <td>{% with v=row.values|get:"SHORE" %}{% if v %}<span class="num">{{ v.value|floatformat:"-3g" }}</span>{% if v.temperature_c is not None or v.density is not None %}<span class="small muted"> — {% if v.temperature_c is not None %}{{ v.temperature_c|floatformat:"-2" }} °C{% endif %}{% if v.density is not None %} — d {{ v.density|floatformat:"-4" }}{% endif %}</span>{% endif %}<div class="small muted">{{ v.entered_label }}</div>{% else %}<span class="muted">—</span>{% endif %}{% endwith %}</td>
+            <td>{% with v=row.values|get:"SURVEYOR" %}{% if v %}<span class="num">{{ v.value|floatformat:"-3g" }}</span>{% if v.temperature_c is not None or v.density is not None %}<span class="small muted"> — {% if v.temperature_c is not None %}{{ v.temperature_c|floatformat:"-2" }} °C{% endif %}{% if v.density is not None %} — d {{ v.density|floatformat:"-4" }}{% endif %}</span>{% endif %}<div class="small muted">{{ v.entered_label }}</div>{% else %}<span class="muted">—</span>{% endif %}{% endwith %}</td>
+            <td>{% for d in row.differences %}<div class="small" style="white-space:nowrap">{{ parties_labels|get:d.a }} − {{ parties_labels|get:d.b|lower }} <span class="num">{{ d.difference|floatformat:"3g" }} ({{ d.percent|floatformat:3 }} %)</span>
+                {% if d.a == "SHIP" and d.b == "SHORE" %}{% if d.exceeds %}<span class="chip late">{% trans "outside tolerance" %}</span>{% else %}<span class="chip done">{% trans "within tolerance" %}</span>{% endif %}{% endif %}</div>{% endfor %}
+              {% if not m.is_complete %}<span class="chip pending">{% trans "ship or shore value missing — blocks closure" %}</span>{% endif %}</td></tr></table></div>
+        {% if my_parties %}<form method="post" action="{% url 'registry:call_action' call.pk 'measurement_value' %}" class="actions" style="margin-top:8px">{% csrf_token %}
+          <input type="hidden" name="measurement_id" value="{{ m.pk }}"><input type="hidden" name="back" value="?tab=mesures#q{{ m.pk }}">
+          <select name="party" aria-label="{% trans 'Party' %}" style="max-width:160px">{% for p in my_parties %}<option value="{{ p }}">{{ parties_labels|get:p }}</option>{% endfor %}</select>
+          {% if assistant.bl_prefill and m.kind == "BL" %}<span class="prefill-tag">{% trans "pre-filled from the validated bill of lading" %}</span>{% endif %}
+          <input name="value" inputmode="decimal" required placeholder="{% trans 'Quantity' %}" aria-label="{% trans 'Quantity' %}" style="max-width:160px" {% if assistant.bl_prefill and m.kind == "BL" %}value="{{ assistant.bl_prefill }}" class="prefilled"{% endif %}>
+          <input name="temperature_c" inputmode="decimal" placeholder="°C" aria-label="{% trans 'Temperature' %}" style="max-width:90px">
+          <input name="density" inputmode="decimal" placeholder="{% trans 'Density' %}" aria-label="{% trans 'Density' %}" style="max-width:110px">
+          <button class="btn small">{% trans "Enter my value" %}</button></form>{% endif %}
+        {% if can_contest %}<details class="action" style="margin-top:8px"><summary>{% trans "Contest this quantity" %}</summary><div>
+          <form method="post" action="{% url 'registry:call_action' call.pk 'dispute_open' %}" class="form">{% csrf_token %}
+            <input type="hidden" name="back" value="?tab=contestations"><input type="hidden" name="target_kind" value="MEASUREMENT"><input type="hidden" name="target_id" value="{{ m.pk }}">
+            <input type="hidden" name="subject" value="{{ m.get_kind_display }} — {{ m.product }}">
+            <div><label for="qcp{{ m.pk }}">{% trans "Counterpart" %}</label><select id="qcp{{ m.pk }}" name="counterpart_role"><option value="">—</option>{% for r in contest_counterparts %}<option>{{ r }}</option>{% endfor %}</select></div>
+            <div><label for="qst{{ m.pk }}">{% trans "Statement" %}</label><textarea id="qst{{ m.pk }}" name="statement" required></textarea></div>
+            <p class="small muted">{% trans "While this dispute is not closed, the bill of lading cannot be issued." %}</p>
+            <button class="btn small secondary">{% trans "Open the dispute" %}</button></form></div></details>{% endif %}
+      </article>
+      {% endwith %}{% empty %}<p class="empty">{% trans "No measurement opened." %}</p>{% endfor %}
+    </section>
+    <section class="section">
+      <h2>{% trans "Pumping log" %}</h2>
+      <div class="tablewrap"><table class="grid"><tr><th>{% trans "Time" %}</th><th>{% trans "Manifold pressure (bar)" %}</th><th>{% trans "Rate (m³/h)" %}</th><th>{% trans "Temperature (°C)" %}</th><th>{% trans "Entered by" %}</th></tr>
+        {% for p in pumping %}<tr><td><time>{{ p.declared_at|date:"d/m H:i" }}</time></td><td class="num">{% if p.manifold_pressure_bar is not None %}{{ p.manifold_pressure_bar|floatformat:"-2" }}{% else %}—{% endif %}</td><td class="num">{% if p.flow_rate_m3h is not None %}{{ p.flow_rate_m3h|floatformat:"-2g" }}{% else %}—{% endif %}</td><td class="num">{% if p.temperature_c is not None %}{{ p.temperature_c|floatformat:"-2" }}{% else %}—{% endif %}</td><td>{{ p.entered_label }} <span class="role">{{ p.role }}</span>{% if p.source == "AUTOMATIC" %} <span class="chip na">{% trans "automatic" %}</span>{% endif %}{% if p.deferred %} <span class="chip deferred">{% trans "deferred" %}</span>{% endif %}</td></tr>
+        {% empty %}<tr><td colspan="5" class="empty">{% trans "No reading yet." %}</td></tr>{% endfor %}</table></div>
+    </section>
+  </div>
+  <aside>
+    {% if can_open %}<section class="section"><h2>{% trans "Open a measurement" %}</h2>
+      <form method="post" action="{% url 'registry:call_action' call.pk 'measurement_open' %}" class="form">{% csrf_token %}<input type="hidden" name="back" value="?tab=mesures">
+        <div><label for="mkind">{% trans "Kind" %}</label><select id="mkind" name="kind">{% for v, l in kinds %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+        <div><label for="munit">{% trans "Unit" %}</label><select id="munit" name="unit"><option value="MT">MT</option><option value="M3">m³ @15 °C</option><option value="BBL">bbl @60 °F</option></select></div>
+        <button class="btn secondary">{% trans "Open" context "verb" %}</button></form></section>{% endif %}
+    {% if can_pump %}<section class="section"><h2>{% trans "Add a pumping reading" %}</h2>
+      <form method="post" action="{% url 'registry:call_action' call.pk 'pumping' %}" class="form">{% csrf_token %}<input type="hidden" name="back" value="?tab=mesures">
+        <div><label for="pt">{% trans "Time" %}</label><input type="datetime-local" id="pt" name="declared_at" data-default-now></div>
+        <div class="row"><div><label for="pp">bar</label><input id="pp" name="pressure_bar" inputmode="decimal"></div><div><label for="pr">m³/h</label><input id="pr" name="rate_m3h" inputmode="decimal"></div><div><label for="ptc">°C</label><input id="ptc" name="temperature_c" inputmode="decimal"></div></div>
+        <button class="btn secondary">{% trans "Add" %}</button></form></section>{% endif %}
+  </aside>
+</div>
+{% endif %}

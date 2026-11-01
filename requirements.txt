@@ -1,0 +1,19 @@
+# FLUXAA Port — dépendances d'exécution (Python 3.12 ou plus récent).
+# Versions minimales : ce sont celles avec lesquelles l'application est développée et testée.
+Django>=5.2,<5.3
+djangorestframework>=3.15
+drf-spectacular[sidecar]>=0.28
+psycopg[binary]>=3.2
+cryptography>=42
+pyotp>=2.9
+qrcode>=7.4
+gunicorn>=22
+whitenoise>=6.7
+# Module IA optionnel (CDC EF-17) : installé mais inactif tant que la plateforme (clé + clause
+# contractuelle) et le port ne l'ont pas activé. Il ne reçoit jamais de données N4.
+# 2.3 au minimum : les réponses structurées (output_config) sont utilisées.
+anthropic>=2.3,<3
+# Tableau AIS (décodage des trames NMEA d'un récepteur local, flux aisstream.io) : la commande
+# ais_listen seule les utilise ; l'application tourne sans source AIS.
+pyais>=3.3
+websockets>=13
