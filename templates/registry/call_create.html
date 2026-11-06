@@ -66,19 +66,8 @@
 
   <fieldset>
     <legend>{% trans "Parties you invite" %}</legend>
-    <p class="hint">{% trans "The port authorities (harbour master, port authority, customs-immigration-health, security, marine services) are invited automatically." %}</p>
-    <div class="row">
-      {% for role, orgs_for_role in orgs.items %}
-      {% if role == 'COM' or role == 'PRE' %}
-      <fieldset class="picks"><legend>{% if role == 'COM' %}{% trans "Owner / charterer" %}{% else %}{% trans "Providers" %}{% endif %}</legend>
-        {% for o in orgs_for_role %}<label><input type="checkbox" name="party_{{ role }}" value="{{ o.pk }}"> {{ o.name }}</label>{% empty %}<span class="hint">{% trans "None registered in the port." %}</span>{% endfor %}</fieldset>
-      {% else %}
-      <div><label for="party_{{ role }}">{% if role == 'TER' %}{% trans "Terminal / depot" %}{% else %}{% trans "Surveyor & laboratory" %}{% endif %}</label>
-        <select id="party_{{ role }}" name="party_{{ role }}"><option value="">—</option>
-          {% for o in orgs_for_role %}<option value="{{ o.pk }}">{{ o.name }}</option>{% endfor %}</select></div>
-      {% endif %}
-      {% endfor %}
-    </div>
+    <p class="hint">{% trans "The port authorities (harbour master, port authority, customs-immigration-health, security, marine services) are invited automatically. Add every other party of the call — terminal, surveyor, laboratory, owner, charterer, receiver, STS provider, bunker supplier, waste contractor, pilots… — the list is open: choose a registered organisation or name a new one, with its kind (suggested or free), its e-mail and its phone. A party without an account receives its own access by e-mail at the declaration." %}</p>
+    {% include "registry/_party_rows.html" with rows=party_rows kinds=party_kinds %}
   </fieldset>
   <div class="actions"><button class="btn">{% trans "Create the draft call" %}</button><a class="btn quiet" href="{% url 'registry:call_list' %}">{% trans "Cancel" %}</a></div>
 </form>

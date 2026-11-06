@@ -301,6 +301,7 @@ def decide_request(req: ServiceRequest, actor, decision: str, *, reason: str = "
             _set_status(call, rtype.refusal_status, actor, reason=rtype.label_fr)
         if decision != RequestStatus.INFO_REQUIRED:
             complete_by_codes(call, rtype.decision_completes, actor, evidence=f"request:{req.pk}")
+            file_decision_act(req, actor, role)
         return authorization
 
     authorization = with_refusal_log(call, actor, f"decide:{rtype.code}", _do)
@@ -363,6 +364,22 @@ OPEN_ORDER_STATUSES = (RequestStatus.CREATED, RequestStatus.SUBMITTED, RequestSt
 
 
 @transaction.atomic
+def file_decision_act(req: ServiceRequest, actor, role: str):
+    """The written act of a decision (EF-2.5) — approval, approval with conditions or refusal — generated from the
+    registry and filed among the documents of the call the moment the decision is taken: the authority issues it,
+    the platform archives it, every party reads it where the request itself is readable (same confidentiality).
+    The act carries the verification code of an approval; a refusal's reason stays out of it (restricted, S7)."""
+    from .forms import FORMS, auto_issue
+
+    code = f"AUTH_{req.type.code}"
+    if code not in FORMS:
+        return None  # a service order without deciding authority has no act: its provider's note stands for it
+    counterpart = req.requester_role if req.confidentiality == Confidentiality.N3 else ""
+    readers = sorted(request_visible_roles(req)) if req.confidentiality == Confidentiality.N2 else None
+    return auto_issue(req.call, actor, code, as_role=role, confidentiality=req.confidentiality,
+                      counterpart_role=counterpart, audience_roles=readers, about=req)
+
+
 def assign_provider(req: ServiceRequest, actor, organization) -> ServiceRequest:
     """The requesting party names the provider of an order: one created before its provider joined the call, or one
     that several organisations could carry out."""

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: FLUXAA Port\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-28 12:22+0000\n"
+"POT-Creation-Date: 2026-11-02 17:51+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FLUXAA\n"
 "Language-Team: FLUXAA\n"
@@ -169,7 +169,6 @@ msgstr "Destinataire"
 msgid "AI assistance is not enabled for this port."
 msgstr "L'assistance IA n'est pas activée pour ce port."
 
-#| msgid "The assistant is not available through the master's access."
 msgid "The assistant is not available through an access link."
 msgstr "L'assistant n'est pas accessible par un lien d'accès."
 
@@ -314,7 +313,7 @@ msgstr ""
 "l'utiliser depuis ce navigateur."
 
 msgid "settings"
-msgstr "paramètres"
+msgstr "paramétrage"
 
 msgid "Delays and thresholds"
 msgstr "Délais et seuils"
@@ -325,11 +324,32 @@ msgstr "Accès capitaine"
 msgid "Retention and security"
 msgstr "Conservation et sécurité"
 
+msgid "Port waters — AIS board"
+msgstr "Eaux du port — tableau AIS"
+
+msgid ""
+"The box drawn on the AIS board (the four limits, decimal degrees) and, if "
+"wished, a chart excerpt covering exactly that box. Without the box the board"
+" is a list."
+msgstr ""
+"Le cadre dessiné sur le tableau AIS (les quatre limites, en degrés décimaux)"
+" et, si on le souhaite, un extrait de carte couvrant exactement ce cadre. "
+"Sans cadre, le tableau n'est qu'une liste."
+
 msgid "AI assistance (EF-17)"
 msgstr "Assistance IA (EF-17)"
 
 msgid "roles this organisation may hold"
 msgstr "rôles que cette organisation peut tenir"
+
+msgid "kind of party"
+msgstr "nature de la partie"
+
+#, python-format
+msgid "Suggested kinds (non-exhaustive): %(kinds)s — or any other wording."
+msgstr ""
+"Natures suggérées (liste non exhaustive) : %(kinds)s — ou tout autre "
+"libellé."
 
 msgid "roles"
 msgstr "rôles"
@@ -347,8 +367,8 @@ msgid ""
 "Two-factor authentication is activated by the person, from their own phone, "
 "at sign-in; it has been left inactive."
 msgstr ""
-"La double authentification est activée par la personne elle-même, depuis son"
-" téléphone, à la connexion : elle a été laissée inactive."
+"La double authentification est activée par la personne, depuis son propre "
+"téléphone, à la connexion ; elle a été laissée inactive."
 
 msgid "[FLUXAA Port] Your account was changed by an administrator"
 msgstr "[FLUXAA Port] Votre compte a été modifié par un administrateur"
@@ -358,8 +378,8 @@ msgid ""
 "%(admin)s has changed your account (%(email)s): %(changes)s. If you did not "
 "expect it, contact your port administrator."
 msgstr ""
-"%(admin)s a modifié votre compte (%(email)s) : %(changes)s. Si vous ne vous "
-"y attendiez pas, prévenez l'administrateur de votre port."
+"%(admin)s a modifié votre compte (%(email)s) : %(changes)s. Si vous ne "
+"l'attendiez pas, contactez l'administrateur de votre port."
 
 msgid "Platform"
 msgstr "Plateforme"
@@ -417,7 +437,6 @@ msgstr "validité du lien capitaine après le départ (heures)"
 msgid "master link maximum validity (days)"
 msgstr "validité maximale du lien capitaine (jours)"
 
-#| msgid "master link maximum validity (days)"
 msgid "party access link maximum validity (days)"
 msgstr "validité maximale des liens d'accès des parties (jours)"
 
@@ -509,6 +528,15 @@ msgstr "ports"
 
 msgid "short name"
 msgstr "nom court"
+
+msgid ""
+"What the organisation is (pilotage, laboratory, bunker supplier…): a code of"
+" the suggested list or any other wording. The role, not the kind, carries "
+"the rights."
+msgstr ""
+"Ce qu'est l'organisation (pilotage, laboratoire, avitailleur…) : un code de "
+"la liste suggérée ou tout autre libellé. C'est le rôle, non la nature, qui "
+"porte les droits."
 
 msgid "e-mail"
 msgstr "e-mail"
@@ -695,13 +723,14 @@ msgid ""
 "your password is known to someone else."
 msgstr ""
 "Une nouvelle application d'authentification vient d'être enregistrée pour "
-"votre compte (%(email)s). Si ce n'est pas vous, prévenez immédiatement "
+"votre compte (%(email)s). Si ce n'est pas vous, contactez immédiatement "
 "l'administrateur de votre port : votre mot de passe est connu d'un tiers."
 
 msgid ""
 "Too many incorrect codes. Wait up to fifteen minutes before trying again."
 msgstr ""
-"Trop de codes erronés. Patientez jusqu'à quinze minutes avant de réessayer."
+"Trop de codes incorrects. Attendez jusqu'à quinze minutes avant de "
+"réessayer."
 
 msgid "The code of your current authenticator application is not valid."
 msgstr ""
@@ -860,7 +889,6 @@ msgstr "En opération"
 msgid "Operations completed"
 msgstr "Opérations terminées"
 
-#| msgid "waiting in the roads"
 msgid "Shifting within the port"
 msgstr "Déhalage dans le port"
 
@@ -1554,22 +1582,18 @@ msgstr "escale"
 msgid "port calls"
 msgstr "escales"
 
-#| msgid "Current calls"
 msgid "Current"
 msgstr "En cours"
 
-#| msgid "recorded"
 msgid "order"
 msgstr "ordre"
 
 msgid "operation templates of this stage"
 msgstr "modèles d'opération de cette étape"
 
-#| msgid "Planned"
 msgid "planned from"
 msgstr "prévue du"
 
-#| msgid "Planned"
 msgid "planned to"
 msgstr "prévue au"
 
@@ -1579,15 +1603,12 @@ msgstr "amarré / à couple à cette étape"
 msgid "left this stage"
 msgstr "étape quittée le"
 
-#| msgid "Reason"
 msgid "reason"
 msgstr "motif"
 
-#| msgid "call sign"
 msgid "call stage"
 msgstr "étape d'escale"
 
-#| msgid "call templates"
 msgid "call stages"
 msgstr "étapes d'escale"
 
@@ -1612,7 +1633,6 @@ msgstr "SMS"
 msgid "Other"
 msgstr "Autre"
 
-#| msgid "short name"
 msgid "holder's name"
 msgstr "nom du titulaire"
 
@@ -1621,15 +1641,12 @@ msgstr ""
 "Nominatif : saisi à l'émission, ou par le titulaire à la première "
 "utilisation."
 
-#| msgid "roles the user may exercise"
 msgid "role exercised"
 msgstr "rôle exercé"
 
-#| msgid "organisation"
 msgid "party organisation"
 msgstr "organisation de la partie"
 
-#| msgid "Refused by the platform — hold point"
 msgid "issued by the platform at the declaration"
 msgstr "émis par la plateforme à la déclaration"
 
@@ -1639,11 +1656,9 @@ msgstr "envoyé à"
 msgid "Own vessel"
 msgstr "Navire de l'escale"
 
-#| msgid "master access link"
 msgid "access link"
 msgstr "lien d'accès"
 
-#| msgid "master access links"
 msgid "access links"
 msgstr "liens d'accès"
 
@@ -1712,6 +1727,10 @@ msgstr "titre"
 msgid "counterpart (N3)"
 msgstr "contrepartie (N3)"
 
+#| msgid "Read in the document"
+msgid "readers of this document (N2)"
+msgstr "lecteurs de ce document (N2)"
+
 msgid "fingerprint (SHA-256)"
 msgstr "empreinte (SHA-256)"
 
@@ -1778,6 +1797,33 @@ msgstr "abonnement webhook"
 msgid "webhook subscriptions"
 msgstr "abonnements webhook"
 
+msgid "Name the organisation you invite."
+msgstr "Nommez l'organisation que vous invitez."
+
+msgid ""
+"The agency may invite terminals, surveyors, owners/charterers, providers and"
+" marine services only."
+msgstr ""
+"L'agence ne peut inviter que des terminaux, des inspecteurs, des "
+"armateurs/affréteurs, des prestataires et les services nautiques."
+
+msgid "Only the agency or the harbour master invites a new organisation."
+msgstr ""
+"Seules l'agence et la capitainerie invitent une nouvelle organisation."
+
+#, python-format
+msgid "%(org)s exists but is inactive: ask the port administrator."
+msgstr ""
+"%(org)s existe mais est inactive : demandez à l'administrateur du port."
+
+#, python-format
+msgid ""
+"%(org)s is registered in the port without the role %(role)s: ask the port "
+"administrator."
+msgstr ""
+"%(org)s est enregistrée dans le port sans le rôle %(role)s : demandez à "
+"l'administrateur du port."
+
 #, python-format
 msgid "Unknown or inactive call template: %(code)s"
 msgstr "Gabarit d'escale inconnu ou inactif : %(code)s"
@@ -1843,13 +1889,6 @@ msgstr "Cette organisation n'est pas active dans ce port."
 msgid "%(org)s cannot hold the role %(role)s."
 msgstr "%(org)s ne peut pas tenir le rôle %(role)s."
 
-msgid ""
-"The agency may invite terminals, surveyors, owners/charterers, providers and"
-" marine services only."
-msgstr ""
-"L'agence ne peut inviter que des terminaux, des inspecteurs, des "
-"armateurs/affréteurs, des prestataires et les services nautiques."
-
 msgid "The agency or the harbour master designates the shore side."
 msgstr "L'agence ou la capitainerie désigne le côté terre."
 
@@ -1857,7 +1896,7 @@ msgid ""
 "Only an active terminal or provider of the call can speak for the shore "
 "side."
 msgstr ""
-"Seul un terminal ou un prestataire actif sur l'escale peut parler au nom du "
+"Seul un terminal ou un prestataire actif de l'escale peut parler pour le "
 "côté terre."
 
 msgid "A reason is required."
@@ -1870,7 +1909,6 @@ msgid "Only the harbour master may revoke this role."
 msgstr "Seule la capitainerie peut retirer ce rôle."
 
 #, python-format
-#| msgid "Unknown roles: %(r)s"
 msgid "role revoked: %(r)s"
 msgstr "rôle révoqué : %(r)s"
 
@@ -1924,7 +1962,6 @@ msgstr "Le lien d'accès est délivré par l'agence."
 msgid "The master's name is required: the signature is nominative."
 msgstr "Le nom du capitaine est requis : la signature est nominative."
 
-#| msgid "The access link is issued by the agency."
 msgid ""
 "The access link of a party is issued by the agency or the harbour master."
 msgstr ""
@@ -2065,7 +2102,7 @@ msgstr "La tâche %(task)s attend un autre document : %(type)s."
 
 #, python-format
 msgid "Task %(task)s is not completed by providing a document."
-msgstr "La tâche %(task)s ne se réalise pas par la fourniture d'un document."
+msgstr "La tâche %(task)s ne se termine pas par la fourniture d'un document."
 
 msgid "Only an issued document awaiting signatures can be signed."
 msgstr "Seul un document émis en attente de signatures peut être signé."
@@ -2085,13 +2122,14 @@ msgstr "Introuvable."
 msgid "This decision requires a recent two-factor authentication."
 msgstr "Cette décision exige une double authentification récente."
 
-#| msgid "Unknown anchor."
 msgid "Unknown form."
 msgstr "Formulaire inconnu."
 
-#| msgid "This task is not assigned to your role."
 msgid "This form is not generated by your role."
 msgstr "Ce formulaire n'est pas produit par votre rôle."
+
+msgid "This form does not apply to the operations of this call."
+msgstr "Ce formulaire ne s'applique pas aux opérations de cette escale."
 
 #, python-format
 msgid "Refused: “%(transition)s” is not possible yet."
@@ -2128,7 +2166,7 @@ msgid ""
 "The shore figure is entered by the terminal that speaks for the shore side "
 "on this call."
 msgstr ""
-"Le chiffre terre est saisi par le terminal qui parle au nom du côté terre "
+"La quantité terre est saisie par le terminal qui parle pour le côté terre "
 "sur cette escale."
 
 #, python-format
@@ -2146,8 +2184,8 @@ msgid ""
 "Another organisation speaks for the shore side on this call: the agency or "
 "the harbour master designates it in the parties of the call."
 msgstr ""
-"Une autre organisation parle au nom du côté terre sur cette escale : "
-"l'agence ou la capitainerie la désigne dans les parties de l'escale."
+"Une autre organisation parle pour le côté terre sur cette escale : l'agence "
+"ou la capitainerie la désigne dans les parties de l'escale."
 
 msgid "A milestone cannot be declared in the future."
 msgstr "Un jalon ne peut pas être déclaré dans le futur."
@@ -2234,11 +2272,11 @@ msgid ""
 "Several organisations can carry out this service on the call: choose the one"
 " who will."
 msgstr ""
-"Plusieurs organisations peuvent réaliser ce service sur l'escale : "
+"Plusieurs organisations peuvent exécuter ce service sur l'escale : "
 "choisissez celle qui le fera."
 
 msgid "Only the requesting party submits the request."
-msgstr "Seule la partie demanderesse dépose la demande."
+msgstr "Seule la partie demanderesse soumet la demande."
 
 msgid "The requesting role cannot review its own request (rule 2)."
 msgstr "Le rôle demandeur ne peut pas instruire sa propre demande (règle 2)."
@@ -2264,8 +2302,6 @@ msgstr "Une approbation sous conditions énonce les conditions."
 msgid "Select the berth or area assigned."
 msgstr "Choisissez le poste ou la zone attribué."
 
-#| msgid ""
-#| "The berth assigned does not match the operating area of the call."
 msgid ""
 "The berth assigned does not match the operating area of the call, nor of a "
 "planned stage."
@@ -2277,7 +2313,7 @@ msgid "This request awaits the decision of the competent authority."
 msgstr "Cette demande attend la décision de l'autorité compétente."
 
 msgid "This request is not carried out by a provider."
-msgstr "Cette demande n'est pas réalisée par un prestataire."
+msgstr "Cette demande n'est pas exécutée par un prestataire."
 
 msgid "Only the requesting party names the provider."
 msgstr "Seule la partie demanderesse désigne le prestataire."
@@ -2286,7 +2322,7 @@ msgid "The provider of this order can no longer be chosen."
 msgstr "Le prestataire de cette commande ne peut plus être choisi."
 
 msgid "This service order is carried out by another provider."
-msgstr "Cette commande de service est réalisée par un autre prestataire."
+msgstr "Cette commande de service est exécutée par un autre prestataire."
 
 msgid "Only the requesting party cancels its request."
 msgstr "Seule la partie demanderesse annule sa demande."
@@ -2297,14 +2333,9 @@ msgstr "Seule l'autorité émettrice annule une autorisation."
 msgid "Your role on this call does not allow this action."
 msgstr "Votre rôle sur cette escale ne permet pas cette action."
 
-#| msgid ""
-#| "Select at least one operation model (discharge, loading, STS…)."
 msgid "Select at least one operation model for the stage."
 msgstr "Choisissez au moins un modèle d'opération pour l'étape."
 
-#| msgid ""
-#| "The statements are bilateral: they are visible to the two parties and to the"
-#| " harbour master."
 msgid "The stages of a call are planned by the agency or the harbour master."
 msgstr ""
 "Les étapes d'une escale sont planifiées par l'agence ou la capitainerie."
@@ -2312,20 +2343,15 @@ msgstr ""
 msgid "The call is closed or the vessel has departed: no further stage."
 msgstr "L'escale est close ou le navire a appareillé : plus d'étape possible."
 
-#| msgid "operating area"
 msgid "Unknown operating area."
 msgstr "Zone d'exploitation inconnue."
 
 msgid "The end of the window must follow its start."
 msgstr "La fin de la fenêtre doit suivre son début."
 
-#| msgid "Only a completed task can be countersigned."
 msgid "Only a planned stage can be cancelled."
 msgstr "Seule une étape planifiée peut être annulée."
 
-#| msgid ""
-#| "Another organisation speaks for the shore side on this call: the agency or "
-#| "the harbour master designates it in the parties of the call."
 msgid ""
 "No next stage is planned for this call: the agency or the harbour master "
 "plans it first (overview, « Stages of the call »)."
@@ -2511,7 +2537,6 @@ msgstr "Estimé"
 msgid "Expected"
 msgstr "Attendus"
 
-#| msgid "At anchorage / approaching"
 msgid "At anchorage / approaching / shifting"
 msgstr "En rade / en approche / en déhalage"
 
@@ -2593,9 +2618,6 @@ msgstr ""
 "Accès délivré : remettez maintenant le lien ou le code au capitaine — ils ne"
 " seront plus affichés."
 
-#| msgid ""
-#| "Access issued: hand the link or the code to the master now — they will not "
-#| "be shown again."
 msgid ""
 "Access issued: hand the link or the code to the party now — they will not be"
 " shown again."
@@ -2652,7 +2674,7 @@ msgid ""
 "Too many unsuccessful attempts. Wait up to fifteen minutes before trying "
 "again."
 msgstr ""
-"Trop de tentatives infructueuses. Patientez jusqu'à quinze minutes avant de "
+"Trop de tentatives infructueuses. Attendez jusqu'à quinze minutes avant de "
 "réessayer."
 
 msgid ""
@@ -2669,7 +2691,6 @@ msgstr ""
 "Ce lien n'est pas valide, a expiré ou a été révoqué. Demandez un nouvel "
 "accès à votre agent."
 
-#| msgid "full name"
 msgid "Enter your full name."
 msgstr "Saisissez votre nom complet."
 
@@ -3114,7 +3135,7 @@ msgid ""
 "To register a new application, first enter a code from the one you use now."
 msgstr ""
 "Pour enregistrer une nouvelle application, saisissez d'abord un code de "
-"celle que vous utilisez aujourd'hui."
+"celle que vous utilisez actuellement."
 
 msgid "Activate two-factor authentication"
 msgstr "Activer la double authentification"
@@ -3163,8 +3184,8 @@ msgid ""
 "sign-in."
 msgstr ""
 "Téléphone perdu ou remplacé ? L'administrateur de votre port peut "
-"réinitialiser votre double authentification ; vous enregistrerez la nouvelle"
-" application à votre prochaine connexion."
+"réinitialiser votre double authentification ; vous enregistrerez alors la "
+"nouvelle application à votre prochaine connexion."
 
 msgid "Second factor"
 msgstr "Second facteur"
@@ -3300,6 +3321,48 @@ msgstr "État"
 msgid "Nothing is waiting for your roles."
 msgstr "Rien n'attend vos rôles."
 
+msgid "Registered organisation"
+msgstr "Organisation enregistrée"
+
+msgid "New organisation: name"
+msgstr "Nouvelle organisation : nom"
+
+msgid "Kind (suggested or free)"
+msgstr "Nature (suggérée ou libre)"
+
+msgid "Phone"
+msgstr "Téléphone"
+
+msgid "— new organisation —"
+msgstr "— nouvelle organisation —"
+
+msgid "Name of the new organisation"
+msgstr "Nom de la nouvelle organisation"
+
+msgid "Name"
+msgstr "Nom"
+
+msgid "Kind of party"
+msgstr "Nature de la partie"
+
+msgid "e.g. laboratory, bunker supplier…"
+msgstr "ex. laboratoire, avitailleur…"
+
+msgid "Remove this party"
+msgstr "Retirer cette partie"
+
+msgid "Add a party"
+msgstr "Ajouter une partie"
+
+msgid ""
+"An organisation already registered in the port is picked from the list; a "
+"new one is created with the role you give it and completed later by the port"
+" administrator."
+msgstr ""
+"Une organisation déjà enregistrée dans le port se choisit dans la liste ; "
+"une nouvelle est créée avec le rôle que vous lui donnez et complétée ensuite"
+" par l'administrateur du port."
+
 msgid "Refused by the platform — hold point"
 msgstr "Refusé par la plateforme — point d'arrêt"
 
@@ -3422,9 +3485,6 @@ msgstr "nouveau navire"
 msgid "Register a new vessel"
 msgstr "Enregistrer un nouveau navire"
 
-msgid "Name"
-msgstr "Nom"
-
 msgid "Type"
 msgstr "Type"
 
@@ -3497,17 +3557,21 @@ msgstr "Parties que vous invitez"
 
 msgid ""
 "The port authorities (harbour master, port authority, customs-immigration-"
-"health, security, marine services) are invited automatically."
+"health, security, marine services) are invited automatically. Add every "
+"other party of the call — terminal, surveyor, laboratory, owner, charterer, "
+"receiver, STS provider, bunker supplier, waste contractor, pilots… — the "
+"list is open: choose a registered organisation or name a new one, with its "
+"kind (suggested or free), its e-mail and its phone. A party without an "
+"account receives its own access by e-mail at the declaration."
 msgstr ""
 "Les autorités du port (capitainerie, autorité portuaire, douanes-"
 "immigration-santé, sûreté, services nautiques) sont invitées "
-"automatiquement."
-
-msgid "Providers"
-msgstr "Prestataires"
-
-msgid "None registered in the port."
-msgstr "Aucune enregistrée dans le port."
+"automatiquement. Ajoutez toutes les autres parties de l'escale — terminal, "
+"inspecteur, laboratoire, armateur, affréteur, réceptionnaire, prestataire "
+"STS, avitailleur, collecteur de déchets, pilotes… — la liste est ouverte : "
+"choisissez une organisation enregistrée ou nommez-en une nouvelle, avec sa "
+"nature (suggérée ou libre), son courriel et son téléphone. Une partie sans "
+"compte reçoit son propre accès par courriel à la déclaration."
 
 msgid "Create the draft call"
 msgstr "Créer l'escale en brouillon"
@@ -4256,41 +4320,48 @@ msgstr ""
 msgid "Your roles on this call: {roles}"
 msgstr "Vos rôles sur cette escale : {roles}"
 
-msgid "Standard forms"
-msgstr "Formulaires standards"
+msgid "Forms of the call"
+msgstr "Formulaires de l'escale"
 
 msgid ""
-"One structure for every form: header of the call, body of the standard, "
-"signatures by role, sealed footer. What the registry knows is pre-filled; "
-"the rest is completed and signed on paper, then filed back as a document."
+"Every party issues from here the documents the call asks of it — the tasks «"
+" provide a document » and the decisions on the requests addressed to it — in"
+" one structure: header of the call, body of the standard, signatures by "
+"role, sealed footer. What the registry knows is pre-filled; the rest is "
+"completed and signed on paper, then filed back as a version of the same "
+"document."
 msgstr ""
-"Une structure unique pour tous les formulaires : en-tête de l'escale, corps "
-"selon le standard, signatures par rôle, pied scellé. Ce que le registre "
-"connaît est prérempli ; le reste est complété et signé sur le papier, puis "
-"déposé comme document."
+"Chaque partie émet d'ici les documents que l'escale lui demande — les tâches"
+" « fournir un document » et les décisions sur les demandes qui lui sont "
+"adressées — dans une structure unique : en-tête de l'escale, corps du "
+"standard, signatures par rôle, pied scellé. Ce que le registre sait est "
+"prérempli ; le reste est complété et signé sur le papier, puis déposé comme "
+"version du même document."
 
-msgid "Forms you may generate"
-msgstr "Formulaires que vous pouvez produire"
+#, python-format
+msgid "%(n)s form you may issue on this call"
+msgid_plural "%(n)s forms you may issue on this call"
+msgstr[0] "%(n)s formulaire que vous pouvez émettre sur cette escale"
+msgstr[1] "%(n)s formulaires que vous pouvez émettre sur cette escale"
 
-#| msgid "Your roles on this call: {roles}"
 msgid "Your roles on this call:"
 msgstr "Vos rôles sur cette escale :"
 
 msgid "Form"
 msgstr "Formulaire"
 
-#| msgid "Reference"
+msgid "Answers"
+msgstr "Répond à"
+
 msgid "Reference standard"
 msgstr "Standard de référence"
 
-#| msgid "Signed"
 msgid "Signed by"
 msgstr "Signé par"
 
 msgid "Filed"
 msgstr "Déposé"
 
-#| msgid "Preview of the photo"
 msgid "Preview / print"
 msgstr "Aperçu / imprimer"
 
@@ -4301,30 +4372,35 @@ msgstr ""
 "Génère le formulaire depuis le registre et le dépose dans les documents de "
 "l'escale, avec son empreinte, sous votre rôle."
 
-#| msgid "Close the call"
-msgid "File in the call"
-msgstr "Déposer dans l'escale"
+msgid "Issue and file"
+msgstr "Émettre et déposer"
 
-#| msgid "This action is not open to your role on this call."
-msgid "None of the standard forms is generated by your roles on this call."
-msgstr ""
-"Aucun formulaire standard n'est produit par vos rôles sur cette escale."
+msgid "None of the forms of this call is issued by your roles."
+msgstr "Aucun formulaire de cette escale n'est émis par vos rôles."
 
 msgid ""
 "A filed form is a generated document: it carries its SHA-256 fingerprint, "
 "its version and the electronic signatures of the roles named on it. The "
 "completed and signed paper is deposited as a new version of the same "
-"document."
+"document. Forms of operations the call does not include (STS, bunkering, "
+"works…) are not offered."
 msgstr ""
 "Un formulaire déposé est un document généré : il porte son empreinte "
-"SHA-256, sa version et les signatures électroniques des rôles qui y "
-"figurent. Le papier complété et signé est déposé comme nouvelle version du "
-"même document."
+"SHA-256, sa version et les signatures électroniques des rôles qui y sont "
+"nommés. Le papier complété et signé est déposé comme nouvelle version du "
+"même document. Les formulaires des opérations que l'escale ne comprend pas "
+"(STS, soutage, travaux…) ne sont pas proposés."
 
-msgid "Other forms of the call (generated by other roles)"
-msgstr "Autres formulaires de l'escale (produits par d'autres rôles)"
+#, python-format
+msgid "%(n)s form issued by the other parties of the call"
+msgid_plural "%(n)s forms issued by the other parties of the call"
+msgstr[0] "%(n)s formulaire émis par les autres parties de l'escale"
+msgstr[1] "%(n)s formulaires émis par les autres parties de l'escale"
 
-#| msgid "short name"
+msgid "Each party issues its own; you receive them as documents of the call."
+msgstr ""
+"Chaque partie émet les siens ; vous les recevez comme documents de l'escale."
+
 msgid "Your name"
 msgstr "Votre nom"
 
@@ -4339,18 +4415,15 @@ msgstr ""
 " : saisissez votre nom complet avant de commencer. Il sera affiché à côté de"
 " ce que vous enregistrez."
 
-#| msgid "full name"
 msgid "Full name"
 msgstr "Nom complet"
 
-#| msgid "Open my call"
 msgid "Open the call"
 msgstr "Ouvrir l'escale"
 
 msgid "Master's access"
 msgstr "Accès capitaine"
 
-#| msgid "Access code"
 msgid "Access by code"
 msgstr "Accès par code"
 
@@ -4753,7 +4826,6 @@ msgstr "Remis le %(t)s par %(by)s."
 msgid "The NOR is visible to every party of the call."
 msgstr "La NOR est visible par toutes les parties de l'escale."
 
-#| msgid "Sections of the call"
 msgid "Stages of the call"
 msgstr "Étapes de l'escale"
 
@@ -4764,7 +4836,6 @@ msgstr ""
 "Rade, zone STS, bouée, quai : une même escale peut opérer dans plusieurs "
 "zones, successivement."
 
-#| msgid "Assign a berth"
 msgid "Area / berth"
 msgstr "Zone / poste"
 
@@ -4774,19 +4845,15 @@ msgstr "Fenêtre"
 msgid "Left"
 msgstr "Quittée"
 
-#| msgid "Current calls"
 msgid "current"
 msgstr "en cours"
 
-#| msgid "Planned"
 msgid "planned"
 msgstr "planifiée"
 
-#| msgid "Mark done"
 msgid "done"
 msgstr "terminée"
 
-#| msgid "Cancel the call"
 msgid "Cancel the stage"
 msgstr "Annuler l'étape"
 
@@ -4811,18 +4878,15 @@ msgstr "Poste / zone (facultatif, attribué par le port)"
 msgid "Operations at this stage"
 msgstr "Opérations à cette étape"
 
-#| msgid "Planned"
 msgid "Planned from"
 msgstr "Prévue du"
 
-#| msgid "Planned"
 msgid "Planned to"
 msgstr "Prévue au"
 
 msgid "e.g. lightering offshore, then discharge of the remainder at the quay"
 msgstr "ex. allègement au large, puis déchargement du reliquat à quai"
 
-#| msgid "Reload the page"
 msgid "Plan the stage"
 msgstr "Planifier l'étape"
 
@@ -4993,8 +5057,8 @@ msgid ""
 "The harbour master records that the dispute ends without agreement: an "
 "agreement belongs to the parties."
 msgstr ""
-"La capitainerie enregistre que la contestation prend fin sans accord : "
-"l'accord appartient aux parties."
+"La capitainerie constate que la contestation se termine sans accord : un "
+"accord appartient aux parties."
 
 msgid "How it ends"
 msgstr "Issue"
@@ -5139,7 +5203,7 @@ msgid "Name the provider"
 msgstr "Désigner le prestataire"
 
 msgid "Provider who carries out the service"
-msgstr "Prestataire qui réalise le service"
+msgstr "Prestataire qui exécute le service"
 
 msgid "Submit again"
 msgstr "Soumettre à nouveau"
@@ -5213,6 +5277,9 @@ msgstr "Publier la nouvelle version"
 msgid "No document visible to your roles."
 msgstr "Aucun document visible pour vos rôles."
 
+msgid "Standard forms"
+msgstr "Formulaires standards"
+
 msgid ""
 "Generated from the registry in one structure (ISGOTT, OCIMF, IMO FAL / ISPS,"
 " MARPOL, API MPMS): preview, print, file in the call."
@@ -5220,7 +5287,6 @@ msgstr ""
 "Générés depuis le registre dans une structure unique (ISGOTT, OCIMF, FAL / "
 "ISPS de l'OMI, MARPOL, API MPMS) : aperçu, impression, dépôt dans l'escale."
 
-#| msgid "Sections of the call"
 msgid "All the forms of the call"
 msgstr "Tous les formulaires de l'escale"
 
@@ -5521,9 +5587,9 @@ msgid ""
 "shore side records the shore milestones and figure and countersigns for the "
 "shore."
 msgstr ""
-"Quand plusieurs terminaux ou prestataires participent, celui qui est désigné"
-" pour le côté terre enregistre les jalons et le chiffre terre et contresigne"
-" au nom de la terre."
+"Lorsque plusieurs terminaux ou prestataires participent, celui désigné pour "
+"le côté terre enregistre les jalons et la quantité terre et contresigne pour"
+" la terre."
 
 msgid "Organisation"
 msgstr "Organisation"
@@ -5535,7 +5601,7 @@ msgid "port default"
 msgstr "défaut du port"
 
 msgid "speaks for the shore side"
-msgstr "parle au nom du côté terre"
+msgstr "parle pour le côté terre"
 
 msgid "Designate for the shore side"
 msgstr "Désigner pour le côté terre"
@@ -5546,8 +5612,18 @@ msgstr "retiré"
 msgid "Revoke the role"
 msgstr "Retirer le rôle"
 
-msgid "Invite an organisation"
-msgstr "Inviter une organisation"
+msgid "Invite a party"
+msgstr "Inviter une partie"
+
+msgid ""
+"The list of the parties of a call is open: pick a registered organisation, "
+"or name a new one with its kind (suggested or free), its e-mail and its "
+"phone. A party without an account receives its own access by e-mail."
+msgstr ""
+"La liste des parties d'une escale est ouverte : choisissez une organisation "
+"enregistrée, ou nommez-en une nouvelle avec sa nature (suggérée ou libre), "
+"son courriel et son téléphone. Une partie sans compte reçoit son propre "
+"accès par courriel."
 
 msgid "Invite"
 msgstr "Inviter"
@@ -5620,14 +5696,12 @@ msgstr "Nom du titulaire (facultatif : demandé à la première utilisation)"
 msgid "name asked at first use"
 msgstr "nom demandé à la première utilisation"
 
-#| msgid "Issue the departure clearance"
 msgid "issued at the declaration"
 msgstr "émis à la déclaration"
 
 msgid "until closure, at the latest"
 msgstr "jusqu'à la clôture, au plus tard"
 
-#| msgid "The NOR is visible to every party of the call."
 msgid "No link issued: every party of this call has an account."
 msgstr "Aucun lien émis : toutes les parties de cette escale ont un compte."
 

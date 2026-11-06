@@ -116,6 +116,9 @@ class Organization(models.Model):
     port = models.ForeignKey(Port, on_delete=models.PROTECT, related_name="organizations", verbose_name=_("port"))
     name = models.CharField(_("name"), max_length=200)
     short_name = models.CharField(_("short name"), max_length=40, blank=True)
+    kind = models.CharField(_("kind of party"), max_length=80, blank=True,
+                            help_text=_("What the organisation is (pilotage, laboratory, bunker supplier…): a code of the "
+                                        "suggested list or any other wording. The role, not the kind, carries the rights."))
     allowed_roles = models.JSONField(_("roles this organisation may hold"), default=list, blank=True)
     email = models.EmailField(_("e-mail"), blank=True)
     phone = models.CharField(_("phone (escalations)"), max_length=40, blank=True)
@@ -130,6 +133,14 @@ class Organization(models.Model):
 
     def __str__(self) -> str:
         return self.short_name or self.name
+
+    @property
+    def kind_label(self) -> str:
+        from django.utils.translation import get_language
+
+        from .parties import kind_label
+
+        return kind_label(self.kind, (get_language() or "fr")[:2]) if self.kind else ""
 
     def clean(self):
         unknown = validate_roles(self.allowed_roles)

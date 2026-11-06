@@ -21,18 +21,24 @@ from apps.registry.services import tasks as task_svc
 from apps.registry.services.context import actor_for_call, system_actor
 
 ORGS = [
-    # key, FR name, EN name, roles, default party roles
-    ("authority", "Autorité portuaire (démo)", "Port Authority (demo)", ["CAP", "APO", "DIR"], ["CAP", "APO", "DIR"]),
-    ("adm", "Douanes, immigration et santé (démo)", "Customs, Immigration and Health (demo)", ["ADM"], ["ADM"]),
-    ("security", "Sûreté portuaire et marine nationale (démo)", "Port Security and Navy (demo)", ["SUR"], ["SUR"]),
-    ("marine", "Services nautiques (démo)", "Marine Services (demo)", ["SVC"], ["SVC"]),
-    ("agency", "Agence maritime (démo)", "Shipping Agency (demo)", ["AGE"], []),
-    ("terminal", "Terminal pétrolier (démo)", "Oil Terminal (demo)", ["TER"], []),
-    ("surveyor", "Surveyor et laboratoire (démo)", "Surveyor & Laboratory (demo)", ["INS"], []),
-    ("owner", "Armateur / affréteur (démo)", "Owner / Charterer (demo)", ["COM"], []),
-    ("waste", "Prestataire déchets (démo)", "Waste Contractor (demo)", ["PRE"], []),
-    ("sts", "Prestataire STS (démo)", "STS Provider (demo)", ["PRE"], []),
-    ("lab", "Laboratoire indépendant (démo)", "Independent Laboratory (demo)", ["INS"], []),  # no account: convened by link
+    # key, FR name, EN name, roles, default party roles, kind (apps.core.parties — a suggestion list, not a closed one)
+    ("authority", "Autorité portuaire (démo)", "Port Authority (demo)", ["CAP", "APO", "DIR"], ["CAP", "APO", "DIR"], "PORT_AUTHORITY"),
+    ("adm", "Douanes, immigration et santé (démo)", "Customs, Immigration and Health (demo)", ["ADM"], ["ADM"], "CUSTOMS"),
+    ("security", "Sûreté portuaire et marine nationale (démo)", "Port Security and Navy (demo)", ["SUR"], ["SUR"], "PORT_SECURITY"),
+    ("marine", "Services nautiques (démo)", "Marine Services (demo)", ["SVC"], ["SVC"], "PILOTAGE"),
+    ("agency", "Agence maritime (démo)", "Shipping Agency (demo)", ["AGE"], [], "SHIPPING_AGENT"),
+    ("terminal", "Terminal pétrolier (démo)", "Oil Terminal (demo)", ["TER"], [], "OIL_TERMINAL"),
+    ("surveyor", "Surveyor et laboratoire (démo)", "Surveyor & Laboratory (demo)", ["INS"], [], "CARGO_SURVEYOR"),
+    ("owner", "Armateur / affréteur (démo)", "Owner / Charterer (demo)", ["COM"], [], "CHARTERER"),
+    ("waste", "Prestataire déchets (démo)", "Waste Contractor (demo)", ["PRE"], [], "WASTE_CONTRACTOR"),
+    ("sts", "Prestataire STS (démo)", "STS Provider (demo)", ["PRE"], [], "STS_PROVIDER"),
+    ("lab", "Laboratoire indépendant (démo)", "Independent Laboratory (demo)", ["INS"], [], "LABORATORY"),  # no account: convened by link
+    # parties without an account, registered in the port and invited by the agency when the call needs them
+    ("bunkers", "Avitailleur de soutes (démo)", "Bunker Supplier (demo)", ["PRE"], [], "BUNKER_SUPPLIER"),
+    ("water", "Fournisseur d'eau douce (démo)", "Fresh Water Supplier (demo)", ["PRE"], [], "WATER_SUPPLIER"),
+    ("pandi", "Correspondant P&I (démo)", "P&I Correspondent (demo)", ["INS"], [], "PANDI_SURVEYOR"),
+    ("receiver", "Réceptionnaire / importateur (démo)", "Receiver / Importer (demo)", ["COM"], [], "RECEIVER"),
+    ("tugs", "Remorquage et lamanage (démo)", "Towage and Mooring (demo)", ["SVC"], [], "TOWAGE"),
 ]
 USERS = [
     # login, organisation, roles, FR label, EN label
@@ -134,9 +140,12 @@ class Command(BaseCommand):
         english = port.default_language == "en"
         password = options["password"] or secrets.token_urlsafe(10)
         orgs = {}
-        for key, fr, en, roles, defaults in ORGS:
+        for key, fr, en, roles, defaults, kind in ORGS:
             org, _ = Organization.objects.get_or_create(port=port, name=en if english else fr,
-                                                        defaults={"allowed_roles": roles, "email": f"{key}@{options['domain']}"})
+                                                        defaults={"allowed_roles": roles, "email": f"{key}@{options['domain']}", "kind": kind})
+            if org.kind != kind:
+                org.kind = kind
+                org.save(update_fields=["kind"])
             orgs[key] = org
             for role in defaults:
                 PortDefaultParty.objects.get_or_create(port=port, organization=org, role=role)
@@ -222,7 +231,9 @@ class Command(BaseCommand):
             raise CommandError("Demo agency user missing.")
         now = timezone.now()
         jetty = port.berths.filter(kind="JETTY").first()
-        parties = [(orgs["terminal"], "TER"), (orgs["surveyor"], "INS"), (orgs["owner"], "COM"), (orgs["waste"], "PRE")]
+        parties = [(orgs["terminal"], "TER"), (orgs["surveyor"], "INS"), (orgs["owner"], "COM"), (orgs["waste"], "PRE"),
+                   # the list of the parties is open: a receiver, a P&I correspondent and a water supplier without accounts
+                   (orgs["receiver"], "COM"), (orgs["pandi"], "INS"), (orgs["water"], "PRE")]
 
         def actor(call, key):
             user = User.objects.filter(organization=orgs[key]).first() if key not in ("cap", "apo", "dir") else (

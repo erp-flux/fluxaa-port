@@ -120,8 +120,12 @@ def issue_statement_of_facts(call: PortCall, actor, *, remarks: str = "", remark
     content = ContentFile(html.encode("utf-8"), name=f"{call.reference}_statement_of_facts.html")
     content.content_type = "text/html"
     task = call.tasks.filter(template_code="M0", number="36", status=TaskStatus.PENDING).first()
-    return upload_document(call, actor, "SOF", content, title=f"Rapport des faits / Statement of facts — {call.reference}",
-                           generated=True, previous=previous, task=task, as_role="AGE")
+    statement = upload_document(call, actor, "SOF", content, title=f"Rapport des faits / Statement of facts — {call.reference}",
+                                generated=True, previous=previous, task=task, as_role="AGE")
+    from .forms import auto_issue
+
+    auto_issue(call, actor, "TIME_SHEET", as_role="AGE")  # the time sheet goes with the statement of facts (M0:37)
+    return statement
 
 
 # ============================================================================ indicators (EF-10.2)

@@ -250,6 +250,15 @@ def _apply_effects(call: PortCall, actor, milestone: Milestone) -> None:
         advance_from_milestone(call, mtype.sets_status, actor)
     if mtype.completes_tasks:
         complete_by_codes(call, mtype.completes_tasks, actor, evidence=f"milestone:{milestone.pk}")
+    for code in FORMS_ON_MILESTONE.get(mtype.code, ()):
+        # the written form of the fact just recorded, filed by its emitter (the notice of readiness once tendered)
+        from .forms import auto_issue
+
+        auto_issue(call, actor, code, as_role=milestone.emitter_role, about=milestone)
+
+
+# forms the platform files as soon as the milestone is recorded, under the emitter's role (docs/FORMULAIRES.md)
+FORMS_ON_MILESTONE = {"NOR_TENDERED": ("NOR",)}
 
 
 def _conflict(call, actor, role, milestone: Milestone, first: Milestone) -> None:

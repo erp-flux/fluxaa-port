@@ -5,15 +5,25 @@
     <p class="small muted">{% trans "Rights come from the role an organisation holds on the call, dated and revocable. Revoking a role removes the access at once and keeps everything the organisation entered." %}</p>
     <p class="small muted">{% trans "When several terminals or providers take part, the one designated for the shore side records the shore milestones and figure and countersigns for the shore." %}</p>
     <div class="tablewrap"><table class="grid"><tr><th>{% trans "Organisation" %}</th><th>{% trans "Role" %}</th><th>{% trans "Since" %}</th><th>{% trans "State" %}</th><th></th></tr>
-      {% for p in all_parties %}<tr><td>{{ p.organization.name }}{% if p.is_default %} <span class="small muted">({% trans "port default" %})</span>{% endif %}</td><td><span class="role">{{ p.role }}</span> {{ p.role|role_name }}{% if p.shore %} <span class="chip done">{% trans "speaks for the shore side" %}</span>{% endif %}{% if p.can_designate %}<form method="post" action="{% url 'registry:call_action' call.pk 'party_shore' %}" class="inline">{% csrf_token %}<input type="hidden" name="party_id" value="{{ p.pk }}"><input type="hidden" name="back" value="?tab=parties"><button class="linkbtn small">{% trans "Designate for the shore side" %}</button></form>{% endif %}</td><td><time>{{ p.valid_from|date:"d/m/Y H:i" }}</time></td>
+      {% for p in all_parties %}<tr><td>{{ p.organization.name }}{% if p.is_default %} <span class="small muted">({% trans "port default" %})</span>{% endif %}{% if p.organization.kind %}<div class="small muted">{{ p.organization.kind_label }}</div>{% endif %}</td><td><span class="role">{{ p.role }}</span> {{ p.role|role_name }}{% if p.shore %} <span class="chip done">{% trans "speaks for the shore side" %}</span>{% endif %}{% if p.can_designate %}<form method="post" action="{% url 'registry:call_action' call.pk 'party_shore' %}" class="inline">{% csrf_token %}<input type="hidden" name="party_id" value="{{ p.pk }}"><input type="hidden" name="back" value="?tab=parties"><button class="linkbtn small">{% trans "Designate for the shore side" %}</button></form>{% endif %}</td><td><time>{{ p.valid_from|date:"d/m/Y H:i" }}</time></td>
         <td>{% if p.revoked_at %}<span class="chip na">{% trans "revoked" %} <time>{{ p.revoked_at|date:"d/m H:i" }}</time></span><div class="small muted">{{ p.revoke_reason }}</div>{% else %}<span class="chip done">{% trans "active" %}</span>{% endif %}</td>
         <td class="actions">{% if p.can_revoke %}<details class="action"><summary>{% trans "Revoke" %}</summary><div><form method="post" action="{% url 'registry:call_action' call.pk 'party_revoke' %}" class="form">{% csrf_token %}<input type="hidden" name="party_id" value="{{ p.pk }}"><input type="hidden" name="back" value="?tab=parties"><input name="reason" required placeholder="{% trans 'Reason' %}" aria-label="{% trans 'Reason' %}"><button class="btn small danger">{% trans "Revoke the role" %}</button></form></div></details>{% endif %}</td></tr>{% endfor %}
     </table></div>
-    {% if orgs %}
-    <details class="action" style="margin-top:12px"><summary>{% trans "Invite an organisation" %}</summary><div>
-      <form method="post" action="{% url 'registry:call_action' call.pk 'party_add' %}" class="form">{% csrf_token %}<input type="hidden" name="back" value="?tab=parties">
-        <div class="row"><div><label for="porg">{% trans "Organisation" %}</label><select id="porg" name="organization">{% for o in orgs %}<option value="{{ o.pk }}">{{ o.name }} ({{ o.allowed_roles|join:", " }})</option>{% endfor %}</select></div>
-          <div><label for="prole">{% trans "Role" %}</label><select id="prole" name="role">{% for r in invitable %}<option value="{{ r }}">{{ r }} — {{ r|role_name }}</option>{% endfor %}</select></div></div>
+    {% if invitable and not call.is_terminal_state %}
+    <details class="action" style="margin-top:12px"><summary>{% trans "Invite a party" %}</summary><div>
+      <p class="small muted">{% trans "The list of the parties of a call is open: pick a registered organisation, or name a new one with its kind (suggested or free), its e-mail and its phone. A party without an account receives its own access by e-mail." %}</p>
+      <form method="post" action="{% url 'registry:call_action' call.pk 'party_add' %}" class="form" data-parties data-party-row>{% csrf_token %}<input type="hidden" name="back" value="?tab=parties">
+        <div class="row">
+          <div><label for="prole">{% trans "Role" %}</label><select id="prole" name="role" data-party-role>{% for r in invitable %}<option value="{{ r }}">{{ r }} — {{ r|role_name }}</option>{% endfor %}</select></div>
+          <div><label for="porg">{% trans "Registered organisation" %}</label><select id="porg" name="organization" data-party-org><option value="">—</option><option value="new">{% trans "— new organisation —" %}</option>{% for o in orgs %}<option value="{{ o.pk }}" data-roles="{{ o.allowed_roles|join:' ' }}">{{ o.name }}{% if o.kind %} — {{ o.kind_label }}{% endif %} ({{ o.allowed_roles|join:", " }})</option>{% endfor %}</select></div>
+        </div>
+        <div class="row" data-new>
+          <div><label for="pname">{% trans "New organisation: name" %}</label><input id="pname" name="party_name" maxlength="200"></div>
+          <div><label for="pkind">{% trans "Kind (suggested or free)" %}</label><input id="pkind" name="party_kind" data-party-kind maxlength="80" list="kinds-{{ invitable.0 }}"></div>
+          <div><label for="pemail">{% trans "E-mail" %}</label><input id="pemail" name="party_email" type="email"></div>
+          <div><label for="pphone">{% trans "Phone" %}</label><input id="pphone" name="party_phone" maxlength="40"></div>
+        </div>
+        {% for role, suggestions in party_kinds.items %}<datalist id="kinds-{{ role }}">{% for code, fr, en in suggestions %}<option value="{% if LANGUAGE_CODE == 'en' %}{{ en }}{% else %}{{ fr }}{% endif %}"></option>{% endfor %}</datalist>{% endfor %}
         <button class="btn secondary">{% trans "Invite" %}</button></form></div></details>
     {% endif %}
   </section>

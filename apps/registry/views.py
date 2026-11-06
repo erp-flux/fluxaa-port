@@ -21,6 +21,7 @@ from django.views.decorators.http import require_POST
 
 from apps.core import mfa, throttle
 from apps.core.models import Berth, Organization, Port, pick
+from apps.core.parties import kinds_for_role
 from apps.core.roles import ALL_ROLES, role_label
 
 from .models import (
@@ -373,6 +374,44 @@ def call_list(request):
                                                        "can_create": "AGE" in user.role_set})
 
 
+def party_rows(data) -> list[dict]:
+    """The rows of the open party list as posted (empty rows kept for the form); three blank rows by default."""
+    roles, orgs = data.getlist("party_role"), data.getlist("party_org")
+    names, kinds = data.getlist("party_name"), data.getlist("party_kind")
+    emails, phones = data.getlist("party_email"), data.getlist("party_phone")
+    rows = []
+    for i in range(max(len(roles), len(orgs), len(names))):
+        pick_ = lambda values: values[i] if i < len(values) else ""  # noqa: E731
+        rows.append({"role": pick_(roles), "org": pick_(orgs), "name": pick_(names).strip(), "kind": pick_(kinds).strip(),
+                     "email": pick_(emails).strip(), "phone": pick_(phones).strip()})
+    for role in call_svc.AGENCY_INVITABLE_ROLES:  # the former fixed slots (party_TER=<id>…) are still accepted
+        for org_id in data.getlist(f"party_{role}"):
+            rows.append({"role": role, "org": org_id, "name": "", "kind": "", "email": "", "phone": ""})
+    while len(rows) < 3:
+        rows.append({"role": ["TER", "INS", "PRE"][len(rows)], "org": "", "name": "", "kind": "", "email": "", "phone": ""})
+    return rows
+
+
+def resolve_parties(actor, rows: list[dict]) -> list[tuple[Organization, str]]:
+    """(organisation, role) pairs of the posted rows: a registered organisation by id, or a new one registered on
+    the spot (services.calls.register_organization); rows without organisation nor name are ignored."""
+    parties = []
+    for row in rows:
+        role = row["role"]
+        if row["org"] and row["org"] != "new":
+            org = Organization.objects.filter(port=actor.port, pk=row["org"]).first()
+            if org is None:
+                raise NotVisible()
+        elif row["name"] or row["org"] == "new":
+            org = call_svc.register_organization(actor, name=row["name"], role=role, kind=row["kind"], email=row["email"],
+                                                 phone=row["phone"])
+        else:
+            continue
+        if (org, role) not in parties:
+            parties.append((org, role))
+    return parties
+
+
 @login_required
 @web_action
 def call_create(request):
@@ -389,8 +428,11 @@ def call_create(request):
         "modules": templates.filter(kind=TemplateKind.MODULE),
         "berths": Berth.objects.filter(port=port, is_active=True),
         "kinds": Berth.Kind.choices,
-        "orgs": {role: Organization.objects.filter(port=port, is_active=True, allowed_roles__contains=[role])
-                 for role in ("TER", "INS", "COM", "PRE")},
+        # the parties of a call: an open list — any number of rows, registered organisations or new ones
+        "orgs": Organization.objects.filter(port=port, is_active=True).exclude(allowed_roles=[]).order_by("name"),
+        "invitable": sorted(call_svc.AGENCY_INVITABLE_ROLES, key=["TER", "INS", "COM", "PRE", "SVC"].index),
+        "party_kinds": {role: kinds_for_role(role) for role in call_svc.AGENCY_INVITABLE_ROLES},
+        "party_rows": party_rows(request.POST),
         # only the agency's own calls: another agency's call is linked by the harbour master
         "partners": rights.call_queryset_for_user(request.user).filter(
             status__in=[CallStatus.DRAFT, *ACTIVE_STATUSES]).select_related("vessel"),
@@ -409,12 +451,11 @@ def call_create(request):
     if vessel is None:
         messages.error(request, _("Choose a vessel or register a new one."))
         return render(request, "registry/call_create.html", context)
-    parties = []
-    for role in ("TER", "INS", "COM", "PRE"):
-        for org_id in data.getlist(f"party_{role}"):
-            org = Organization.objects.filter(port=port, pk=org_id).first()
-            if org:
-                parties.append((org, role))
+    try:
+        parties = resolve_parties(actor, party_rows(data))
+    except RegistryError as exc:
+        messages.error(request, str(exc))
+        return render(request, "registry/call_create.html", context)
     berth = Berth.objects.filter(port=port, pk=data.get("requested_berth")).first() if data.get("requested_berth") else None
     partner = PortCall.objects.filter(port=port, pk=data.get("linked_call")).first() if data.get("linked_call") else None
     call = call_svc.create_call(
@@ -650,6 +691,7 @@ def _tab_parties(request, call, actor):
             "party_links": [lk for lk in links if lk.role != "NAV"],
             "linkable": [p for p in parties if p.revoked_at is None and p.role in call_svc.LINK_ROLES] if can_manage else [],
             "orgs": orgs, "invitable": sorted(call_svc.AGENCY_INVITABLE_ROLES) if actor.has("AGE") and not actor.has("CAP") else list(ALL_ROLES),
+            "party_kinds": {role: kinds_for_role(role) for role in ALL_ROLES},
             "new_link": request.session.pop("fluxaa_new_master_link", None)}
 
 
@@ -725,9 +767,14 @@ def call_action(request, pk, action):
             raise NotVisible()
         call_svc.link_partner(call, actor, partner, data.get("link_kind", "STS"))
     elif action == "party_add":
-        org = Organization.objects.filter(port=call.port, pk=data.get("organization")).first()
-        if org is None:
-            raise NotVisible()
+        if data.get("organization") == "new" or (not data.get("organization") and data.get("party_name")):
+            org = call_svc.register_organization(actor, name=data.get("party_name", ""), role=data.get("role", ""),
+                                                 kind=data.get("party_kind", ""), email=data.get("party_email", ""),
+                                                 phone=data.get("party_phone", ""))
+        else:
+            org = Organization.objects.filter(port=call.port, pk=data.get("organization")).first()
+            if org is None:
+                raise NotVisible()
         call_svc.add_party(call, actor, org, data.get("role", ""))
     elif action == "party_shore":
         party = call.parties.filter(pk=data.get("party_id")).first()
@@ -958,12 +1005,14 @@ def form_list(request, pk):
     filed = {}
     for doc in rights.visible_documents(actor, call):
         if doc.generated and doc.status in ("ISSUED", "SIGNED"):
-            filed.setdefault(doc.type.code, doc)
-    rows = [{"form": f, "filed": filed.get(f.document_type)} for f in forms]
+            filed.setdefault(doc.title.rsplit(" — ", 1)[0], doc)  # one generated document per form title (the reference last)
+    groups = [(code, label, [{"form": f, "filed": filed.get(f"{f.title[0]} / {f.title[1]}")} for f in members])
+              for code, label, members in form_svc.grouped(forms)]
+    others = form_svc.grouped([f for f in form_svc.for_call(call) if f not in forms])
     journal.audit(port=call.port, call=call, user=actor.user, master=actor.master, action="view", obj=call,
                   object_kind="forms", request=request)
-    return render(request, "registry/forms.html", {"call": call, "actor": actor, "rows": rows,
-                                                   "others": [f for f in form_svc.FORMS.values() if f not in forms]})
+    return render(request, "registry/forms.html", {"call": call, "actor": actor, "groups": groups, "count": len(forms),
+                                                   "others": others, "others_count": sum(len(m) for _c, _l, m in others)})
 
 
 @account_or_master

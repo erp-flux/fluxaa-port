@@ -13,6 +13,7 @@ from django.contrib.auth.forms import UserChangeForm
 from django.utils.translation import gettext_lazy as _
 
 from .models import Berth, Organization, Port, User
+from .parties import PARTY_KINDS, normalize_kind
 from .roles import Role
 
 
@@ -97,6 +98,11 @@ class PortAdmin(admin.ModelAdmin):
                                                  "ais_divergence_minutes", "digest_hour_local")}),
         (_("Master access"), {"fields": ("master_link_grace_hours", "master_link_max_days")}),
         (_("Retention and security"), {"fields": ("retention_years", "security_authority_email")}),
+        (_("Port waters — AIS board"), {
+            "description": _("The box drawn on the AIS board (the four limits, decimal degrees) and, if wished, a chart "
+                             "excerpt covering exactly that box. Without the box the board is a list."),
+            "fields": (("map_lat_min", "map_lat_max"), ("map_lon_min", "map_lon_max"), "map_image", "ais_retention_days"),
+        }),
         (_("AI assistance (EF-17)"), {"fields": ("ai_assistance_enabled", "ai_agreement_reference")}),
     )
 
@@ -127,22 +133,33 @@ class PortAdmin(admin.ModelAdmin):
 
 class OrganizationForm(forms.ModelForm):
     allowed_roles = RolesField(label=_("roles this organisation may hold"))
+    kind = forms.CharField(label=_("kind of party"), required=False, max_length=80,
+                           help_text=_("Suggested kinds (non-exhaustive): %(kinds)s — or any other wording.") % {
+                               "kinds": ", ".join(fr for _code, _role, fr, _en in PARTY_KINDS)},
+                           widget=forms.TextInput(attrs={"list": "party-kinds", "style": "width:28em"}))
 
     class Meta:
         model = Organization
         fields = "__all__"
 
+    def clean_kind(self):
+        return normalize_kind(self.cleaned_data.get("kind", ""))
+
 
 @admin.register(Organization)
 class OrganizationAdmin(PortScopedAdmin):
     form = OrganizationForm
-    list_display = ("name", "short_name", "roles_display", "email", "phone", "is_active")
-    list_filter = ("is_active",)
-    search_fields = ("name", "short_name", "email")
+    list_display = ("name", "short_name", "kind_display", "roles_display", "email", "phone", "is_active")
+    list_filter = ("is_active", "kind")
+    search_fields = ("name", "short_name", "email", "kind")
 
     @admin.display(description=_("roles"))
     def roles_display(self, obj):
         return ", ".join(obj.allowed_roles or [])
+
+    @admin.display(description=_("kind of party"), ordering="kind")
+    def kind_display(self, obj):
+        return obj.kind_label
 
 
 class UserForm(UserChangeForm):

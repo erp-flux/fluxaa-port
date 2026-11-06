@@ -1,0 +1,26 @@
+{% load i18n fluxaa %}{# Open list of parties: one row per party — role, registered organisation or a new one. Context: rows (list of dicts: role, org, name, kind, email, phone), invitable (role codes), orgs (Organization queryset), kinds (role → [(code, fr, en)]) #}
+<div data-parties>
+  <div class="tablewrap"><table class="grid parties">
+    <thead><tr><th>{% trans "Role" %}</th><th>{% trans "Registered organisation" %}</th><th>{% trans "New organisation: name" %}</th><th>{% trans "Kind (suggested or free)" %}</th><th>{% trans "E-mail" %}</th><th>{% trans "Phone" %}</th><th></th></tr></thead>
+    <tbody>
+    {% for row in rows %}
+    <tr data-party-row>
+      <td><select name="party_role" data-party-role aria-label="{% trans 'Role' %}">{% for r in invitable %}<option value="{{ r }}" {% if row.role == r %}selected{% endif %}>{{ r }} — {{ r|role_name }}</option>{% endfor %}</select></td>
+      <td><select name="party_org" data-party-org aria-label="{% trans 'Registered organisation' %}">
+        <option value="">—</option>
+        <option value="new" {% if row.org == "new" %}selected{% endif %}>{% trans "— new organisation —" %}</option>
+        {% for o in orgs %}<option value="{{ o.pk }}" data-roles="{{ o.allowed_roles|join:' ' }}" {% if row.org == o.pk|stringformat:'s' %}selected{% endif %}>{{ o.name }}{% if o.kind %} — {{ o.kind_label }}{% endif %} ({{ o.allowed_roles|join:", " }})</option>{% endfor %}
+      </select></td>
+      <td><input data-new name="party_name" value="{{ row.name }}" maxlength="200" aria-label="{% trans 'Name of the new organisation' %}" placeholder="{% trans 'Name' %}"></td>
+      <td><input data-new name="party_kind" data-party-kind value="{{ row.kind }}" maxlength="80" list="kinds-{{ row.role|default:'PRE' }}" aria-label="{% trans 'Kind of party' %}" placeholder="{% trans 'e.g. laboratory, bunker supplier…' %}"></td>
+      <td><input data-new name="party_email" type="email" value="{{ row.email }}" aria-label="{% trans 'E-mail' %}" placeholder="contact@…"></td>
+      <td><input data-new name="party_phone" value="{{ row.phone }}" maxlength="40" aria-label="{% trans 'Phone' %}"></td>
+      <td><button type="button" class="linkbtn small" data-remove aria-label="{% trans 'Remove this party' %}">✕</button></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <div class="actions" style="margin-top:6px"><button type="button" class="btn quiet small" data-add>+ {% trans "Add a party" %}</button>
+    <span class="small muted">{% trans "An organisation already registered in the port is picked from the list; a new one is created with the role you give it and completed later by the port administrator." %}</span></div>
+  {% for role, suggestions in party_kinds.items %}<datalist id="kinds-{{ role }}">{% for code, fr, en in suggestions %}<option value="{% if LANGUAGE_CODE == 'en' %}{{ en }}{% else %}{{ fr }}{% endif %}"></option>{% endfor %}</datalist>{% endfor %}
+</div>

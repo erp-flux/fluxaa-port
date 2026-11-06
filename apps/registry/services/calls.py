@@ -58,6 +58,40 @@ def call_url(call) -> str:
     return f"/escales/{call.pk}/"
 
 
+def register_organization(actor: Actor, *, name: str, role: str, kind: str = "", email: str = "", phone: str = "") -> Organization:
+    """A party the port does not know yet, named by the agency (or the harbour master) when it invites it: the
+    list of the parties of a call is open. The organisation is created in the port with the one role it is
+    invited for; the port administrator completes or corrects it in the settings. Recorded in the port journal."""
+    name = " ".join((name or "").split())
+    if len(name) < 2:
+        raise RuleViolation(_("Name the organisation you invite."))
+    if role not in AGENCY_INVITABLE_ROLES and "CAP" not in actor.roles:
+        raise PermissionRefused(_("The agency may invite terminals, surveyors, owners/charterers, providers and marine services only."))
+    if "AGE" not in actor.roles and "CAP" not in actor.roles:
+        raise PermissionRefused(_("Only the agency or the harbour master invites a new organisation."))
+    existing = Organization.objects.filter(port=actor.port, name__iexact=name).first()
+    if existing is not None:
+        if not existing.is_active:
+            raise RuleViolation(_("%(org)s exists but is inactive: ask the port administrator.") % {"org": existing.name})
+        if role not in (existing.allowed_roles or []):
+            raise RuleViolation(_("%(org)s is registered in the port without the role %(role)s: ask the port administrator.")
+                                % {"org": existing.name, "role": role_label(role)})
+        return existing
+    from apps.core.parties import normalize_kind
+
+    org = Organization(port=actor.port, name=name, kind=normalize_kind(kind), allowed_roles=[role], email=(email or "").strip().lower(),
+                       phone=(phone or "").strip()[:40], is_active=True)
+    org.full_clean()
+    org.save()
+    journal.record(
+        port=actor.port, actor=actor, action="organization.created", obj=org, object_kind="organization",
+        summary_fr=f"Organisation {org.name} enregistrée ({role_label(role)}{', ' + org.kind if org.kind else ''})",
+        summary_en=f"Organisation {org.name} registered ({role_label(role)}{', ' + org.kind if org.kind else ''})",
+        visible_roles=["CAP", "APO", "DIR", "AGE"], payload={"role": role, "kind": org.kind, "email": org.email},
+    )
+    return org
+
+
 # ============================================================================ deadlines
 def compute_due(task: Task, call: PortCall):
     if not task.anchor:

@@ -5,8 +5,8 @@
   <div class="top">
     <div>
       <div class="ref"><a href="{% url 'registry:call_detail' call.pk %}">{{ call.reference }}</a>{% if call.voyage_number %} — voy. {{ call.voyage_number }}{% endif %}</div>
-      <h1 class="vessel">{% trans "Standard forms" %} — {{ call.vessel.name }}</h1>
-      <div class="muted">{% trans "One structure for every form: header of the call, body of the standard, signatures by role, sealed footer. What the registry knows is pre-filled; the rest is completed and signed on paper, then filed back as a document." %}</div>
+      <h1 class="vessel">{% trans "Forms of the call" %} — {{ call.vessel.name }}</h1>
+      <div class="muted">{% trans "Every party issues from here the documents the call asks of it — the tasks « provide a document » and the decisions on the requests addressed to it — in one structure: header of the call, body of the standard, signatures by role, sealed footer. What the registry knows is pre-filled; the rest is completed and signed on paper, then filed back as a version of the same document." %}</div>
     </div>
     <div class="actions"><span class="chip status st-{{ call.status }}">{{ call.get_status_display }}</span>
       <a class="btn secondary small" href="{% url 'registry:call_detail' call.pk %}?tab=documents">{% trans "Documents" %}</a></div>
@@ -14,33 +14,44 @@
 </div>
 
 <section class="section">
-  <div class="section-head"><h2>{% trans "Forms you may generate" %}</h2>
+  <div class="section-head"><h2>{% blocktrans count n=count %}{{ n }} form you may issue on this call{% plural %}{{ n }} forms you may issue on this call{% endblocktrans %}</h2>
     <span class="small muted">{% trans "Your roles on this call:" %} {% for r in actor.roles %}<span class="role" title="{{ r|role_name }}">{{ r }}</span> {% endfor %}</span></div>
-  {% if rows %}
+  {% if groups %}
   <div class="tablewrap"><table class="grid">
-    <tr><th>{% trans "Form" %}</th><th>{% trans "Reference standard" %}</th><th>{% trans "Signed by" %}</th><th>{% trans "Filed" %}</th><th></th></tr>
+    <tr><th>{% trans "Form" %}</th><th>{% trans "Answers" %}</th><th>{% trans "Reference standard" %}</th><th>{% trans "Signed by" %}</th><th>{% trans "Filed" %}</th><th></th></tr>
+    {% for code, label, rows in groups %}
+    <tr class="section-row"><td colspan="6"><span class="role" title="{{ code|role_name }}">{{ code }}</span> {% if LANGUAGE_CODE == 'en' %}{{ label.1 }}{% else %}{{ label.0 }}{% endif %}</td></tr>
     {% for row in rows %}{% with f=row.form %}
     <tr>
-      <td><b>{{ f.title.0 }}</b><div class="small muted">{{ f.title.1 }} — <span class="code">{{ f.code }}</span></div></td>
-      <td class="small">{{ f.standard.0 }}<div class="muted">{{ f.standard.1 }}</div></td>
-      <td class="small">{% for role, label in f.signers %}<div><span class="role" title="{{ role|role_name }}">{{ role }}</span> {{ label.0 }}</div>{% endfor %}</td>
+      <td><b>{% if LANGUAGE_CODE == 'en' %}{{ f.title.1 }}{% else %}{{ f.title.0 }}{% endif %}</b><div class="small muted">{% if LANGUAGE_CODE == 'en' %}{{ f.title.0 }}{% else %}{{ f.title.1 }}{% endif %} — <span class="code">{{ f.code }}</span></div>
+        {% if f.purpose %}<div class="small">{% if LANGUAGE_CODE == 'en' %}{{ f.purpose.1 }}{% else %}{{ f.purpose.0 }}{% endif %}</div>{% endif %}</td>
+      <td class="small">{% for a in f.answers %}<span class="code">{{ a }}</span> {% empty %}—{% endfor %}</td>
+      <td class="small">{% if LANGUAGE_CODE == 'en' %}{{ f.standard.1 }}{% else %}{{ f.standard.0 }}{% endif %}</td>
+      <td class="small">{% for role, label in f.signers %}<div><span class="role" title="{{ role|role_name }}">{{ role }}</span> {% if LANGUAGE_CODE == 'en' %}{{ label.1 }}{% else %}{{ label.0 }}{% endif %}</div>{% endfor %}</td>
       <td class="small">{% if row.filed %}<a href="{% url 'registry:document_download' call.pk row.filed.pk %}?inline=1" target="_blank" rel="noopener">v{{ row.filed.version }}</a> — {{ row.filed.get_status_display }}<div class="muted"><time>{{ row.filed.issued_at|date:"d/m H:i" }}</time> {{ row.filed.issuer_label|truncatechars:40 }}</div>{% else %}<span class="muted">—</span>{% endif %}</td>
       <td class="actions">
         <a class="btn small secondary" href="{% url 'registry:form_preview' call.pk f.code %}" target="_blank" rel="noopener">{% trans "Preview / print" %}</a>
         <form method="post" action="{% url 'registry:call_action' call.pk 'form_issue' %}">{% csrf_token %}<input type="hidden" name="code" value="{{ f.code }}"><input type="hidden" name="back" value="{% url 'registry:form_list' call.pk %}">
-          <button class="btn small" title="{% trans 'Generates the form from the registry and files it in the documents of the call, fingerprinted, under your role.' %}">{% trans "File in the call" %}</button></form>
+          <button class="btn small" title="{% trans 'Generates the form from the registry and files it in the documents of the call, fingerprinted, under your role.' %}">{% trans "Issue and file" %}</button></form>
       </td>
     </tr>
     {% endwith %}{% endfor %}
+    {% endfor %}
   </table></div>
-  {% else %}<p class="empty">{% trans "None of the standard forms is generated by your roles on this call." %}</p>{% endif %}
-  <p class="hint">{% trans "A filed form is a generated document: it carries its SHA-256 fingerprint, its version and the electronic signatures of the roles named on it. The completed and signed paper is deposited as a new version of the same document." %}</p>
+  {% else %}<p class="empty">{% trans "None of the forms of this call is issued by your roles." %}</p>{% endif %}
+  <p class="hint">{% trans "A filed form is a generated document: it carries its SHA-256 fingerprint, its version and the electronic signatures of the roles named on it. The completed and signed paper is deposited as a new version of the same document. Forms of operations the call does not include (STS, bunkering, works…) are not offered." %}</p>
 </section>
 
 {% if others %}
 <section class="section">
-  <h2>{% trans "Other forms of the call (generated by other roles)" %}</h2>
-  <ul class="plain small">{% for f in others %}<li><b>{{ f.title.0 }}</b> <span class="muted">/ {{ f.title.1 }} — {{ f.standard.0 }}</span></li>{% endfor %}</ul>
+  <div class="section-head"><h2>{% blocktrans count n=others_count %}{{ n }} form issued by the other parties of the call{% plural %}{{ n }} forms issued by the other parties of the call{% endblocktrans %}</h2>
+    <span class="small muted">{% trans "Each party issues its own; you receive them as documents of the call." %}</span></div>
+  <div class="cols">
+  {% for code, label, members in others %}
+  <div><h3 class="small"><span class="role" title="{{ code|role_name }}">{{ code }}</span> {% if LANGUAGE_CODE == 'en' %}{{ label.1 }}{% else %}{{ label.0 }}{% endif %}</h3>
+    <ul class="plain small">{% for f in members %}<li><b>{% if LANGUAGE_CODE == 'en' %}{{ f.title.1 }}{% else %}{{ f.title.0 }}{% endif %}</b> <span class="muted">— {% if LANGUAGE_CODE == 'en' %}{{ f.standard.1|truncatechars:60 }}{% else %}{{ f.standard.0|truncatechars:60 }}{% endif %}</span></li>{% endfor %}</ul></div>
+  {% endfor %}
+  </div>
 </section>
 {% endif %}
 {% endblock %}

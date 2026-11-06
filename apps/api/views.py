@@ -111,10 +111,15 @@ class CallListView(APIView):
         if vessel is None:
             raise RuleViolation("Unknown vessel: register it first (POST /api/v1/vessels/).")
         parties = []
-        for item in data.get("parties", []):
-            org = Organization.objects.filter(port=actor.port, pk=item.get("organization_id")).first()
-            if org is None:
-                raise RuleViolation("Unknown organisation in parties.")
+        for item in data.get("parties", []):  # an open list: a registered organisation, or a new one by name
+            if item.get("organization_id"):
+                org = Organization.objects.filter(port=actor.port, pk=item.get("organization_id")).first()
+                if org is None:
+                    raise RuleViolation("Unknown organisation in parties.")
+            else:
+                org = call_svc.register_organization(actor, name=str(item.get("name", "")), role=str(item.get("role", "")),
+                                                     kind=str(item.get("kind", "")), email=str(item.get("email", "")),
+                                                     phone=str(item.get("phone", "")))
             parties.append((org, item.get("role")))
         berth = Berth.objects.filter(port=actor.port, code=data.get("requested_berth")).first() if data.get("requested_berth") else None
         linked = PortCall.objects.filter(port=actor.port, reference=data.get("linked_call")).first() if data.get("linked_call") else None
@@ -161,7 +166,7 @@ class CallDetailView(CallAPIView):
 
 
 class CallActionView(CallAPIView):
-    @extend_schema(request=JSON, responses=JSON, summary="Life-cycle action: declare | estimates | cancel | close-request | close | archive")
+    @extend_schema(request=JSON, responses=JSON, summary="Life-cycle action: declare | estimates | cancel | close-request | close | archive | statement-of-facts | invite")
     def post(self, request, reference, action):
         call, actor = self.resolve(request, reference)
         data = request.data
@@ -181,6 +186,16 @@ class CallActionView(CallAPIView):
         elif action == "statement-of-facts":
             doc = reports.issue_statement_of_facts(call, actor)
             return Response(rep.document_dict(doc), status=201)
+        elif action == "invite":  # the open list of the parties: a registered organisation, or a new one by name
+            if data.get("organization_id"):
+                org = Organization.objects.filter(port=call.port, pk=data.get("organization_id")).first()
+                if org is None:
+                    raise RuleViolation("Unknown organisation.")
+            else:
+                org = call_svc.register_organization(actor, name=str(data.get("name", "")), role=str(data.get("role", "")),
+                                                     kind=str(data.get("kind", "")), email=str(data.get("email", "")),
+                                                     phone=str(data.get("phone", "")))
+            call_svc.add_party(call, actor, org, str(data.get("role", "")))
         else:
             raise NotVisible()
         call.refresh_from_db()
@@ -380,8 +395,12 @@ class FormView(CallAPIView):
 
 
 def _form_json(form) -> dict:
+    family_fr, family_en = form.family_label
     return {"code": form.code, "document_type": form.document_type, "title_fr": form.title[0], "title_en": form.title[1],
             "standard_fr": form.standard[0], "standard_en": form.standard[1], "roles": sorted(form.roles),
+            "family": form.family, "family_fr": family_fr, "family_en": family_en,
+            "purpose_fr": form.purpose[0] if form.purpose else "", "purpose_en": form.purpose[1] if form.purpose else "",
+            "answers": list(form.answers), "templates": sorted(form.templates), "needs_link": form.needs_link,
             "signers": [{"role": role, "label_fr": fr, "label_en": en} for role, (fr, en) in form.signers],
             "landscape": form.landscape}
 

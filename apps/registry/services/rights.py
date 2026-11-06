@@ -290,7 +290,8 @@ def document_visible(actor, doc: Document) -> bool:
         return bool(roles & roles_with("V", "document"))
     if doc.confidentiality == Confidentiality.N3:
         return doc.counterpart_role in roles  # the issuing side is its own organisation, checked above
-    allowed = set(N2_SUPERVISORS) | {"COM"} | set(doc.required_signers or []) | set(doc.type.audience_roles or [])
+    allowed = set(N2_SUPERVISORS) | {"COM"} | set(doc.required_signers or []) | set(doc.type.audience_roles or []) \
+        | set(doc.audience_roles or [])
     return bool(roles & allowed)
 
 

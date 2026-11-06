@@ -1244,6 +1244,9 @@ class Document(NoDeleteModel):
     status = models.CharField(max_length=10, choices=DocumentStatus.choices, default=DocumentStatus.ISSUED)
     confidentiality = models.CharField(max_length=2, choices=Confidentiality.choices, default=Confidentiality.N2)
     counterpart_role = models.CharField(_("counterpart (N3)"), max_length=3, blank=True)
+    # extra readers of this one document (N2): the roles that could read the act it stems from — the requester
+    # of a decided request reads the written act of the decision whatever the audience of the document type
+    audience_roles = models.JSONField(_("readers of this document (N2)"), default=list, blank=True)
     issuer_role = models.CharField(max_length=3)
     issuer_org = models.ForeignKey(Organization, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
     issuer_user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name="+")

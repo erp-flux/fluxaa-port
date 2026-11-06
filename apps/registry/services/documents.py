@@ -43,7 +43,7 @@ def visibility_roles(doc: Document) -> list[str]:
     if doc.confidentiality == Confidentiality.N3:
         return sorted({doc.issuer_role, doc.counterpart_role} - {""})
     return sorted(set(N2_SUPERVISORS) | {"COM", doc.issuer_role, *(doc.required_signers or []),
-                                         *(doc.type.audience_roles or [])})
+                                         *(doc.type.audience_roles or []), *(doc.audience_roles or [])})
 
 
 # Types a browser may display inline; recognised from the content itself, never from what the sender declares.
@@ -83,7 +83,7 @@ def _read(uploaded) -> tuple[bytes, str, str]:
 def upload_document(call, actor, type_code: str, uploaded, *, title: str = "", confidentiality: str = "",
                     counterpart_role: str = "", task=None, previous: Document | None = None, client_uuid=None,
                     deferred: bool = False, as_role: str | None = None, generated: bool = False,
-                    filename: str = "") -> Document:
+                    filename: str = "", audience_roles: list[str] | None = None) -> Document:
     if client_uuid:
         existing = Document.objects.filter(client_uuid=client_uuid).first()
         if existing is not None:
@@ -137,6 +137,7 @@ def upload_document(call, actor, type_code: str, uploaded, *, title: str = "", c
         doc = Document(
             call=call, type=dtype, title=title or dtype.label, version=(previous.version + 1) if previous else 1,
             previous=previous, status=DocumentStatus.ISSUED, confidentiality=level, counterpart_role=counterpart_role,
+            audience_roles=sorted(set(audience_roles or []) - {role}),
             issuer_role=role, issuer_org=actor.org, issuer_user=actor.user if not actor.is_system else None,
             issuer_master=actor.master, issuer_label=actor.label, original_name=name[:255], mime_type=mime[:120],
             size=len(data), sha256=digest, required_signers=list(dtype.signer_roles or []), generated=generated,

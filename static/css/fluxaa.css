@@ -460,3 +460,12 @@ table.grid time { white-space: nowrap; }
 .notice ul.plain li, ul.plain li { margin: 3px 0; }
 .assistant-answer { white-space: pre-line; background: var(--surface-2); border-radius: var(--r-m); padding: 12px 14px; margin: 8px 0; max-width: 80ch; }
 .assistant-answer.small { font-size: 13px; }
+
+/* open list of the parties of a call (announcement, Parties tab) */
+table.parties { table-layout: fixed; width: 100%; }
+table.parties th, table.parties td { padding: 5px 6px; vertical-align: middle; }
+table.parties th:nth-child(1) { width: 14%; } table.parties th:nth-child(2) { width: 21%; } table.parties th:nth-child(3) { width: 20%; }
+table.parties th:nth-child(4) { width: 18%; } table.parties th:nth-child(5) { width: 15%; } table.parties th:nth-child(6) { width: 12%; } table.parties th:nth-child(7) { width: 30px; }
+table.parties input, table.parties select { width: 100%; min-width: 0; }
+table.parties td:last-child { text-align: center; }
+.form table.parties select, .form table.parties input { font-size: 14px; }

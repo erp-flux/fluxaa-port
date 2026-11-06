@@ -88,4 +88,42 @@
     }
     select.addEventListener("change", sync); sync();
   });
+
+  // Parties of a call: an open list. A row (a table row at the announcement, the whole form on the Parties tab)
+  // names a role, a registered organisation (filtered by that role) or a new one (name, kind, e-mail, phone).
+  // "Add a party" clones the last table row. Without JavaScript every field is shown: the server validates
+  // the rows the same way.
+  document.querySelectorAll("[data-parties]").forEach(function (box) {
+    function sync(row) {
+      var role = row.querySelector("select[data-party-role]"), org = row.querySelector("select[data-party-org]");
+      if (!role || !org) return;
+      var current = role.value;
+      Array.prototype.forEach.call(org.options, function (opt) {
+        var roles = opt.getAttribute("data-roles");
+        opt.hidden = !!(roles && roles.split(" ").indexOf(current) < 0);
+        if (opt.hidden && opt.selected) org.value = "";
+      });
+      var kind = row.querySelector("input[data-party-kind]");
+      if (kind) kind.setAttribute("list", "kinds-" + current);
+      var isNew = org.value === "new";
+      row.querySelectorAll("[data-new]").forEach(function (el) { el.hidden = !isNew; });
+    }
+    function wire(row) {
+      row.querySelectorAll("select").forEach(function (s) { s.addEventListener("change", function () { sync(row); }); });
+      var remove = row.querySelector("[data-remove]");
+      if (remove) remove.addEventListener("click", function () {
+        var rows = box.querySelectorAll("[data-party-row]");
+        if (rows.length > 1) row.remove(); else { row.querySelectorAll("input, select").forEach(function (f) { f.value = ""; }); sync(row); }
+      });
+      sync(row);
+    }
+    box.querySelectorAll("[data-party-row]").forEach(wire);
+    var add = box.querySelector("[data-add]"), body = box.querySelector("tbody");
+    if (add && body) add.addEventListener("click", function () {
+      var rows = body.querySelectorAll("[data-party-row]"), clone = rows[rows.length - 1].cloneNode(true);
+      clone.querySelectorAll("input").forEach(function (f) { f.value = ""; });
+      clone.querySelectorAll("select[data-party-org]").forEach(function (f) { f.value = ""; });
+      body.appendChild(clone); wire(clone); clone.querySelector("select").focus();
+    });
+  });
 })();

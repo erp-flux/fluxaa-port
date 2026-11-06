@@ -35,6 +35,8 @@
   .note { margin: 6px 0 0; padding: 6px 10px; background: var(--soft); font-size: 10.5px; }
   .text p { margin: 4px 0; }
   .intro { margin: 10px 0 0; font-size: 11px; }
+  .qr { display: grid; grid-template-columns: 112px 1fr; gap: 12px; align-items: center; margin-top: 6px; }
+  .qr p { margin: 2px 0; } .small { font-size: 9.5px; }
   /* 3. signatures — one column per signing role */
   .sign { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-top: 22px; }
   .sign div { border-top: 1px solid var(--ink); padding-top: 4px; min-height: 76px; }
@@ -84,6 +86,8 @@
 </table>
 {% elif s.kind == "text" %}
 <div class="text">{% for p in s.paragraphs %}<p>{{ p.0 }}</p><p class="en">{{ p.1 }}</p>{% endfor %}</div>
+{% elif s.kind == "qr" %}
+<div class="qr"><img src="{{ s.image }}" alt="QR" width="112" height="112"><div><p>{{ s.caption.0 }}</p><p class="en">{{ s.caption.1 }}</p><p class="mono small">{{ s.url }}</p></div></div>
 {% endif %}
 {% if s.note %}<p class="note">{{ s.note.0 }} <span class="en">/ {{ s.note.1 }}</span></p>{% endif %}
 {% endfor %}
