@@ -4,6 +4,7 @@
 <div class="loginbox">
   <h1>{% trans "Sign in" %}</h1>
   <p class="muted">{% trans "Operational registry of tanker calls — for the parties to each call." %}</p>
+  <p>Bienvenue sur FLUXAA</p>
   <form method="post" class="form">{% csrf_token %}
     {% if throttled %}<div class="flash error">{% trans "Too many unsuccessful attempts. Wait up to fifteen minutes before trying again." %}</div>{% elif form.errors %}<div class="flash error">{% trans "E-mail or password incorrect." %}</div>{% endif %}
     <div><label for="id_username">{% trans "E-mail" %}</label><input type="email" name="username" id="id_username" autocomplete="username" required autofocus></div>
