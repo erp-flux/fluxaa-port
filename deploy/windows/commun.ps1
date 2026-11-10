@@ -10,6 +10,7 @@ $script:Deploy = Join-Path $script:Racine 'deploy'
 $script:EnvFile = Join-Path $script:Deploy '.env'
 $script:PortsFile = Join-Path $script:Deploy 'docker-compose.ports.yml'
 $script:Comptes = Join-Path $script:Racine 'COMPTES-DEMO.txt'
+$script:VersionFile = Join-Path $PSScriptRoot 'version-installee.txt'
 $script:MotDePasseDemo = 'Demo-Fluxaa-2026'
 $script:Docker = $null
 

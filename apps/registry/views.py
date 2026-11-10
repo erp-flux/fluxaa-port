@@ -374,6 +374,15 @@ def call_list(request):
                                                        "can_create": "AGE" in user.role_set})
 
 
+def pk_of(value):
+    """A posted identifier as an integer, or None when it is empty or not a number (then no object matches:
+    the caller answers "not visible" or ignores it instead of a server error)."""
+    try:
+        return int(str(value).strip()) if value not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
 def party_rows(data) -> list[dict]:
     """The rows of the open party list as posted (empty rows kept for the form); three blank rows by default."""
     roles, orgs = data.getlist("party_role"), data.getlist("party_org")
@@ -399,7 +408,7 @@ def resolve_parties(actor, rows: list[dict]) -> list[tuple[Organization, str]]:
     for row in rows:
         role = row["role"]
         if row["org"] and row["org"] != "new":
-            org = Organization.objects.filter(port=actor.port, pk=row["org"]).first()
+            org = Organization.objects.filter(port=actor.port, pk=pk_of(row["org"])).first()
             if org is None:
                 raise NotVisible()
         elif row["name"] or row["org"] == "new":
@@ -441,7 +450,7 @@ def call_create(request):
     if request.method != "POST":
         return render(request, "registry/call_create.html", context)
     data = request.POST
-    vessel = Vessel.objects.filter(port=port, pk=data.get("vessel")).first()
+    vessel = Vessel.objects.filter(port=port, pk=pk_of(data.get("vessel"))).first()
     if vessel is None and data.get("new_imo"):
         vessel = Vessel(port=port, imo=data.get("new_imo", "").strip(), name=data.get("new_name", "").strip().upper(),
                         flag=data.get("new_flag", ""), vessel_type=data.get("new_type", ""),
@@ -456,8 +465,8 @@ def call_create(request):
     except RegistryError as exc:
         messages.error(request, str(exc))
         return render(request, "registry/call_create.html", context)
-    berth = Berth.objects.filter(port=port, pk=data.get("requested_berth")).first() if data.get("requested_berth") else None
-    partner = PortCall.objects.filter(port=port, pk=data.get("linked_call")).first() if data.get("linked_call") else None
+    berth = Berth.objects.filter(port=port, pk=pk_of(data.get("requested_berth"))).first() if data.get("requested_berth") else None
+    partner = PortCall.objects.filter(port=port, pk=pk_of(data.get("linked_call"))).first() if data.get("linked_call") else None
     call = call_svc.create_call(
         user, vessel=vessel, eta=parse_local(data.get("eta")), requested_berth_kind=data.get("kind", ""),
         operations=data.getlist("operations"), modules=data.getlist("modules"), requested_berth=berth,
@@ -713,7 +722,7 @@ def call_action(request, pk, action):
     done = _("Recorded.")
 
     def task():
-        t = Task.objects.filter(call=call, pk=data.get("task_id")).first()
+        t = Task.objects.filter(call=call, pk=pk_of(data.get("task_id"))).first()
         if t is None or not rights.task_visible(actor, t):
             raise NotVisible()
         return t
@@ -740,13 +749,13 @@ def call_action(request, pk, action):
     elif action == "cancel":
         call_svc.cancel_call(call, actor, data.get("reason", ""))
     elif action == "stage_add":
-        berth = Berth.objects.filter(port=call.port, pk=data.get("berth")).first() if data.get("berth") else None
+        berth = Berth.objects.filter(port=call.port, pk=pk_of(data.get("berth"))).first() if data.get("berth") else None
         stage = stage_svc.add_stage(call, actor, berth_kind=data.get("berth_kind", ""), operations=data.getlist("operations"),
                                     berth=berth, planned_from=parse_local(data.get("planned_from")),
                                     planned_to=parse_local(data.get("planned_to")), reason=data.get("reason", ""))
         done = _("Stage %(n)d planned: its tasks have been created for every party.") % {"n": stage.order}
     elif action == "stage_cancel":
-        stage = call.stages.filter(pk=data.get("stage_id")).first()
+        stage = call.stages.filter(pk=pk_of(data.get("stage_id"))).first()
         if stage is None:
             raise NotVisible()
         stage_svc.cancel_stage(call, actor, stage, data.get("reason", ""))
@@ -772,18 +781,18 @@ def call_action(request, pk, action):
                                                  kind=data.get("party_kind", ""), email=data.get("party_email", ""),
                                                  phone=data.get("party_phone", ""))
         else:
-            org = Organization.objects.filter(port=call.port, pk=data.get("organization")).first()
+            org = Organization.objects.filter(port=call.port, pk=pk_of(data.get("organization"))).first()
             if org is None:
                 raise NotVisible()
         call_svc.add_party(call, actor, org, data.get("role", ""))
     elif action == "party_shore":
-        party = call.parties.filter(pk=data.get("party_id")).first()
+        party = call.parties.filter(pk=pk_of(data.get("party_id"))).first()
         if party is None:
             raise NotVisible()
         call_svc.designate_shore_side(call, actor, party)
         done = _("Shore side designated.")
     elif action == "party_revoke":
-        party = call.parties.filter(pk=data.get("party_id")).first()
+        party = call.parties.filter(pk=pk_of(data.get("party_id"))).first()
         if party is None:
             raise NotVisible()
         call_svc.revoke_party(call, actor, party, data.get("reason", ""))
@@ -797,7 +806,7 @@ def call_action(request, pk, action):
         done = _("Access issued: hand the link or the code to the master now — they will not be shown again.")
         back = call_url(call, "parties")
     elif action == "party_link":
-        party = call.parties.filter(pk=data.get("party_id"), revoked_at__isnull=True).select_related("organization").first()
+        party = call.parties.filter(pk=pk_of(data.get("party_id")), revoked_at__isnull=True).select_related("organization").first()
         if party is None:
             raise NotVisible()
         link, token, code = call_svc.issue_party_link(call, actor, party=party, holder_name=data.get("holder_name", ""),
@@ -809,7 +818,7 @@ def call_action(request, pk, action):
         done = _("Access issued: hand the link or the code to the party now — they will not be shown again.")
         back = call_url(call, "parties")
     elif action in ("master_revoke", "link_revoke"):
-        link = call.master_links.filter(pk=data.get("link_id")).first()
+        link = call.master_links.filter(pk=pk_of(data.get("link_id"))).first()
         if link is None:
             raise NotVisible()
         call_svc.revoke_master_link(link, actor, data.get("reason", "") or "—")
@@ -826,7 +835,7 @@ def call_action(request, pk, action):
                                     role=data.get("role", ""), anchor=data.get("anchor", ""),
                                     offset_minutes=int(data.get("offset_hours") or 0) * 60)
     elif action == "milestone":
-        related = Milestone.objects.filter(call=call, pk=data.get("related_id")).first() if data.get("related_id") else None
+        related = Milestone.objects.filter(call=call, pk=pk_of(data.get("related_id"))).first() if data.get("related_id") else None
         ms_svc.record_milestone(call, actor, data.get("type", ""), parse_local(data.get("declared_at")) or timezone.now(),
                                 cause_code=data.get("cause", ""), cause_reason=data.get("cause_reason", ""),
                                 note=data.get("note", ""), related=related,
@@ -863,7 +872,7 @@ def call_action(request, pk, action):
         if action == "request_review":
             req_svc.take_under_review(req, actor)
         elif action == "request_decide":
-            berth = Berth.objects.filter(port=call.port, pk=data.get("berth")).first() if data.get("berth") else None
+            berth = Berth.objects.filter(port=call.port, pk=pk_of(data.get("berth"))).first() if data.get("berth") else None
             req_svc.decide_request(req, actor, data.get("decision", ""), reason=data.get("reason", ""),
                                    conditions=data.get("conditions", ""), valid_from=parse_local(data.get("valid_from")),
                                    valid_until=parse_local(data.get("valid_until")), berth=berth)
@@ -881,8 +890,8 @@ def call_action(request, pk, action):
         if uploaded is None:
             messages.error(request, _("Choose a file."))
             return redirect(back)
-        t = Task.objects.filter(call=call, pk=data.get("task_id")).first() if data.get("task_id") else None
-        previous = Document.objects.filter(call=call, pk=data.get("previous_id")).first() if data.get("previous_id") else None
+        t = Task.objects.filter(call=call, pk=pk_of(data.get("task_id"))).first() if data.get("task_id") else None
+        previous = Document.objects.filter(call=call, pk=pk_of(data.get("previous_id"))).first() if data.get("previous_id") else None
         doc_svc.upload_document(call, actor, data.get("type", ""), uploaded, title=data.get("title", ""),
                                 confidentiality=data.get("confidentiality", ""),
                                 counterpart_role=data.get("counterpart_role", ""), task=t, previous=previous)
@@ -918,12 +927,12 @@ def call_action(request, pk, action):
                               subject=data.get("subject", ""), statement=data.get("statement", ""),
                               counterpart_role=data.get("counterpart_role", ""))
     elif action == "dispute_respond":
-        d = call.disputes.filter(pk=data.get("dispute_id")).first()
+        d = call.disputes.filter(pk=pk_of(data.get("dispute_id"))).first()
         if d is None:
             raise NotVisible()
         disputes.respond(d, actor, data.get("text", ""))
     elif action == "dispute_close":
-        d = call.disputes.filter(pk=data.get("dispute_id")).first()
+        d = call.disputes.filter(pk=pk_of(data.get("dispute_id"))).first()
         if d is None:
             raise NotVisible()
         disputes.close(d, actor, agreed=data.get("agreed") == "1", text=data.get("text", ""))
@@ -931,7 +940,7 @@ def call_action(request, pk, action):
         correspondence.create_thread(call, actor, subject=data.get("subject", ""), participant_roles=data.getlist("participants"),
                                      body=data.get("body", ""), confidentiality=data.get("confidentiality", "N2"))
     elif action == "thread_post":
-        t = Thread.objects.filter(call=call, pk=data.get("thread_id")).first()
+        t = Thread.objects.filter(call=call, pk=pk_of(data.get("thread_id"))).first()
         if t is None:
             raise NotVisible()
         correspondence.post_message(t, actor, data.get("body", ""))

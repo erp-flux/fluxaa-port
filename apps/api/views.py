@@ -54,6 +54,14 @@ def when(value, field="datetime") -> datetime | None:
     return parsed
 
 
+def pk_of(value):
+    """A posted identifier as an integer, or None when empty or not a number (no object matches, no server error)."""
+    try:
+        return int(str(value).strip()) if value not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
 class CallAPIView(APIView):
     permission_classes = [IsAuthenticated]
     # reading a call's records through the API is written to the access journal, as on screen (ENF-3.4)
@@ -188,7 +196,7 @@ class CallActionView(CallAPIView):
             return Response(rep.document_dict(doc), status=201)
         elif action == "invite":  # the open list of the parties: a registered organisation, or a new one by name
             if data.get("organization_id"):
-                org = Organization.objects.filter(port=call.port, pk=data.get("organization_id")).first()
+                org = Organization.objects.filter(port=call.port, pk=pk_of(data.get("organization_id"))).first()
                 if org is None:
                     raise RuleViolation("Unknown organisation.")
             else:

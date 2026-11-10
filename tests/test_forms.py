@@ -294,3 +294,55 @@ def test_the_documents_of_the_call_appear_as_soon_as_their_act_is_taken(world, c
     from apps.registry.services.forms import auto_issue
 
     assert auto_issue(call, act(world, call, "INS"), "AUTH_MOVEMENT") is None
+
+
+def test_an_upgraded_installation_catches_up_the_documents_it_did_not_file_before(world, monkeypatch):
+    """A port that ran a version which did not file the acts (1.2 and earlier) keeps its calls under way: at the
+    first start of the new version, the written acts of the decisions already taken, the notice of readiness of a
+    NOR already tendered and the time sheet of a statement already produced are filed — once, under the author of
+    the original act — and the frozen calls (closed, archived) are left as they are."""
+    from django.core.management import call_command
+
+    from apps.registry.models import RequestStatus
+    from apps.registry.services import reports
+    from apps.registry.services import requests as req_svc
+
+    # a call handled by the former version: nothing is filed automatically
+    monkeypatch.setattr("apps.registry.services.requests.auto_issue", lambda *a, **k: None, raising=False)
+    monkeypatch.setattr("apps.registry.services.forms.core.issue", lambda *a, **k: None)
+    call = make_call(world)
+    force_done(call, ["M0:02", "M0:03", "M0:05"])
+    call_svc.declare_call(call, act(world, call, "AGE"))
+    age, cap, ter = act(world, call, "AGE"), act(world, call, "CAP"), act(world, call, "TER")
+    vet = req_svc.create_request(call, ter, "VESSEL_ACCEPTANCE", {
+        "product": "Gasoil", "inspection": "SIRE 2.0", "last_cargoes": "ULSD / ULSD / Jet A-1", "vetting_result": "Accepted"})
+    req_svc.decide_request(vet, cap, RequestStatus.APPROVED)
+    force_done(call, ["M0:06", "M0:07"])
+    req_svc.decide_request(call.requests.get(type__code="GREEN_LIGHT"), cap, RequestStatus.APPROVED)
+    ms_svc.record_milestone(call, age, "NOR_TENDERED", timezone.now() - timedelta(minutes=5))
+    for field in ("ata", "atb", "t0", "t1", "atd"):
+        setattr(call, field, timezone.now() - timedelta(hours=10))
+    call.status = "DEPARTED"
+    call.save()
+    reports.issue_statement_of_facts(call, age, remarks="")
+    assert not call.documents.filter(type__code__in=["AUTHORIZATION", "NOR", "TIME_SHEET"]).exists()
+    monkeypatch.undo()
+
+    # the new version starts: the missing documents are filed under their authors, and only once
+    call_command("backfill_generated_documents", "--dry-run", verbosity=0)
+    assert not call.documents.filter(type__code__in=["AUTHORIZATION", "NOR", "TIME_SHEET"]).exists()
+    call_command("backfill_generated_documents", verbosity=0)
+    acts = call.documents.filter(type__code="AUTHORIZATION", generated=True)
+    assert {a.title.split(" / ")[0] for a in acts} == {"Autorisation — Acceptation de navire (vetting)", "Autorisation — Feu vert"}
+    assert all(a.issuer_role == "CAP" and a.issuer_org_id == cap.org.pk for a in acts)
+    nor = call.documents.get(type__code="NOR", generated=True)
+    assert nor.issuer_role == "AGE" and nor.confidentiality == "N1"
+    assert call.documents.filter(type__code="TIME_SHEET", generated=True, issuer_role="AGE").count() == 1
+    before = call.documents.count()
+    call_command("backfill_generated_documents", verbosity=0)
+    assert call.documents.count() == before
+    # a closed call is frozen: nothing is added to it
+    call.status = "CLOSED"
+    call.save()
+    call_command("backfill_generated_documents", verbosity=0)
+    assert call.documents.count() == before

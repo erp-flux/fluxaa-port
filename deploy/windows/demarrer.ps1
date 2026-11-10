@@ -215,6 +215,21 @@ function Install-CertificatLocal {
     }
 }
 
+# Version du code livré : première ligne « ## x.y — date » du CHANGELOG.md ; version installée : deploy\windows\version-installee.txt.
+function Get-VersionCode {
+    $changelog = Join-Path $script:Racine 'CHANGELOG.md'
+    if (-not (Test-Path $changelog)) { return $null }
+    foreach ($ligne in Get-Content $changelog -Encoding UTF8) {
+        if ($ligne -match '^##\s+(\d+(\.\d+)+)') { return $Matches[1] }
+    }
+    return $null
+}
+
+function Get-VersionInstallee {
+    if (-not (Test-Path $script:VersionFile)) { return $null }
+    return (Get-Content $script:VersionFile -Raw).Trim()
+}
+
 function Show-Journal {
     Write-Host ''
     Write-Host "  Dernières lignes du journal des services :" -ForegroundColor DarkGray
@@ -272,7 +287,15 @@ function Main {
     }
     Write-Ok "Application prête."
 
+    $versionCode = Get-VersionCode
+    $versionInstallee = Get-VersionInstallee
     $etatDemo = Get-EtatDemo
+    if (($etatDemo -eq 0) -and $versionCode -and $versionInstallee -and ($versionCode -ne $versionInstallee)) {
+        Write-Alerte "Nouvelle version du code : $versionCode (la précédente était $versionInstallee)."
+        Write-Host "  Les escales et les comptes de démonstration existants ont été conservés et mis à niveau (les actes des décisions"
+        Write-Host "  déjà prises, la notice de disponibilité et le time sheet manquants viennent d'être déposés dans leurs escales)."
+        Write-Host "  Pour voir toutes les nouveautés sur des escales neuves : ARRETER.cmd, puis REINITIALISER-DEMO.cmd, puis DEMARRER.cmd."
+    }
     if ($etatDemo -eq 3) {
         Write-Etape "Chargement des données de démonstration (Lomé puis Freetown, une à deux minutes)…"
         $lignes = Load-Demo
@@ -292,6 +315,8 @@ function Main {
 
     Write-Etape "Certificat de l'adresse https://localhost…"
     Install-CertificatLocal
+
+    if ($versionCode) { Write-FichierSansBom $script:VersionFile $versionCode }
 
     Write-Etape "Ouverture du navigateur…"
     Start-Process $url

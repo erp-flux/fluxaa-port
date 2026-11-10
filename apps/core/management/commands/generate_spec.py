@@ -660,6 +660,26 @@ def gen_routes(screens_doc: Path) -> tuple[str, list[str]]:
 
 
 # ------------------------------------------------------------------------------------------------ command
+
+VOLATILE = [
+    (re.compile(r"Code [A-Z0-9]{10}"), "Code XXXXXXXXXX"),
+    (re.compile(r'"verification_code": "[A-Z0-9]{10}"'), '"verification_code": "XXXXXXXXXX"'),
+    (re.compile(r"\d{2}/\d{2}/\d{4} \d{2}:\d{2}"), "<date heure>"),
+    (re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(\+00:00|Z)?"), "<horodatage>"),
+    (re.compile(r"\b[0-9a-f]{64}\b"), "<sha256>"),
+    (re.compile(r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b"), "<uuid>"),
+]
+
+
+def volatile(text: str) -> str:
+    """The examples of chapters 06 and 07 are rendered from the demonstration data: verification codes, times, hashes
+    and identifiers change at every `load_demo`. They are neutralised before comparing, so that `--check` only
+    fails when the structure described by the code changed."""
+    for pattern, replacement in VOLATILE:
+        text = pattern.sub(replacement, text)
+    return text
+
+
 class Command(BaseCommand):
     help = "Generate the generated chapters of the developer specification dossier (docs/spec)."
 
@@ -694,8 +714,8 @@ class Command(BaseCommand):
 
     def _write(self, path: Path, content: str, changed: list, check: bool):
         current = path.read_text() if path.exists() else None
-        if current == content:
-            return
+        if current is not None and volatile(current) == volatile(content):
+            return  # only the examples taken from the demonstration data moved (codes, times, hashes): not a change
         changed.append(path.name)
         if not check:
             path.write_text(content)

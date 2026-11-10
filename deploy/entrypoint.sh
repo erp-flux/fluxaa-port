@@ -160,6 +160,12 @@ prepare_web() {
   done
   log "Catalogues de référence des ports…"
   python manage.py bootstrap_ports ${args[@]+"${args[@]}"}
+
+  # Mise à niveau depuis une version qui ne déposait pas d'elle-même les actes des décisions, la notice de
+  # disponibilité et le time sheet (1.2 et avant) : les documents manquants des escales en cours sont déposés, une
+  # fois, sous leur auteur d'origine. Idempotent ; un échec n'empêche pas le démarrage.
+  log "Documents générés des escales en cours (rattrapage après mise à niveau)…"
+  python manage.py backfill_generated_documents || log "ATTENTION : rattrapage incomplet, voir ci-dessus (le service démarre quand même)."
 }
 
 command="${1:-web}"

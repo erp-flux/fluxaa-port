@@ -1,0 +1,158 @@
+# Guide de paramétrage — administrateur fonctionnel du port
+
+Tout ce qui suit se fait **sans livraison de code** (EF-16), dans l'écran **Paramétrage** (`/admin/`), accessible aux utilisateurs marqués « administrateur fonctionnel du port ». Chaque administrateur ne voit et ne modifie que **son** port. L'exploitant de la plateforme (superutilisateur) gère en plus la création des ports et l'activation de l'assistance IA.
+
+Aucun écran de paramétrage ne permet de supprimer un enregistrement du registre, ni de modifier une escale, un jalon, un document ou une décision : ces objets ne se touchent que par l'application, où les droits s'appliquent.
+
+> **Règle de prudence.** Un gabarit publié est figé ; une escale garde la version de gabarit en vigueur à sa création. On peut donc modifier les gabarits pendant que des escales sont en cours sans rien changer à celles-ci.
+
+---
+
+## 1. Seuils et délais du port
+
+**Paramétrage › Ports › (votre port)**
+
+| Paramètre | Défaut | Effet |
+|---|---|---|
+| Délai de contresignature | 120 min | passé ce délai, un jalon non contresigné devient « contresignature tacite » (EF-3.4) — jamais un accord |
+| Délai de rappel | 24 h | rappel adressé au rôle assigné avant l'échéance |
+| Escalade après retard | 240 min | une tâche normale en retard au-delà de ce seuil est escaladée ; une tâche bloquante en retard l'est immédiatement |
+| Tolérance bord/terre | 0,300 % | au-delà, alerte de quantité et proposition de contestation (EF-8.2) |
+| Seuil d'écart AIS | 30 min | au-delà, alerte (jamais de correction) |
+| Heure du résumé quotidien | 7 h (heure locale) | envoi du résumé des notifications non urgentes |
+| Validité du lien capitaine après le départ | 24 h | |
+| Validité maximale du lien capitaine | 30 jours | |
+| Validité maximale des liens des parties sans compte | 90 jours | lien d'un terminal, inspecteur, armateur, prestataire ou service nautique, émis à la déclaration : valable jusqu'à la clôture de l'escale, au plus ce nombre de jours |
+| Conservation | 10 ans | durée de conservation probante (PRO-MAR-001 §6.1) |
+| E-mail de l'autorité de sûreté | — | reçoit les notifications d'accès aux dossiers N4 (sans détail) |
+
+Le fuseau horaire et la langue par défaut se règlent ici aussi ; le code du port, le pays et l'activation de l'assistance IA sont réservés à l'exploitant.
+
+**Carte des eaux du port (tableau AIS)** — les quatre limites du cadre (latitude sud et nord, longitude ouest et est), un fond de carte facultatif (PNG ou JPEG couvrant exactement ce cadre, dont le port détient les droits), et la durée de conservation des positions AIS (30 jours par défaut ; ce sont des données diffusées publiquement, pas des actes du registre). Sans cadre, le tableau AIS reste une liste. Sources de positions : DEPLOIEMENT.md §15.
+
+## 2. Organisations, utilisateurs, rôles
+
+**Organisations** — pour chacune, cochez les **rôles qu'elle peut tenir** (AGE, TER, INS, COM, PRE, SVC, ADM, SUR, CAP, APO, DIR). Une organisation peut en tenir plusieurs (l'autorité portuaire : CAP, APO, DIR). Sa **nature** dit ce qu'elle est dans les mots du port : une liste **non exhaustive** de natures est suggérée (`apps/core/parties.py` : agence, agent protecteur, terminal, dépôt, raffinerie, exploitant de bouée, pipeline, capitainerie, VTS, autorité portuaire, pilotage, remorquage, lamanage, vedettes, douanes, immigration, santé portuaire, autorité maritime, autorité environnementale, sûreté portuaire, marine nationale, gendarmerie maritime, inspecteur de cargaison, laboratoire, société de classification, expert P&I, inspecteur vetting, chimiste maritime, expert maritime, armateur, gestionnaire technique, affréteur, réceptionnaire, expéditeur, négociant, gestionnaire de garanties / banque, assureur, courtier, prestataire STS, fournisseur de défenses et flexibles, avitailleur, collecteur de déchets, nettoyage de citernes, eau douce, ship chandler, agence de relève, chantier, plongée, lutte antipollution, service incendie, gardiennage, transport, services médicaux, télécommunications…) et toute autre nature peut être écrite librement. Seul le rôle porte les droits ; la nature sert à reconnaître la partie (liste des parties, formulaires, exports).
+
+**Liste ouverte des parties d'une escale.** L'agence (ou la capitainerie) invite sur une escale autant d'organisations qu'il en faut, dans les rôles TER, INS, COM, PRE et SVC (tous les rôles pour la capitainerie) : une organisation déjà enregistrée, ou une **nouvelle organisation** nommée à l'annonce ou dans l'onglet *Parties* avec sa nature, son courriel et son téléphone. Celle-ci est créée dans le port avec le seul rôle de l'invitation, active, et enregistrée au journal du port (`organization.created`) ; vous la complétez ou la corrigez ici (autres rôles, adresse, désactivation). Une organisation inactive, ou enregistrée sans le rôle demandé, n'est pas réinvitée sous un autre rôle depuis une escale : l'administrateur tranche. Une partie sans compte est convoquée par lien à la déclaration (à son adresse, ou par QR/impression).
+
+**Utilisateurs** — rattachés à une organisation, avec les rôles qu'ils peuvent exercer. Les droits réels sur une escale sont l'intersection de ces rôles et des rôles que **l'organisation tient sur l'escale** : une personne n'a jamais de droit « par elle-même » (règle 5).
+
+* La double authentification est imposée à la première connexion pour CAP, APO et SUR et pour tout administrateur (vous compris), et redemandée pour toute décision ; le paramétrage exige une vérification de moins de 8 heures.
+* **Téléphone perdu** : décochez « double authentification activée » dans la fiche de la personne ; elle enregistrera une nouvelle application à sa prochaine connexion. Toute modification d'un compte (rôles, activation, mot de passe, second facteur) est inscrite au journal des accès et signalée par courriel à la personne.
+* « Résumé quotidien pour les tâches normales » réduit le bruit ; les tâches bloquantes et les escalades restent en temps réel.
+* « Compte d'intégration technique » et ses périmètres : réservés à l'exploitant, pour les systèmes tiers qui utilisent l'API.
+
+**Parties par défaut** — les organisations invitées automatiquement sur toute escale du port (capitainerie, autorité portuaire, douanes-immigration-santé, sûreté, services nautiques). L'agence invite les autres (terminal, inspecteur, armateur ou affréteur, prestataires).
+
+**Plusieurs organisations pour un même rôle sur une escale** (deux prestataires, l'armateur et l'affréteur, deux sociétés de remorquage…) : chacune ne lit, ne remplace, n'annule ou ne clôt que ce qu'elle a elle-même émis (documents, demandes, échanges, chiffres de mesure, contestations) ; une commande de service désigne l'organisation qui la réalise. Quand deux terminaux, ou plusieurs prestataires en mer, participent à une escale, l'agence ou la capitainerie désigne dans les *Parties* celui qui parle au nom du côté terre (jalons et chiffre terre, contresignature au nom de la terre) ; sans désignation, aucun ne le peut. Une commande passée avant l'arrivée de tout prestataire revient à celui qui rejoint l'escale s'il est seul de son métier ; à défaut, l'agence le désigne depuis l'onglet *Demandes*. Les tâches restent assignées au rôle (EF-5.2).
+
+## 3. Postes et zones
+
+**Postes / zones** — code, nom bilingue, type (`Quai / appontement`, `Rade`, `Bouée au large SPM/CBM`, `Zone STS au large`), longueur hors tout et tirant d'eau maximaux, port en lourd maximal, limites météo (par exemple `{"wind_kn": 25, "swell_m": 2.0}`), récupération des vapeurs. Le type de poste choisit les tâches applicables (voir §4, « uniquement pour ces zones »).
+
+**Position sur le tableau AIS** — latitude et longitude du centre du poste ou de la zone, et rayon (m) pour une zone de mouillage ou STS. Un poste sans position n'est pas dessiné. Les positions livrées pour les ports pilotes sont indicatives (note « à confirmer ») : la capitainerie les corrige depuis sa carte.
+
+## 4. Gabarits d'escale et tâches
+
+**Gabarits d'escale** — M0 (socle commun), M1 à M8 (modèles d'opération), M9 et MA1 à MA3 (modules). Un gabarit inactif n'est plus proposé à la création des escales.
+
+Pour modifier un gabarit :
+
+1. Sélectionnez-le dans la liste, action **« Créer une version brouillon »** : la version publiée est copiée.
+2. Ouvrez **Versions de gabarit › (le brouillon)** et modifiez, ajoutez ou supprimez des tâches.
+3. Revenez à la liste des versions, sélectionnez le brouillon, action **« Publier »**. La plateforme vérifie les règles ci-dessous et refuse la publication en expliquant pourquoi.
+
+Champs d'une tâche :
+
+| Champ | Règle |
+|---|---|
+| Numéro, ordre, section (FR/EN), tâche (FR/EN) | les deux langues sont saisies ici, pas dans le code (ENF-7) |
+| Rôle responsable, nature, signature conjointe, rôles cosignataires | la tâche est assignée à un **rôle**, jamais à une personne ; une tâche conjointe n'est faite que lorsque chaque rôle a signé |
+| Point d'ancrage + décalage, libellé de l'échéance | **toujours relatif** à ETA, ETB, ATB, T0, T1, ATD ou NOR (EF-5.3) ; une échéance absolue est refusée ; 60 jours au plus |
+| Criticité, confidentialité, fondement du caractère bloquant | une tâche **bloquante** doit citer son fondement (point d'arrêt de la PRO-MAR-001 ou obligation réglementaire) |
+| Peut être déclarée sans objet | si coché, « Sans objet » est proposé, avec motif obligatoire et tracé |
+| Réalisée par… (repliable) | la tâche se ferme seule quand survient l'acte correspondant : dépôt ou décision d'une demande (`type de demande lié`), enregistrement de jalons, fourniture d'un type de document, événement de la plateforme (escale créée, déclarée) |
+| Tâche continue | reste ouverte jusqu'à la fin du transfert (journal de pompage, interruptions) |
+| Une par navire (×2) | pour STS et accostage à couple |
+| Uniquement pour ces zones | vide = toutes ; par exemple `["JETTY", "SPM"]` pour les tâches d'interface navire/terre |
+
+Une tâche N4 ne peut pas figurer dans un gabarit : les questions de sûreté vont dans l'espace sûreté.
+
+## 5. Types de demande et leurs formulaires
+
+**Types de demande** — chaque type est un formulaire paramétrable (EF-2.2) :
+
+| Champ | Règle |
+|---|---|
+| Rôles demandeurs / autorités décisionnaires | un rôle ne peut jamais être les deux (règle 2) — la plateforme refuse l'enregistrement |
+| Rôle exécutant | pour les prestations (pilotage, remorquage…) : pas de décision, une programmation puis une exécution |
+| Confidentialité, confidentialité du motif de refus | N1 à N3 (N4 : espace sûreté) |
+| Champs du formulaire | liste JSON, voir ci-dessous |
+| Délai d'instruction, validité par défaut de l'autorisation | une autorisation porte **toujours** une date d'expiration |
+| Acceptation du navire (vetting), décision gardée par | effet de point d'arrêt sur l'attribution de poste et le feu vert |
+| Tâches réalisées par le dépôt / la décision / l'exécution | codes `GABARIT:NUMÉRO`, par exemple `["M0:06"]` |
+| Jalon enregistré à l'approbation, statut de l'escale à l'approbation / au refus | par exemple le feu vert fait passer l'escale à « Acceptée » |
+| La décision attribue un poste | le décideur choisit le poste dans la liste des postes compatibles |
+
+Format des champs du formulaire :
+
+```json
+[
+  {"key": "window_from", "label_fr": "Créneau souhaité — début", "label_en": "Requested window — from",
+   "type": "datetime", "required": true},
+  {"key": "arrival_draft", "label_fr": "Tirant d'eau à l'arrivée (m)", "label_en": "Arrival draft (m)",
+   "type": "number", "required": true},
+  {"key": "movement", "label_fr": "Mouvement", "label_en": "Movement", "type": "select", "required": true,
+   "options": [{"value": "ARRIVAL", "label_fr": "Entrée / accostage", "label_en": "Arrival / berthing"},
+               {"value": "SHIFT", "label_fr": "Déhalage", "label_en": "Shifting"}]}
+]
+```
+
+Types disponibles : `text`, `textarea`, `number`, `integer`, `datetime` (saisi en heure du port, conservé en UTC), `date`, `select`, `boolean`. Les nombres acceptent la virgule décimale.
+
+## 6. Types de document
+
+Rôles émetteurs, signataires requis, lecteurs supplémentaires (N2), confidentialité par défaut, durée de conservation. Un document avec signataires n'est réputé fait qu'une fois toutes les signatures obtenues. Les cases « généré à partir du registre » (rapport des faits, time sheet) et « connaissement (verrouillé) » ne sont **pas modifiables** : le verrou du connaissement ne peut pas être levé par paramétrage (EF-7.4).
+
+Les **formulaires standards** ([FORMULAIRES.md](FORMULAIRES.md)) — soixante-seize formulaires, émis par chaque partie — s'appuient sur les types de document : les rôles émetteurs, la confidentialité et les signataires que vous réglez ici s'appliquent au formulaire déposé ; un formulaire n'est proposé qu'aux rôles émetteurs de son type. Seize types livrés en 1.3 leur sont propres : `AUTHORIZATION` (acte d'autorisation, **généré seulement**, N1, émis par CAP, APO, ADM), `ARRIVAL_NOTICE`, `SANCTIONS_CHECK`, `ACCESS_LIST`, `PRE_ARRIVAL_SECURITY`, `INERT_GAS_DECLARATION`, `HOT_WORK_PERMIT`, `ENCLOSED_SPACE_PERMIT`, `INCIDENT_REPORT`, `MOVEMENT_ORDER`, `SERVICE_NOTE`, `BERTH_READINESS`, `SHORE_TANK_REPORT`, `SAMPLING_RECORD`, `BUNKER_CHECKLIST`, `LOI` ; les autres formulaires reprennent les types existants (`QQ_CERT`, `WASTE_RECEIPT`, `STS_DOC`, `VETTING_REPORT`, `CP_RECAP`…). Un port installé avant la 1.3 reçoit les nouveaux types par la migration de données `registry.0012` (ou `bootstrap_ports --refresh`). Le contenu des formulaires (sections, points de contrôle) suit les standards de l'industrie et ne se modifie pas à l'écran. Le type `OTHER` (« Autre document ») permet à toute partie de déposer une pièce qui n'entre dans aucun type.
+
+## 7. Causes d'interruption
+
+Liste **fermée** (EF-3.5) : code, libellé bilingue, imputation (terre, bord, tiers, météo), « motif obligatoire » (pour « Autre »), ordre d'affichage. Une cause désactivée n'est plus proposée mais reste valable pour les jalons déjà enregistrés. La liste livrée (17 causes) est une proposition à négocier avec les parties avant la recette.
+
+## 8. Points d'arrêt et types de jalons
+
+**Points d'arrêt** — pour chaque transition gardée (déclaration, feu vert, attribution de poste, autorisation de mouvement, pilote à bord à l'arrivée et au départ, début du transfert, accostage à couple, travaux par point chaud, autorisation de départ, clôture), la liste des tâches exigées. Ajouter une exigence durcit le contrôle ; aucun utilisateur ne peut la contourner (EF-11.4). Les contrôles réglementaires codés (verrou du connaissement, acceptation de navire valide, clôture sans contestation ouverte ni mesure incomplète) ne figurent pas ici parce qu'ils ne se désactivent pas.
+
+**Types de jalons** — émetteur unique, contresignataires, rôles pouvant contester (`["*"]` = toutes les parties), corroboration AIS, cause obligatoire, ancre fixée (ATA, ATB, T0…), statut d'escale atteint, tâches réalisées, proposition dans l'appli terrain. Changer l'émetteur d'un jalon est une décision de procédure : à faire valider par la capitainerie.
+
+## 9. Échanges avec les systèmes tiers
+
+**Abonnements webhook** — URL du système destinataire (guichet unique, PCS…), actions publiées (vide = toutes). Seules les entrées visibles par toutes les parties (N1) sont publiées, signées par HMAC (`X-Fluxaa-Signature`) avec le secret affiché, et rejouées en cas d'échec.
+
+## 10. Assistance IA (EF-17)
+
+Activable **par l'exploitant seulement**, port par port, une fois l'accord écrit du port obtenu (sa référence est saisie dans « référence de l'accord du port »). L'administrateur du port consulte en lecture les **requêtes à l'assistant** (qui, quand, quoi, empreinte des données envoyées) et les **extractions en attente de validation**. L'activation ouvre aussi, pour la direction, l'autorité et la capitainerie, l'**assistant du port** (`/assistant/`) : point du port et questions sur le registre, tracés de la même façon (requêtes sans escale).
+
+## 11. Pilotage du paramétrage
+
+La page **Pilotage** (`/pilotage/`, administrateur du port et direction) indique, sur 30 à 365 jours : les alertes par gabarit et par nature, le nombre de notifications reçues par personne et par escale (cible EF-6 : moins de 15), les retards et le délai moyen de saisie des jalons par rôle (EF-6.5, ENF-8). C'est l'outil pour décider d'allonger un délai, de rendre une tâche normale ou de revoir un seuil — il juge le paramétrage, pas les personnes.
+
+La page **Statistiques** (`/statistiques/`, direction, autorité, capitainerie, administrateur du port) complète le pilotage sur une période libre : escales, tonnages, attentes et durées par mois, répartition par modèle d'opération, zone, produit et poste, interruptions par cause et imputation, délais de décision par type de demande, contestations et contresignatures, saisies par source, tâches dans les délais par rôle ; export CSV du même contenu. Rien n'y est stocké : chaque chiffre est recalculé du registre.
+
+## 12. Démonstration de recette EF-16 (15 minutes, sans assistance technique)
+
+1. **Ajouter un type de demande** : *Types de demande › Ajouter* — code `BUNKER_SURVEY`, libellés FR/EN, demandeur `AGE`, décideur `CAP`, confidentialité N2, champs `[{"key": "grade", "label_fr": "Grade", "label_en": "Grade", "type": "text", "required": true}]`, validité 24 h. Enregistrer. Sur une escale, l'agence le voit dans « Nouvelle demande », la capitainerie le décide.
+2. **Ajouter une tâche à un gabarit** : *Gabarits d'escale* › cocher M1 › action « Créer une version brouillon » › ouvrir le brouillon › ajouter une tâche (rôle TER, nature « Confirmer l'exécution », ancre ETB, décalage −720 min, normale) › publier. La prochaine escale M1 la contient ; les escales en cours ne changent pas.
+3. **Ajouter une cause d'interruption** : *Causes d'interruption › Ajouter* — code `JETTY_INSPECTION`, libellés FR/EN, imputation « Terre ». Elle apparaît immédiatement dans le formulaire de jalon et dans l'appli terrain.
+
+## 13. Commandes d'exploitation utiles
+
+| Commande | Usage |
+|---|---|
+| `python manage.py bootstrap_ports [--port TGLFW] [--refresh]` | charge le catalogue de référence (idempotent) ; `--refresh` réaligne les libellés des listes de référence, **jamais** les gabarits publiés |
+| `python manage.py export_port TGLFW export.zip` | export de réversibilité complet, vérifiable avec `scripts/verifier_export.py` |
+| `python manage.py verify_journal` | recalcule les chaînes du journal et de l'audit de chaque port |
+| `python manage.py load_demo --port TGLFW [--history 8] [--refresh-ais]` | **démonstration et formation uniquement** — jamais sur un port en production ; `--history N` rejoue N escales closes sur l'année écoulée pour nourrir les statistiques (0 = aucune) ; `--refresh-ais` réémet seulement l'image AIS de démonstration (positions des 24 dernières heures) |
+| `python manage.py ais_listen --port TGLFW --udp 0.0.0.0:10110` (ou `--tcp hôte:port`, `--aisstream`) | alimente le tableau AIS depuis un récepteur ou un flux — DEPLOIEMENT.md §15 |

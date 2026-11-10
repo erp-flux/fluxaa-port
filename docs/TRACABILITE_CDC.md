@@ -1,0 +1,165 @@
+# Traçabilité FLX-CDC-001 → code et tests
+
+Ce tableau relie chaque exigence du cahier des charges FLX-CDC-001 v1.0 à l'endroit du code qui la porte et au test automatisé qui la démontre. La règle de recette du chapitre 6 s'applique ici aussi : **une exigence n'est cochée que si un test la prouve**. Ce qui relève de l'exploitation (hébergement, test d'intrusion, sauvegardes testées) est signalé comme tel.
+
+Légende : **✔** couvert et testé · **◐** couvert, à compléter ou à confirmer en recette · **⚙** relève de l'exploitation, du paramétrage ou d'une décision du commanditaire, pas du code · **✗** à développer (exigence nouvelle de FLX-CDC-002 §6.11, non livrée).
+
+Commande de preuve : `pytest` (PostgreSQL requis : les déclencheurs de base sont testés, pas simulés).
+
+## Règles d'or (§0.3)
+
+| Nº | Règle | Où | Preuve |
+|---|---|---|---|
+| 1 | Émetteur unique ; les autres contresignent ou contestent | `services/milestones.py` (`record_milestone`, `countersign_milestone`), `services/measurements.py` (`add_value`), types de jalons (`MilestoneType.emitter_role`) | `test_only_agency_creates_and_rights_on_call`, `test_measurement_single_emitter_and_discrepancy` |
+| 2 | Qui demande n'approuve jamais | `services/requests.py` (`decide_request`), `RequestType.clean()` refuse un rôle à la fois demandeur et décideur | `test_rule_two_request_decision_and_strong_auth`, `test_api_flow_and_n4_existence_not_disclosed` |
+| 3 | Aucune suppression, administrateur compris | 3 niveaux : `apps/core/guards.py` (ORM), déclencheurs PostgreSQL (`registry/migrations/0002_database_guards.py`, `ai/migrations/0002_database_guards.py`, `secure/migrations/0002…`), rôle d'exécution sans `DELETE` (`apply_db_grants`) ; l'admin Django n'offre aucune suppression | `test_database_refuses_update_and_delete` |
+| 4 | Besoin d'en connaître, 4 niveaux, défaut N2 | `services/rights.py`, `Confidentiality` (défaut N2), domaine N4 séparé (`apps/secure`, base distincte) | `test_s5_n4_partitioning`, `test_s7_vetting_refusal`, `test_no_free_messaging_and_bilateral_threads` |
+| 5 | Le rôle porte les droits, par escale, daté, révocable | `CallParty` (dates, révocation), `services/context.py` (`roles_on_call`) | `test_only_agency_creates_and_rights_on_call` |
+| 6 | Toute attente est une tâche assignée, datée, relancée | moteur de tâches (`services/tasks.py`, `services/calls.py` → `recompute_deadlines`), alertes (`services/alerts.py`) | `test_s1_nominal_discharge_call`, `test_s3_eta_revision_cascade_without_burst` |
+
+## Exigences fonctionnelles
+
+| Exigence | Mise en œuvre | Preuve | État |
+|---|---|---|---|
+| **EF-1.1** Seule l'agence crée ; identifiant `PORT-AAAA-SÉQ` immuable | `calls.create_call` ; `CallSequence` ; déclencheur `fluxaa_reference_immutable` | `test_only_agency_creates_and_rights_on_call` | ✔ |
+| **EF-1.2** Cycle de vie | `CallStatus`, graphe `CALL_TRANSITIONS`, `calls._set_status` (refus hors graphe) | `test_s1_nominal_discharge_call`, `test_closed_call_is_frozen` | ✔ |
+| **EF-1.3** Aucun objet sans escale | clé étrangère `call` non nulle sur tous les objets métier ; refus explicite pour les fils d'échange | `test_no_free_messaging_and_bilateral_threads` | ✔ |
+| **EF-1.4** Invitation et notification à la déclaration | `calls.declare_call` → `notifications.notify` ; `calls.convene_parties` : chaque partie est convoquée avec son propre accès — notification pour les comptes, lien nominatif par courriel (valable jusqu'à la clôture) pour une organisation sans compte | `test_ef_1_4_declaring_notifies_every_party`, `test_declaration_convenes_every_party_with_its_own_way_in` | ✔ |
+| **EF-2.1** Moteur unique de demandes | `RequestStatus`, `REQUEST_TRANSITIONS`, `services/requests.py` | `test_s1_…`, `test_rule_two_…` | ✔ |
+| **EF-2.2** Types paramétrables sans code | `RequestType.form_schema` (champs, pièces, rôles, délai, confidentialité), écran d'administration | `test_ef_16_port_admin_configures_without_code` ; format : [PARAMETRAGE.md](PARAMETRAGE.md) §5 | ✔ |
+| **EF-2.3** Séparation demande/décision, même organisation comprise | contrôle par rôle **et** par personne dans `decide_request` | `test_rule_two_request_decision_and_strong_auth` | ✔ |
+| **EF-2.4** Motif obligatoire (refus, conditions) | `decide_request` | `test_rule_two_…` | ✔ |
+| **EF-2.5** Autorisation distincte, expiration obligatoire, code de vérification public | modèle `Authorization` (refus sans expiration, en `clean()` et `save()`), `/verifier/<code>/`, `/api/v1/verify/<code>/` | `test_api_flow_and_n4_existence_not_disclosed` | ✔ |
+| **EF-2.6** Vetting : TER demande, CAP + APO décident, validité, motif de refus N3 | type `VESSEL_ACCEPTANCE`, `rights.can_see_refusal_reason`, exclusion des exports | `test_s7_vetting_refusal` | ✔ |
+| **EF-3.1** Append-only, rectification liée | `AppendOnlyModel` + déclencheurs ; `record_milestone(rectifies=…)` : seule l'organisation émettrice rectifie, et le point d'arrêt est réévalué à l'heure corrigée | `test_database_refuses_update_and_delete`, `test_journal_chain_detects_tampering`, `test_rectifications_and_late_entries` | ✔ |
+| **EF-3.2** Émetteur unique par type d'événement | `MilestoneType.emitter_role` (catalogue FLX-SPEC-002 §7) ; la fin d'une interruption par la partie qui en a saisi le début ; côté terre (terminal à quai, prestataire en mer) : une seule organisation saisit et contresigne au nom de la terre, désignée par l'agence ou la capitainerie quand elles sont plusieurs | `test_only_agency_creates_and_rights_on_call`, `test_an_interruption_ends_by_the_party_that_started_it`, `test_only_the_shore_side_provider_countersigns_at_sea`, `test_the_shore_side_is_designated_not_self_proclaimed` | ✔ |
+| **EF-3.3** Double horodatage | `Milestone.declared_at` + `recorded_at` (+ `device_recorded_at` hors ligne) ; une saisie déclarée plus de 30 min avant son enregistrement est marquée « saisie différée » (`FLUXAA_LATE_ENTRY_SECONDS`) | `test_s6_offline_conflict_creates_dispute`, `test_rectifications_and_late_entries` | ✔ |
+| **EF-3.4** Contresignature, tacite après délai paramétrable | `apply_tacit_countersignatures` (planificateur), `Port.countersign_delay_minutes` ; mention au rapport des faits | `test_s4_tacit_countersignature` | ✔ |
+| **EF-3.5** Cause d'interruption en liste fermée, « Autre » motivé | `InterruptionCause` (paramétrable), contrôle dans `record_milestone` | `test_ef_3_5_interruption_needs_a_cause_from_the_closed_list` | ✔ |
+| **EF-3.6** Corroboration AIS, alerte sans correction | `milestones.corroborate_ais`, `POST /api/v1/ais/` | `test_ef_3_6_ais_divergence_is_an_alert_never_a_correction` | ✔ (◐ flux AIS réel à brancher sur l'API) |
+| **EF-4.1–4.4** Contestations, jamais de « rejet », bloquent la clôture | `services/disputes.py` (répondre, clore avec/sans accord) ; point d'arrêt `CLOSE` : toute contestation non close (ouverte ou répondue) bloque la clôture ; seule l'organisation qui l'a ouverte la clôt par accord | `test_disputes_never_rejected_and_block_closure`, `test_answered_dispute_still_locks_bill_of_lading_and_closure`, `test_only_the_opening_organisation_settles_its_dispute` | ✔ |
+| **EF-5.1** Instanciation automatique (opération × poste) | `calls.create_call` lit les gabarits publiés ; `TemplateTask.berth_kinds` | `test_operation_area_selects_tasks_and_modules` | ✔ |
+| **EF-5.2** Assignation à un rôle | `Task.role` | `test_s1_…` | ✔ |
+| **EF-5.3** Échéances relatives uniquement | `TemplateTask.anchor` + décalage ; refus de validation sans ancre | `test_templates_versioned_and_frozen` | ✔ |
+| **EF-5.4** Recalcul en cascade < 60 s | `calls.update_estimates` → `recompute_deadlines` | `test_s3_eta_revision_cascade_without_burst` | ✔ |
+| **EF-5.5** Bloquante / normale | `TemplateTask.criticality` ; points d'arrêt | `test_s2_hold_point_refusal_then_allowed` | ✔ |
+| **EF-5.6** « Sans objet » motivé et tracé | `tasks.mark_not_applicable` ; pour une décision, une demande ou une tâche attendue par un point d'arrêt, seul le rôle qui en répond (double authentification pour une décision) | `test_ef_5_6_not_applicable_requires_a_traced_reason`, `test_requester_cannot_wave_aside_the_decision_it_awaits` | ✔ |
+| **EF-5.7** Chaque rôle ne voit que ses tâches ; AGE et CAP voient tout | `rights.visible_tasks` (interface et API) | `test_only_agency_creates_and_rights_on_call` | ✔ |
+| **EF-5.8** Modèles versionnés sans livraison de code | `TemplateVersion` brouillon → publiée (figée) ; actions d'administration | `test_templates_versioned_and_frozen` | ✔ |
+| **EF-6.1** Rappel, retard, escalade | `services/alerts.py` (`evaluate_all`), seuils du port | `test_ef_6_alert_levels_digest_and_statement` | ✔ |
+| **EF-6.2** Anti-bruit | une notification par événement et destinataire (contrainte d'unicité), résumé quotidien, temps réel réservé au bloquant | `test_s3_eta_revision_cascade_without_burst` | ✔ |
+| **EF-6.3** Réduction du bruit, alerte bloquante non désactivable | préférence « résumé quotidien » sans effet sur le bloquant | `test_ef_6_alert_levels_digest_and_statement` | ✔ |
+| **EF-6.4** L'alerte est une pièce du dossier | `Alert` (append-only), journal, rapport des faits | `test_ef_6_alert_levels_digest_and_statement` | ✔ |
+| **EF-6.5** Métrique de calibrage | page **Pilotage** `/pilotage/` (`reports.calibration`) : alertes par gabarit, notifications par personne et par escale, retards et délais de saisie par rôle | `test_calibration_page_for_management_only` | ✔ |
+| **EF-7.1** Documents typés, versionnés, empreinte | `Document` (SHA-256), `DocumentType` | `test_create_declare_and_hold_point_box` | ✔ |
+| **EF-7.2** Document signé figé, versions | déclencheur `fluxaa_document_frozen`, `previous` | `test_database_refuses_update_and_delete` | ✔ |
+| **EF-7.3** Rapport des faits, time sheet, journal de pompage générés | `services/reports.py` ; mentions tacite / différé / contestation | `test_s1_…`, `test_s4_…` | ✔ |
+| **EF-7 (extension)** Formulaires standards générés dans une structure unique | paquet `services/forms/` (76 formulaires : ISGOTT, OCIMF STS, FAL, ISPS, RSI, MARPOL, BWM, API MPMS, A.960, A.1050, BIMCO, P&I, pratiques portuaires), gabarit unique `reports/form.html`, dépôt comme document généré de son type, aperçu imprimable ; [FORMULAIRES.md](FORMULAIRES.md) | `test_every_form_shares_the_same_structure_and_is_prefilled_from_the_registry`, `test_forms_are_offered_by_role_and_by_operation`, `test_filing_a_form_makes_a_generated_document_under_the_right_role`, `test_a_party_without_account_files_its_forms_through_its_link` | ✔ |
+| **EF-7 (extension) — chaque partie émet ses documents** : suivant les tâches « fournir un document » et les demandes qui lui sont adressées, chaque rôle émet depuis la plateforme les documents attendus de lui, que la plateforme archive (acte écrit de chaque décision avec code de vérification, certificats de l'inspecteur, bons et attestations des prestataires, déclarations et permis du navire, pièces de l'agence, du terminal, de l'armateur) | une famille de formulaires par rôle (`Form.family`), `answers` reliant chaque formulaire aux tâches et types de demande, actes `AUTH_*` engendrés par le catalogue des types de demande, type `AUTHORIZATION` généré seulement, proposition selon les opérations de l'escale (`Form.templates`, `needs_link`), un document par formulaire | `test_every_party_issues_the_documents_the_call_asks_of_it`, `test_the_written_act_of_a_decision_carries_the_authorization_and_its_verification_code`, `test_the_bill_of_lading_form_stays_behind_its_lock` | ✔ |
+| **EF-7 (extension) — dépôt automatique des actes** : l'acte écrit d'une décision (approbation, conditions, refus), la notice de disponibilité remise et le time sheet du rapport des faits sont déposés par la plateforme au moment de l'acte, sous le rôle de son auteur, avec la confidentialité et les lecteurs de la demande ; un échec de génération ne bloque jamais l'acte | `forms.auto_issue`, `requests.file_decision_act`, `milestones.FORMS_ON_MILESTONE`, `reports.issue_statement_of_facts`, `Document.audience_roles` (migration `registry 0013`) | `test_the_documents_of_the_call_appear_as_soon_as_their_act_is_taken` | ✔ |
+| **EF-1.4 (extension) — liste ouverte des parties** : les parties à inviter ne sont pas une liste fermée ; l'agence (tous rôles pour la capitainerie) invite autant d'organisations qu'il en faut, enregistrées ou nouvelles (nom, nature suggérée ou libre, courriel, téléphone), à l'annonce, dans l'onglet Parties ou par l'API ; une nouvelle organisation est créée avec le rôle de l'invitation, journalisée, puis convoquée par lien à la déclaration | `apps/core/parties.py` (catalogue non exhaustif `PARTY_KINDS`, `normalize_kind`), `Organization.kind`, `calls.register_organization`, `views.party_rows` / `resolve_parties`, action `party_add` et API `actions/invite/`, `parties[]` de `POST /api/v1/calls/` | `test_the_agency_announces_a_call_with_any_number_of_parties_registered_or_new`, `test_a_party_is_invited_later_on_the_call_registered_or_new`, `test_the_api_takes_the_open_party_list_too`, `test_the_catalogue_of_party_kinds_is_a_suggestion_not_a_restriction` | ✔ |
+| **EF-1 (extension)** Escale à plusieurs zones (rade → STS → quai, et retour) | `CallStage`, `services/stages.py` (planification par l'agence ou la capitainerie, tâches instanciées à l'étape, annulation motivée), jalon `SHIFT_START` et statut `SHIFTING` gardés par l'autorisation de mouvement et les tâches de l'étape suivante, jalons et tâches rattachés à leur étape, rapport des faits par étape | `test_offshore_then_quay_in_one_call` | ✔ |
+| **EF-7.4** Verrou du connaissement, indérogeable | `holdpoints` (verrou codé, non paramétrable, `LockRefused`), refusé aussi par l'API et pour le compte système ; une contestation de quantité non close (ouverte ou répondue) le maintient | `test_s8_bill_of_lading_lock`, `test_answered_dispute_still_locks_bill_of_lading_and_closure` | ✔ |
+| **EF-8.1** Bord + terre (+ inspecteur), écart calculé | `Measurement.differences()` (toutes les paires), complétude = bord **et** terre ; le chiffre d'une partie appartient à l'organisation qui l'a saisi | `test_figures_are_compared_pairwise_and_ship_shore_carries_the_tolerance`, `test_threads_figures_and_journal_stay_with_their_organisation`, `test_second_terminal_and_second_surveyor` | ✔ |
+| **EF-8.2** Alerte de seuil, jamais d'arbitrage | tolérance portée par l'écart bord/terre ; alerte `QUANTITY` | `test_measurement_single_emitter_and_discrepancy` | ✔ |
+| **EF-8.3** Journal de pompage, alimentation automatique future | `PumpingLogEntry.source` (`AUTOMATIC` prévu, sans changement de schéma) | `test_s1_nominal_discharge_call` (saisie manuelle) | ✔ |
+| **EF-9** Aucune messagerie libre | fils rattachés à l'escale, refus sans escale (service et API) | `test_no_free_messaging_and_bilateral_threads` | ✔ |
+| **EF-10.1** Tableau de bord temps réel | plan des postes 72 h, groupes, rafraîchissement HTMX | `test_pages_render_for_every_role` | ✔ |
+| **EF-10.2** Sept indicateurs traçables | `reports.indicators` (chaque valeur liste ses escales sources) | `test_ef_10_2_seven_indicators_traceable_to_their_calls` | ✔ |
+| **EF-10.3** Aucun N4, même agrégé | le domaine N4 est dans une autre base : aucune requête du tableau de bord ne peut l'atteindre | `test_s5_n4_partitioning` | ✔ |
+| **EF-10.4** Export ouvert et documenté | `services/exports.py`, [FORMAT_EXPORT.md](FORMAT_EXPORT.md) | `test_s7_vetting_refusal`, `test_port_export_is_verifiable_offline_and_tampering_is_detected` | ✔ |
+| **EF-11.1–11.4** Points d'arrêt, message explicite, trace, paramétrage | `HoldPoint` (paramétrable) + invariants codés ; une tâche de décision n'ouvre le point d'arrêt que si l'autorisation délivrée est en vigueur à l'heure du fait ; accostage et appareillage gardés en propre ; un document ne complète que la tâche qui l'attend ; `with_refusal_log` journalise même quand l'action échoue | `test_s2_…`, `test_create_declare_and_hold_point_box`, `test_hold_points_require_an_authorization_in_force`, `test_upload_completes_only_the_task_expecting_that_document`, `test_only_the_assigned_role_waives_a_guarded_task`, `test_late_entry_after_the_authorization_lapsed_is_flagged` | ✔ |
+| **EF-12.1** Rôle-sur-escale | `CallParty` ; quand plusieurs organisations tiennent un rôle, documents, demandes, jalons et contestations restent cloisonnés par organisation (`rights.acts_for`) ; une escale d'une autre agence n'est ni listée ni liable | `test_only_agency_creates_and_rights_on_call`, `test_two_providers_on_one_call_stay_apart`, `test_rival_agency_neither_sees_nor_links_another_agencys_call`, `test_frozen_calls_and_named_providers`, `test_orders_and_frozen_authorizations` | ✔ |
+| **EF-12.2** Matrice FLX-SPEC-001 §5 côté serveur | `rights.MATRIX`, appliquée dans les services (l'interface et l'API passent par eux) | `test_pages_render_for_every_role`, `test_api_flow_…` | ✔ |
+| **EF-12.3** Quatre niveaux, défaut N2 | `Confidentiality` ; une entrée du journal qui porte sur un échange ou un document ne se montre qu'à qui voit cet objet ; un prestataire n'y lit que ce que son organisation a fait ou les commandes qu'elle réalise | `test_no_free_messaging_and_bilateral_threads`, `test_journal_titles_follow_the_objects_visibility` | ✔ |
+| **EF-12.4** Domaine N4 séparé, chiffré, journalisé, notifié | `apps/secure` : base distincte, clés Fernet distinctes, dépôt en écriture seule, journal nominatif chaîné, courriel à l'autorité de sûreté sans détail | `test_s5_n4_partitioning`, `test_security_space_pages` | ✔ |
+| **EF-12.5** COM sans saisie | `rights.MATRIX`, `tasks.complete_task` | `test_api_flow_…` (403 sur création d'événement) | ✔ |
+| **EF-13** Capitaine sans compte | `MasterAccessLink` (jeton et code haché, portée une escale, expiration, révocation, remise enregistrée), `/bord/` | `test_master_access_without_account`, `test_master_portal_with_code` | ✔ |
+| **EF-13 (extension)** Parties sans compte : lien nominatif jusqu'à la clôture, jamais une décision | `MasterAccessLink.role/organization/holder`, `calls.issue_party_link`, `calls.convene_parties`, `/bord/nom/` (nom exigé à la première ouverture), `rights.acts_for` (une organisation agit pour ses propres actes), rôles décideurs refusés | `test_link_holder_enters_consults_and_files_but_never_decides`, `test_party_link_lasts_until_closure_and_ends_with_the_role`, `test_agency_issues_and_harbour_master_revokes_a_party_link` | ✔ |
+| **EF-14.1–14.4** Hors ligne, synchronisation ordonnée, double horodatage, conflit → contestation | appli terrain (PWA) `/escales/<id>/terrain/`, `services/sync.py`, `POST /api/v1/calls/<réf>/sync/` | `test_s6_offline_conflict_creates_dispute`, `test_api_flow_…` | ✔ (◐ essai « mode avion avec photo » à jouer en recette sur appareil réel) |
+| **EF-15** Réversibilité | `manage.py export_port`, format documenté, **vérificateur autonome** `scripts/verifier_export.py` | `test_port_export_is_verifiable_offline_and_tampering_is_detected` | ✔ (délai de 30 jours et export de fin de contrat : ⚙ contractuel) |
+| **EF-16** Paramétrage sans code | écrans d'administration limités au port de l'administrateur | `test_admin_scoped_to_port`, `test_ef_16_port_admin_configures_without_code` (type de demande, cause d'interruption et tâche de gabarit ajoutés par les écrans, règle 2 refusée au paramétrage) ; démonstration : [PARAMETRAGE.md](PARAMETRAGE.md) §12 | ✔ |
+| **EF-17** IA jamais dans la chaîne d'autorisation | `apps/ai` : extraction → valeurs **pré-remplies** à valider ; projet de remarques ; revue → constats ; résumés ; aucune décision ; aucun accès N4 ; activation par la plateforme **et** par le port avec référence contractuelle | `tests/test_ai.py` (10 tests, dont `test_no_n4_object_ever_reaches_the_assistant` et `test_the_assistant_code_has_no_path_into_decisions`) | ✔ |
+| **EF-18** Notifications dérivées, SMS pour les escalades, N4 sans détail | `services/notifications.py`, `Notification.dedupe_key`, courriels N4 génériques | `test_s3_…`, `test_s5_…` | ✔ |
+
+## Exigences non fonctionnelles
+
+| Exigence | Mise en œuvre | État |
+|---|---|---|
+| **ENF-1** Disponibilité, RTO/RPO, sauvegardes testées, mode dégradé | mode dégradé : appli terrain hors ligne + ressaisie papier marquée « saisie différée » (formulaire de jalon) ; sauvegardes et restauration : [DEPLOIEMENT.md](DEPLOIEMENT.md) | ◐ code prêt ; ⚙ cibles et test trimestriel de restauration à l'exploitation |
+| **ENF-2** Performance | requêtes indexées, cascade mesurée (< 60 s exigé, quelques dixièmes de seconde mesurés en test) | ◐ à mesurer en charge sur l'infrastructure cible |
+| **ENF-3.1** Authentification forte CAP, APO, SUR et décisions | TOTP obligatoire pour ces rôles et pour tout administrateur (vérification de moins de 8 h pour le paramétrage), sur les pages web comme sur l'API appelée depuis le navigateur ; *step-up* pour toute décision (session ou en-tête `X-MFA-Code`) | ✔ `test_mfa_is_enforced_for_harbour_master`, `test_api_session_requires_the_second_factor`, `test_administrators_hold_a_second_factor`, `test_attempt_limits_on_guessable_secrets`, `test_password_alone_cannot_replace_the_second_factor`, `test_bearer_token_never_borrows_a_session_step_up`, `test_session_stamp_belongs_to_the_person_who_passed_it`, `test_settings_actions_need_a_recent_second_factor`, `test_rule_two_…` |
+| **ENF-3** (durcissement des pages) | `Content-Security-Policy` sur chaque page HTML (aucun script en ligne ni tiers, aucun encadrement), HSTS, `nosniff`, cookies `Secure` | ✔ `test_content_security_policy`, `test_templates_have_no_inline_script`, `test_a_file_sent_by_a_party_is_never_rendered_as_a_page_of_the_site` |
+| **ENF-3.2** Capitaine sans compte | voir EF-13 | ✔ |
+| **ENF-3.3** Chiffrement en transit et au repos, clés N4 distinctes | N4 chiffré applicativement (clés `FLUXAA_N4_KEYS` distinctes, rotation) ; TLS et chiffrement disque : [DEPLOIEMENT.md](DEPLOIEMENT.md) | ✔ N4 ; ⚙ TLS/disques |
+| **ENF-3.4** Journal d'audit inaltérable, consultable par CAP et DIR | `AuditEntry` chaîné (consultations à l'écran **et par l'API**, téléchargements, exports, accès capitaine, assistant, administration des comptes) | ✔ `test_journal_chain_detects_tampering`, `test_api_consultations_are_audited`, `test_administrator_reset_of_the_second_factor_is_traced` |
+| **ENF-3.6** Aucune suppression, même par accès direct à la base | déclencheurs + rôle sans `DELETE` | ✔ démontré par test (y compris contournement par superutilisateur détecté par la chaîne) |
+| **ENF-3.7–3.8** Test d'intrusion, notification d'incident | — | ⚙ avant mise en service |
+| **ENF-4.1** Chaînage cryptographique | SHA-256 chaîné par port (journal et audit), `manage.py verify_journal`, vérificateur hors plateforme | ✔ |
+| **ENF-4.2** Horodatage, bascule vers un horodatage qualifié | fournisseur `local` (HMAC) ; interface `rfc3161` prête, sans réécriture du journal | ◐ **point ouvert O04** |
+| **ENF-4.3** Signature électronique des actes engageants | signatures nominatives scellées (HMAC) liées à l'empreinte du document ; tracé manuscrit optionnel | ◐ niveau juridique à confirmer (O04) |
+| **ENF-4.4** Archivage probant 10 ans | `retention_years`, `Document.retention_until` ; export de réversibilité vérifiable | ◐ ⚙ politique d'archivage à l'exploitation |
+| **ENF-5** Accessibilité | contrastes AA, aucun statut par la couleur seule (libellé + glyphe), focus visible, `prefers-reduced-motion`, cibles tactiles larges sur l'appli terrain, thème clair à fort contraste ; rouge de marque limité au logo et à l'onglet actif | ✔ (◐ audit RGAA/WCAG externe recommandé) |
+| **ENF-6** Clients 360–1920 px, PWA, impression | mise en page fluide (aucun débordement horizontal à 390 px), PWA installable, feuilles d'impression | ✔ |
+| **ENF-7** FR/EN, libellés paramétrables, fuseau du port | interface complète FR/EN (catalogue `locale/fr`), libellés de tâches, statuts et causes en données bilingues, fuseau du port affiché, UTC en base | ✔ `test_french_pages_keep_css_numbers_unlocalized` |
+| **ENF-8** Observabilité | `/healthz`, journaux structurés, page Pilotage (alertes par gabarit, retards, délais de saisie par rôle) | ✔ (◐ supervision d'infrastructure à brancher) |
+
+## Scénarios de recette (§6)
+
+| Scénario | Test automatisé |
+|---|---|
+| S1 — Déchargement nominal | `tests/test_scenarios.py::test_s1_nominal_discharge_call` |
+| S2 — Refus de point d'arrêt | `test_s2_hold_point_refusal_then_allowed` (+ `test_create_declare_and_hold_point_box` pour l'interface) |
+| S3 — Révision d'ETA | `test_s3_eta_revision_cascade_without_burst` |
+| S4 — Contresignature tacite | `test_s4_tacit_countersignature` |
+| S5 — Cloisonnement N4 | `test_s5_n4_partitioning` (+ `test_api_flow_and_n4_existence_not_disclosed`, `test_security_space_pages`) |
+| S6 — Hors ligne et conflit | `test_s6_offline_conflict_creates_dispute` |
+| S7 — Refus de vetting | `test_s7_vetting_refusal` |
+| S8 — Verrou du connaissement | `test_s8_bill_of_lading_lock` |
+
+Les huit scénarios passent. La recette du §6 reste à jouer **par des utilisateurs métier** sur l'environnement pilote : les tests automatisés en sont la condition, pas le substitut.
+
+## Écarts assumés par rapport au périmètre V1
+
+* **Deux ports actifs** (Freetown et Lomé) au lieu d'un : demandé pour ce pilote ; l'isolation multi-locataire est celle exigée par l'orientation 1.
+* **Catalogue complet M0–M9 et MA1–MA3 chargé** alors que la V1 n'exige que M0, M1, M2, MA1, MA3 : les modèles M3–M9 sont paramétrés et instanciables, ce qui démontre l'extensibilité exigée au §2.2. Ils peuvent être désactivés par le port (`CallTemplate.is_active`).
+* **IA (EF-17)** livrée désactivée par défaut, activable par port après accord contractuel.
+
+## Extensions au-delà du périmètre V1 (demandées pour un déploiement multi-ports)
+
+| Extension | Ce qui est livré | Rattachement au corpus |
+|---|---|---|
+| **Tableau AIS** (`apps/ais`, `/carte/`, `POST/GET /api/v1/ais/positions/`, `ais_listen`) | positions des navires entendus dessinées sur le plan des eaux du port, rapprochées des escales visibles ; trois sources (récepteur NMEA, aisstream.io, API) ; écarts AIS/registre affichés comme questions ; purge paramétrable | prolonge EF-3.6 (corroboration AIS : alerte, jamais correction) et la règle d'or « aucune donnée n'est modifiée par la plateforme » ; aucune formalité nouvelle |
+| **Statistiques** (`services/stats.py`, `/statistiques/`, export CSV) | période libre ; escales, tonnages, attentes, transferts, modèles, zones, produits, postes, interruptions par cause et imputation, délais de décision, contestations, contresignatures, saisies, alertes, tâches par rôle | prolonge EF-10.2 (indicateurs traçables) et EF-6.5 / ENF-8 (pilotage) ; chiffres par rôle, jamais par personne |
+| **Assistant du port** (`apps/ai`, `/assistant/`) | point du port à la demande et questions sur le registre, pour DIR, APO, CAP ; mêmes garanties que les quatre usages d'EF-17 (rôles, pas de N4, trace append-only, aucune décision) | prolonge EF-17 ; activation par port inchangée |
+
+## Exigences du cahier des charges de reprise (FLX-CDC-002, version 1.3)
+
+FLX-CDC-002 ajoute ses propres exigences (EXG-xx). Celles de ses sections 6.1 à 6.9 reprennent les EF et ENF
+ci-dessus ; celles des sections 6.10 et 6.11 sont tracées ici. La section 6.11 et l'annexe I du cahier des charges
+(référentiel des opérations portuaires, copié au chapitre [16 du dossier de spécifications](spec/16-referentiel-operations-portuaires.md))
+disent, pratique par pratique, ce qui est livré, ce qui relève du paramétrage et ce qui reste à développer.
+
+| Exigence | Mise en œuvre | Preuve | État |
+|---|---|---|---|
+| **EXG-L-01 à L-04** Convocation de chaque partie, lien nominatif sans compte, émission et révocation, adresses | `services/calls.py` (`convene_parties`, `issue_party_link`, `revoke_party`), `MasterAccessLink` (liens de partie), `services/access.py` | `tests/test_links.py`, `tests/test_security.py` | ✔ |
+| **EXG-D-01** Dépôt des documents par toute partie, par compte ou par lien | `services/documents.py`, vues de dépôt par lien | `tests/test_links.py`, `tests/test_forms.py` | ✔ |
+| **EXG-S-01 à S-03** Étapes d'escale, déhalage verrouillé, étapes dans l'aperçu, le rapport, l'API et l'export | `services/stages.py`, `services/holdpoints.py`, `CallStage` | `tests/test_stages.py` (`test_offshore_then_quay_in_one_call`) | ✔ |
+| **EXG-F-01 à F-05** Soixante-seize formulaires standards en structure unique, offerts par rôle et par opération, émis et archivés, actes déposés d'eux-mêmes | `services/forms/` (familles par partie, `core.auto_issue`), `services/requests.py`, migration `registry 0013` | `tests/test_forms.py` (`test_every_form_shares_the_same_structure_…`, `test_forms_are_offered_by_role_and_by_operation`, `test_the_documents_of_the_call_appear_as_soon_as_their_act_is_taken`) | ✔ ; ◐ validation par chaque port de l'édition ISGOTT / OCIMF appliquée et des formulaires actifs (EXG-F-03) |
+| **EXG-P-01** Liste ouverte des parties à inviter, natures non exhaustives | `apps/core/parties.py` (`PARTY_KINDS`), `services/calls.py` (`register_organization`, `add_party`) | `tests/test_parties.py`, `tests/test_links.py` | ✔ |
+| **EXG-M-01** Restrictions structurées des autorisations de mouvement et de poste ; contrôle du tirant d'eau, de la LOA et du DWT contre les maxima du poste (alerte) | restrictions : paramétrage du `form_schema` des types `BERTH` et `MOVEMENT` (lot 2) ; comparaison et alerte : à développer | — | ✗ à développer (priorité O) |
+| **EXG-M-02** Position de mouillage assignée, dérive et mouillage hors zone signalés par l'AIS | `apps/ais` (corroboration existante), décision `ANCHORAGE_POSITION` : à étendre | — | ✗ à développer (S) |
+| **EXG-M-03** Plan d'occupation des postes et de la rade, chevauchements, indisponibilités | à développer (`CallStage`, `Berth`, demandes `BERTH`) | — | ✗ à développer (O) |
+| **EXG-M-04** Registre des certificats du navire, expirations comparées à l'ETD, report d'une escale à l'autre | à développer (aujourd'hui document unique `CERTIFICATES`, tâches `M0:03`, `M7:7.12`) | — | ✗ à développer (O) |
+| **EXG-M-05** Décompte paramétrable du temps de planche, calcul proposé et signé, jamais arbitré | à développer (`SOF`, `TIME_SHEET`, interruptions imputées livrés) | — | ✗ à développer (S) |
+| **EXG-M-06** Inspections et visites à bord comme faits ; détention suspendant le congé de départ | jalon `INSPECTION` et document `INSPECTION_REPORT` : paramétrage (lot 2) ; verrou : à développer | — | ✗ à développer (S) |
+| **EXG-M-07** Types de demandes complémentaires (opérations au mouillage, prolongation, travaux sous-marins, essais machine, accès, avitaillement, assistance médicale) | paramétrage des types de demandes par l'administration (`docs/PARAMETRAGE.md` §5) | `generate_spec --check` | ⚙ lot 2 (O) |
+| **EXG-M-08** Événements et urgences : jalon `INCIDENT`, notification immédiate, mouvement d'urgence régularisé | à développer (`INCIDENT_REPORT`, alertes et causes `AUTHORITY_ORDER`, `SECURITY_ALERT` livrés) | — | ✗ à développer (O) |
+| **EXG-M-09** Reçu de bord (mate's receipt), verrou paramétrable avant le connaissement, chaîne documentaire | type `MATES_RECEIPT` : paramétrage ; formulaire et verrou : à développer | — | ✗ à développer (S) |
+| **EXG-M-10** Lots de cargaison (parcelles) ; déclaration des marchandises dangereuses (FAL 7) | à développer | — | ✗ à développer (S) |
+| **EXG-M-11** Export structuré des faits de facturation | à développer (`services/exports.py`, API `export`) | — | ✗ à développer (S) |
+| **EXG-M-12** Tableau des mouvements du jour | à développer | — | ✗ à développer (S) |
+| **EXG-M-13** Fiche navire : historique inter-escales | à développer (`Vessel`, escales liées) | — | ✗ à développer (S) |
+| **EXG-M-14** Observations météo au poste comparées aux limites publiées | à développer (`Berth.weather_limits`, `BERTH_LIMITS` livrés) | — | ✗ à développer (S) |
+| **EXG-M-15** Contrôles répétés de la liste de contrôle navire/terre (items R) | à développer (`SSSCL` livrée) | — | ✗ à développer (S) |
+| **EXG-M-16** Indicateurs complémentaires (rotation, débit réel, écarts et protêts, préavis et créneaux, incidents) | à développer (`services/reports.py`, `services/stats.py`) | — | ✗ à développer (S) |

@@ -1,0 +1,32 @@
+# Contexte de construction de l'image (racine du dépôt, voir deploy/docker-compose.yml).
+
+# Historique et outils
+.git
+.gitignore
+.idea
+.vscode
+**/*.swp
+**/.DS_Store
+
+# Caches Python
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+.coverage
+htmlcov
+.venv
+venv
+
+# Données d'exécution locales : jamais dans l'image
+media
+staticfiles
+**/*.sqlite3
+
+# Secrets et sauvegardes (deploy/.env, deploy/backups/…) : jamais dans l'image
+**/.env
+**/backups
+
+# Installation locale de démonstration (Windows) : comptes, journaux et complément de ports générés
+COMPTES-DEMO.txt
+deploy/windows/*.log
+deploy/docker-compose.ports.yml
