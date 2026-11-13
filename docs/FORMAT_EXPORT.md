@@ -1,4 +1,4 @@
-# Format d'export et de réversibilité — `fluxaa-port-export/1.0`
+# Format d'export et de réversibilité — `fluxaa-port-export/1.3`
 
 Livrable contractuel (EF-15.3). Ce document suffit à relire, recharger ou vérifier un export **sans la plateforme**. Le format est ouvert : une archive ZIP, des fichiers JSON en UTF-8 et les pièces jointes dans leur format d'origine.
 
@@ -40,18 +40,24 @@ Dates et heures : ISO 8601 avec fuseau, en UTC. Montants et quantités : chaîne
 |---|---|
 | `reference`, `status` | référence immuable `PORT-AAAA-SÉQ`, statut du cycle de vie |
 | `port` | `code`, `name`, `timezone` |
-| `vessel` | `imo`, `name`, `flag`, `type`, `dwt` |
-| `voyage`, `agency`, `operating_area`, `berth`, `product`, `quantity`, `quantity_unit` | |
+| `vessel` | `imo`, `name`, `flag`, `kind` (`1.2` : type de navire), `type`, `dwt` |
+| `voyage`, `agency`, `operating_area`, `berth`, `cargo_kind` (`1.2`), `product`, `quantity`, `quantity_unit`, `planned_pump_hours`, `batch_reference` (`1.2`) | |
+| `sts_role`, `linked_call` (`1.2`), `link_kind` (`1.3`) | rôle dans un transbordement navire-navire (`DONOR`, `RECEIVER`), référence de l'escale partenaire et nature du lien (`STS`, `INNER`, `OUTER`) |
+| `operation_details` (`1.3`) | ce que l'agence a déclaré à l'annonce pour chaque modèle d'opération choisi — `{"M4": {"grade": "VLSFO", "quantity_mt": 450}}` ; les clés sont celles de la fiche d'intention du gabarit (`CallTemplate.intake_schema`), les valeurs typées (nombre, entier, date-heure ISO, booléen, texte) |
+| `validity` (`1.2`) | `days`, `valid_until`, `expired_at`, `renewed_from` (référence de l'escale refaite) |
+| `billing_basis` (`1.2`) | ce sur quoi le port facture : `validity_days`, `valid_from`, `valid_until`, `arrived_at`, `departed_at`, `closed_at`, `expired_at`, `hours_in_port`, `overrun_hours` |
 | `templates` | gabarits et **versions** instanciés à la création (`[{code, version}]`) |
 | `estimates` | `eta`, `etb`, `ets`, `etc`, `etd` |
 | `actuals` | `ata`, `nor_at`, `atb`, `t0`, `t1`, `atd` |
-| `parties` | `organization`, `role`, `valid_from`, `valid_until`, `revoked_at` |
+| `parties` | `organization`, `role`, `valid_from`, `valid_until`, `revoked_at`, et depuis `1.2` `principal_agent`, `access` (`FULL`, `PARTIAL`, `READ`), `scopes` |
 | `milestones` | `id`, `type`, `declared_at` (heure déclarée), `recorded_at` (heure système), `device_recorded_at` (hors ligne), `deferred`, `source` (`ONLINE`, `OFFLINE`, `PAPER`, `AIS`, `SYSTEM`), `emitter_role`, `emitter`, `cause`, `cause_reason`, `related` (fin d'interruption → début), `rectification`, `conflict`, `seal`, `countersignatures` (`{rôle: état}`), `countersignature_state` |
-| `tasks` | `code`, `title_fr`, `title_en`, `role`, `nature`, `criticality`, `due_at`, `status`, `completed_at`, `completed_role`, `na_reason` |
+| `tasks` | `code`, `title_fr`, `title_en`, `role`, `nature`, `criticality`, `due_at`, `status`, `completed_at`, `completed_role`, `na_reason`, et depuis `1.2` `green_light`, `requested_at_creation` |
 | `requests` | `reference`, `type`, `status`, `requester_role`, `data` (champs du formulaire), `submitted_at`, `decision`, `decision_role`, `decided_at`, `conditions`, `reason` (absent pour le vetting), `authorization` (`number`, `valid_from`, `valid_until`, `seal`, `verification_code`, `cancelled`) |
 | `documents` | `id`, `type`, `title`, `version`, `status`, `confidentiality`, `issuer_role`, `issuer`, `issued_at`, `sha256`, `file` (chemin dans l'archive), `signatures` (`role`, `signer`, `at`, `seal`, `document_sha256`) |
-| `measurements` | `kind`, `unit`, `tolerance_pct`, `values` (toutes, corrections comprises : `party`, `value`, `role`, `by`, `declared_at`, `entered_at`, `deferred`, `supersedes`, `seal`), `complete`, `differences` (`between`, `difference`, `percent`, `outside_tolerance` pour la paire bord/terre) |
-| `pumping_log` | `declared_at`, `recorded_at`, `role`, `pressure_bar`, `rate_m3h`, `temperature_c`, `source`, `deferred` |
+| `measurements` | `kind`, `unit`, `tolerance_pct`, `values` (toutes, corrections comprises : `party`, `value`, `role`, `by`, `declared_at`, `entered_at`, `deferred`, `supersedes`, `seal`), `complete`, `differences` (`between`, `difference`, `percent`, `outside_tolerance` pour la paire bord/terre), et depuis `1.1` `tank_readings` — les relevés de citernes que l'exportateur peut lire (validés ; ceux de son bord en attente) : `side`, `tank`, `state` (`PENDING`, `VALIDATED`, `REJECTED`), `quantity`, `level_mm`, `temperature_c`, `free_water_mm`, `density`, `tov_m3`, `gov_m3`, `vcf`, `gsv_m3`, `weight_mt`, `by`, `declared_at`, `supersedes`, `seal`, `reviews` (`state`, `by`, `at`, `note`, `seal`) |
+| `pumping_sheets` (`1.1`, si l'exportateur lit le journal de pompage) | une feuille par bord et par citerne : `id`, `side`, `tank`, `product`, `start_level_mm`, `expected_stop_level_mm`, `m3_per_metre`, `density`, `vcf`, `planned_quantity_m3`, `planned_quantity_mt`, `expected_rate_m3h`, `expected_pressure_bar`, `estimated_start`, `estimated_completion`, `actual_stop_level_mm`, `final_volume_m3`, `closed_at`, `opened_by` |
+| `pumping_log` (si l'exportateur lit le journal de pompage) | `declared_at`, `recorded_at`, `role`, `pressure_bar`, `rate_m3h`, `temperature_c`, `source`, `deferred` ; depuis `1.1` `side`, `sheet` (identifiant de la feuille), `tank`, `by`, `level_mm`, `hourly_m3`, `cumulative_m3`, `cumulative_mt`, `note` |
+| `safety_checklists` (`1.1`, si l'exportateur lit la liste de contrôle) | `version`, `status` (`OPEN`, `SIGNED`, `CANCELLED`), `opened_by`, `opened_at`, `signed_at`, `repeat_interval_h`, `items` (les points tels que posés à l'ouverture : `code`, `part`, `side`, `kind`, `fr`, `en`, `repetitive`), `answers` (`item`, `side`, `state`, `value`, `remark`, `repetition`, `by`, `at`, `seal`), `signatures` (`side`, `by`, `at`, `seal`) |
 | `disputes` | `reference`, `subject`, `target`, `status`, `opened_role`, `counterpart_role`, `opened_at`, `closed_at`, `automatic` et, si l'exportateur est partie ou capitainerie, `entries` (`kind`, `role`, `by`, `text`, `at`, `seal`) |
 | `alerts` | `kind`, `emitted_at`, `message_fr`, `message_en`, `blocking` |
 | `journal` | entrées visibles par l'exportateur : `seq`, `at`, `action`, `role`, `actor`, `summary_fr`, `summary_en`, `hash`, `prev_hash`, `timestamp_provider` |
@@ -62,7 +68,7 @@ Toutes les valeurs successives sont présentes : une rectification, une correcti
 
 ```json
 {
-  "format": "fluxaa-port-export/1.0",
+  "format": "fluxaa-port-export/1.2",
   "scope": "port",
   "port": "TGLFW",
   "generated_at": "2026-10-24T21:40:12.031+00:00",
@@ -119,4 +125,4 @@ Le script n'utilise que la bibliothèque standard de Python ; il signale tout fi
 
 ## 9. Évolution du format
 
-Les versions `1.x` n'ajoutent que des champs : un lecteur écrit pour `1.0` lit les suivantes en ignorant ce qu'il ne connaît pas. Un changement incompatible passerait à `2.0`, documenté ici avec un convertisseur.
+Les versions `1.x` n'ajoutent que des champs : un lecteur écrit pour `1.0` lit les suivantes en ignorant ce qu'il ne connaît pas. `1.1` (plateforme 1.4) ajoute `measurements[].tank_readings`, `pumping_sheets`, les champs de bord et de feuille de `pumping_log` et `safety_checklists` ; ces trois clés n'apparaissent que si l'exportateur lit le rapport correspondant (paramétrage du port). Un changement incompatible passerait à `2.0`, documenté ici avec un convertisseur. `1.2` (plateforme 1.5) ajoute `vessel.kind`, `cargo_kind`, `planned_pump_hours`, `batch_reference`, `sts_role`, `linked_call`, `validity`, `billing_basis`, `parties[].principal_agent` / `access` / `scopes`, `tasks[].green_light` / `requested_at_creation` ; le manifeste et les sceaux ne changent pas. `1.3` (plateforme 1.6) ajoute `link_kind` et `operation_details` à `call.json`.

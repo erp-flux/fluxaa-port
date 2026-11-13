@@ -12,11 +12,13 @@ from django.utils.translation import gettext as _
 from apps.core.roles import AUDIT_ROLES, EXPORT_ROLES, OVERVIEW_ROLES, role_label
 
 from ..models import (
+    DEFAULT_REPORT_READERS,
     CallStatus,
     Confidentiality,
     Dispute,
     Document,
     Milestone,
+    ReportAccess,
     ServiceRequest,
     Task,
     Thread,
@@ -134,6 +136,8 @@ def is_dispute_opener(actor, dispute: Dispute) -> bool:
 
 # ============================================================================ calls
 def can_see_full_call(actor) -> bool:
+    """The product, the quantity and what the agency declared at the announcement (v1.6): for every reader of the
+    call but a provider, who reads what concerns it in the request addressed to it"""
     return not only_provider(actor)
 
 
@@ -278,6 +282,17 @@ def can_see_refusal_reason(actor, req: ServiceRequest) -> bool:
 
 
 # ============================================================================ documents
+def document_readers(doc: Document) -> set[str]:
+    """The roles that read a restricted (N2) document besides its issuer: the listed readers and the required
+    signers, plus — unless the document type limits its readers to that list — the coordinating roles (agency,
+    harbour master, port management) and the owner. A laboratory's quality certificate limits its readers
+    (FLX-CDC-002 v1.4, EXG-Q-06): the agency does not read it."""
+    allowed = set(doc.required_signers or []) | set(doc.type.audience_roles or []) | set(doc.audience_roles or [])
+    if not doc.type.readers_exact:
+        allowed |= set(N2_SUPERVISORS) | {"COM"}
+    return allowed
+
+
 def document_visible(actor, doc: Document) -> bool:
     if actor.is_system:
         return True
@@ -290,9 +305,7 @@ def document_visible(actor, doc: Document) -> bool:
         return bool(roles & roles_with("V", "document"))
     if doc.confidentiality == Confidentiality.N3:
         return doc.counterpart_role in roles  # the issuing side is its own organisation, checked above
-    allowed = set(N2_SUPERVISORS) | {"COM"} | set(doc.required_signers or []) | set(doc.type.audience_roles or []) \
-        | set(doc.audience_roles or [])
-    return bool(roles & allowed)
+    return bool(roles & document_readers(doc))
 
 
 def visible_documents(actor, call):
@@ -302,9 +315,54 @@ def visible_documents(actor, call):
     return [d for d in qs if document_visible(actor, d)]
 
 
+# ============================================================================ reports decided at parametrage
+def report_readers(port, code: str) -> set[str]:
+    """The roles that read a live report of the port (pumping log, validated measurements, safety checklist,
+    call board): the port administrator's setting, else the catalogue's default (FLX-CDC-002 v1.4, EXG-Q-08)."""
+    row = ReportAccess.objects.filter(port=port, code=code).first()
+    if row is not None:
+        return set(row.reader_roles or [])
+    return set(DEFAULT_REPORT_READERS.get(code, []))
+
+
+def can_read_report(actor, code: str) -> bool:
+    if actor is None:
+        return False
+    if actor.is_system:
+        return True
+    return bool(set(actor.roles) & report_readers(actor.port, code))
+
+
 # ============================================================================ measurements
 def measurements_visible(actor) -> bool:
-    return actor.is_system or can(actor, "V", "measurement")
+    """Quantities and validated tank readings: the readers the port decided at parametrage."""
+    return can_read_report(actor, "MEASUREMENTS")
+
+
+def acts_for_side(actor, side: str, org_id=None) -> bool:
+    """The actor is the party of *side*: the ship through the master's link (or a NAV account), the shore through
+    the terminal that entered the record (or, with no record yet, the terminal that speaks for the shore)."""
+    if actor is None:
+        return False
+    if actor.is_system:
+        return True
+    if side == "SHIP":
+        return "NAV" in actor.roles
+    if "TER" not in actor.roles:
+        return False
+    if org_id is not None:
+        return actor.org is not None and actor.org.pk == org_id
+    return True
+
+
+def tank_reading_visible(actor, reading) -> bool:
+    """A validated reading is read by the measurement readers; a pending or rejected one by its own side and the
+    surveyor only (FLX-CDC-002 v1.4, EXG-Q-05)."""
+    if actor.is_system:
+        return True
+    if reading.is_validated:
+        return measurements_visible(actor)
+    return "INS" in actor.roles or acts_for_side(actor, reading.side, reading.entered_org_id)
 
 
 # ============================================================================ disputes
@@ -401,6 +459,63 @@ def call_queryset_for_user(user):
         parties__revoked_at__isnull=True,
         parties__valid_from__lte=now,
     ).distinct()
+
+
+# ============================================================================ controlled access (v1.5, EXG-R-04)
+def is_principal_agent(actor, call) -> bool:
+    """The agency that created the call: it declares, revises, cancels and closes it, and grants the other
+    parties their access. A co-nominated agency acts within the access it was given."""
+    return actor.is_system or (actor.has("AGE") and actor.org is not None and actor.org.pk == call.agency_id)
+
+
+def access_of(actor, call) -> tuple[str, set[str] | None]:
+    """The access the actor holds on the file: ``("FULL", None)`` — every tab, acts within its role —,
+    ``("PARTIAL", {tabs})`` — the tabs listed, acts within them —, ``("READ", None)`` — every tab, no act.
+    The system, the account-less links (a master, a party's link: their role is their whole access), the
+    principal agent and the port's own parties hold the file in full."""
+    if actor.is_system or actor.master is not None or actor.org is None:
+        return "FULL", None
+    if is_principal_agent(actor, call):
+        return "FULL", None
+    from django.utils import timezone
+
+    now = timezone.now()
+    rows = [p for p in call.parties.all() if p.organization_id == actor.org.pk and p.role in actor.roles and p.is_active_at(now)]
+    if not rows or any(p.access == "FULL" for p in rows):
+        return "FULL", None
+    partial = [p for p in rows if p.access == "PARTIAL"]
+    if partial:
+        scopes = set()
+        for p in partial:
+            scopes.update(p.scopes or [])
+        return "PARTIAL", scopes
+    return "READ", None
+
+
+def allowed_tabs(actor, call) -> set[str] | None:
+    """The tabs of the file the actor may open (None = every tab)."""
+    access, scopes = access_of(actor, call)
+    return scopes if access == "PARTIAL" else None
+
+
+def can_act_in(actor, call, scope: str) -> bool:
+    """May the actor act (enter, decide, upload…) in this part of the file? Reading only never acts; a partial
+    access acts in its tabs only."""
+    access, scopes = access_of(actor, call)
+    if access == "READ":
+        return False
+    if access == "PARTIAL":
+        return scope in (scopes or set())
+    return True
+
+
+def require_act(actor, call, scope: str) -> None:
+    access, scopes = access_of(actor, call)
+    if access == "READ":
+        raise PermissionRefused(_("Your access to this call is reading only: the principal agent gives the right to act."))
+    if access == "PARTIAL" and scope not in (scopes or set()):
+        raise PermissionRefused(_("Your access to this call does not cover this part of the file (%(scope)s): the principal "
+                                  "agent gives it.") % {"scope": scope})
 
 
 def draft_visible(actor, call) -> bool:

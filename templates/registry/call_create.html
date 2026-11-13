@@ -1,23 +1,40 @@
-{% extends "base.html" %}{% load i18n %}
+{% extends "base.html" %}{% load i18n fluxaa %}
 {% block title %}{% trans "Announce a call" %}{% endblock %}
 {% block content %}
 <div class="pagehead"><div><h1>{% trans "Announce a call" %}</h1>
-<p>{% trans "The call is created as a draft. The platform instantiates the tasks of every party from the port's templates; the parties are notified when you declare it." %}</p></div></div>
-<form method="post" class="form" style="max-width:980px">{% csrf_token %}
+<p>{% trans "The call is created as a draft. The platform instantiates the tasks of every party from the port's templates for the kind of cargo you choose; the form adapts to the operations you choose — each model asks the port's own questions, a transfer or a double banking names the other vessel and its agency; the parties are notified when you declare it." %}</p></div></div>
+<form method="post" class="form" style="max-width:1040px" data-announce>{% csrf_token %}
   <fieldset>
     <legend>{% trans "Vessel" %}</legend>
     <div class="row">
       <div><label for="vessel">{% trans "Registered vessel" %}</label>
         <select id="vessel" name="vessel"><option value="">— {% trans "new vessel" %} —</option>
-          {% for v in vessels %}<option value="{{ v.pk }}" {% if data.vessel == v.pk|stringformat:'s' %}selected{% endif %}>{{ v.name }} — IMO {{ v.imo }}</option>{% endfor %}</select></div>
+          {% for v in vessels %}<option value="{{ v.pk }}" {% if data.vessel == v.pk|stringformat:'s' %}selected{% endif %}>{{ v.name }} — IMO {{ v.imo }} ({{ v.get_vessel_kind_display }})</option>{% endfor %}</select></div>
     </div>
-    <details class="action" {% if not vessels %}open{% endif %}><summary>{% trans "Register a new vessel" %}</summary><div class="row">
+    <details class="action" {% if not vessels or data.new_imo %}open{% endif %}><summary>{% trans "Register a new vessel" %}</summary><div class="row">
       <div><label for="new_imo">IMO</label><input id="new_imo" name="new_imo" inputmode="numeric" pattern="[0-9]{7}" value="{{ data.new_imo }}"></div>
       <div><label for="new_name">{% trans "Name" %}</label><input id="new_name" name="new_name" value="{{ data.new_name }}"></div>
       <div><label for="new_flag">{% trans "Flag" %}</label><input id="new_flag" name="new_flag" value="{{ data.new_flag }}"></div>
-      <div><label for="new_type">{% trans "Type" %}</label><input id="new_type" name="new_type" placeholder="{% trans 'Product tanker' %}" value="{{ data.new_type }}"></div>
+      <div><label for="new_kind">{% trans "Kind of vessel" %}</label><select id="new_kind" name="new_kind">{% for value, label in vessel_kinds %}<option value="{{ value }}" {% if data.new_kind == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div><label for="new_type">{% trans "Type (detail)" %}</label><input id="new_type" name="new_type" placeholder="{% trans 'Product tanker, geared bulk carrier, PCTC…' %}" value="{{ data.new_type }}"></div>
       <div><label for="new_dwt">DWT</label><input id="new_dwt" name="new_dwt" type="number" min="0" value="{{ data.new_dwt }}"></div>
     </div></details>
+  </fieldset>
+
+  <fieldset>
+    <legend>{% trans "Cargo" %}</legend>
+    <div class="label">{% trans "Kind of cargo" %} <span class="hint">{% trans "It chooses the operation models, the units, the measurement methods and the safety checklist." %}</span></div>
+    <div class="checks" role="radiogroup">
+      {% for value, label in cargo_kinds %}<label><input type="radio" name="cargo_kind" value="{{ value }}" data-cargo-kind required {% if data.cargo_kind == value or not data.cargo_kind and value == "LIQUID" %}checked{% endif %}> {{ label }}</label>{% endfor %}
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div><label for="product">{% trans "Product / nature of the cargo" %}</label><input id="product" name="product" value="{{ data.product }}" placeholder="{% trans 'Gasoil 10 ppm, clinker, containers, vehicles…' %}"></div>
+      <div><label for="quantity">{% trans "Declared quantity" %}</label><input id="quantity" name="quantity" type="number" step="0.001" min="0" value="{{ data.quantity }}"></div>
+      <div><label for="quantity_unit">{% trans "Unit" %}</label><select id="quantity_unit" name="quantity_unit">{% for value, label, kinds in units %}<option value="{{ value }}" data-cargo="{{ kinds }}" {% if data.quantity_unit == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div><label for="planned_pump_hours">{% trans "Planned operation time (h)" %}</label><input id="planned_pump_hours" name="planned_pump_hours" type="number" step="0.25" min="0" value="{{ data.planned_pump_hours }}"></div>
+      <div><label for="batch_reference">{% trans "Batch / booking reference" %}</label><input id="batch_reference" name="batch_reference" value="{{ data.batch_reference }}" maxlength="60"></div>
+    </div>
+    <p class="hint">{% trans "The planned operation time and the batch reference feed the time sheet (required rate, performance)." %}</p>
   </fieldset>
 
   <fieldset>
@@ -29,35 +46,100 @@
     <div class="row" style="margin-top:10px">
       <div><label for="requested_berth">{% trans "Requested berth or area (optional)" %}</label>
         <select id="requested_berth" name="requested_berth"><option value="">—</option>
-        {% for b in berths %}<option value="{{ b.pk }}">{{ b.code }} — {{ b.name }} ({{ b.get_kind_display }})</option>{% endfor %}</select></div>
+        {% for b in berths %}<option value="{{ b.pk }}" {% if data.requested_berth == b.pk|stringformat:'s' %}selected{% endif %}>{{ b.code }} — {{ b.name }} ({{ b.get_kind_display }})</option>{% endfor %}</select></div>
     </div>
-    <div class="label" style="margin-top:10px">{% trans "Operations" %}</div>
-    <div class="checks">{% for t in operations %}<label title="{{ t.description_fr }}"><input type="checkbox" name="operations" value="{{ t.code }}"> <span class="code">{{ t.code }}</span> {{ t.name }}</label>{% endfor %}</div>
+    <div hx-get="{% url 'registry:berth_occupation' %}" hx-trigger="change from:#requested_berth, change from:#eta, change from:#etb, change from:#etd, change from:#vessel, change from:#new_dwt, change from:[name=cargo_kind]" hx-include="#requested_berth, #eta, #etb, #etd, #vessel, #new_imo, #new_name, #new_dwt, [name=cargo_kind]" hx-swap="innerHTML" data-occupation style="margin-top:8px"></div>
+    <div class="label" style="margin-top:10px">{% trans "Operations" %} <span class="hint">{% trans "The models offered follow the kind of cargo; the generic model suits any call not listed." %}</span></div>
+    <div class="checks">{% for t in operations %}<label title="{{ t.description_fr }}" data-operation data-cargo="{{ t.cargo_kinds|join:' ' }}"><input type="checkbox" name="operations" value="{{ t.code }}" data-template="{{ t.code }}" {% if t.code in data.operations_list %}checked{% endif %}> <span class="code">{{ t.code }}</span> {{ t.name }}</label>{% endfor %}</div>
     <div class="label" style="margin-top:10px">{% trans "Additional modules" %} <span class="hint">{% trans "The SPM module and the anchorage stay are added automatically when the area calls for them." %}</span></div>
-    <div class="checks">{% for t in modules %}<label><input type="checkbox" name="modules" value="{{ t.code }}"> <span class="code">{{ t.code }}</span> {{ t.name }}</label>{% endfor %}</div>
-    <div class="row" style="margin-top:10px">
-      <div><label for="linked_call">{% trans "Partner call (STS, double banking)" %}</label>
-        <select id="linked_call" name="linked_call"><option value="">—</option>{% for p in partners %}<option value="{{ p.pk }}">{{ p.reference }} — {{ p.vessel.name }}</option>{% endfor %}</select></div>
-    </div>
+    <div class="checks">{% for t in modules %}<label data-cargo="{{ t.cargo_kinds|join:' ' }}"><input type="checkbox" name="modules" value="{{ t.code }}" data-template="{{ t.code }}" {% if t.code in data.modules_list %}checked{% endif %}> <span class="code">{{ t.code }}</span> {{ t.name }}</label>{% endfor %}</div>
   </fieldset>
 
+  <fieldset data-sts>
+    <legend>{% trans "Ship-to-ship transfer: the two vessels" %}</legend>
+    <p class="hint">{% trans "In an STS transfer each vessel has its own call, its own agency and its own team. Say which vessel this one is, then name the partner: a call already announced — yours, or a call of another agency shown on the placement conference, such as the mother vessel several vessels come to —, or a vessel without a call yet: its call is created at once, under its own agency if you name one (you keep a co-agency access to it). A call of another agency is only named: its agency, its master and the harbour master are told, and the two files read each other once the harbour master authorises the STS area and window." %}</p>
+    <div class="checks" role="radiogroup">
+      {% for value, label in sts_roles %}<label><input type="radio" name="sts_role" value="{{ value }}" {% if data.sts_role == value %}checked{% endif %}> {{ label }}</label>{% endfor %}
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div><label for="linked_call">{% trans "Partner call already announced" %}</label>
+        <select id="linked_call" name="linked_call"><option value="">—</option>
+          <optgroup label="{% trans 'My calls' %}">{% for p in partners %}<option value="{{ p.pk }}" {% if data.linked_call == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.reference }} — {{ p.vessel.name }}</option>{% endfor %}</optgroup>
+          {% if sts_candidates %}<optgroup label="{% trans 'Calls of the port — other agencies (placement conference)' %}">{% for p in sts_candidates %}<option value="{{ p.pk }}" {% if data.linked_call == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.vessel.name }} — {{ p.reference }} — {{ p.agency }}{% if p.sts_role %} — {{ p.get_sts_role_display }}{% endif %}</option>{% endfor %}</optgroup>{% endif %}
+        </select></div>
+      <div><label for="partner_vessel">{% trans "Or the partner vessel (registered)" %}</label>
+        <select id="partner_vessel" name="partner_vessel"><option value="">—</option>{% for v in vessels %}<option value="{{ v.pk }}" {% if data.partner_vessel == v.pk|stringformat:'s' %}selected{% endif %}>{{ v.name }} — IMO {{ v.imo }}</option>{% endfor %}</select></div>
+      <div><label for="partner_agency">{% trans "Agency of the partner vessel" %}</label>
+        <select id="partner_agency" name="partner_agency"><option value="">{% trans "— mine —" %}</option>{% for o in agencies %}<option value="{{ o.pk }}" {% if data.partner_agency == o.pk|stringformat:'s' %}selected{% endif %}>{{ o.name }}</option>{% endfor %}</select>
+        <p class="hint">{% trans "For a vessel without a call yet; a call of the port already has its agency." %}</p></div>
+    </div>
+    <details class="action" {% if data.partner_imo %}open{% endif %}><summary>{% trans "Or register the partner vessel" %}</summary><div class="row">
+      <div><label for="partner_imo">IMO</label><input id="partner_imo" name="partner_imo" inputmode="numeric" pattern="[0-9]{7}" value="{{ data.partner_imo }}"></div>
+      <div><label for="partner_name">{% trans "Name" %}</label><input id="partner_name" name="partner_name" value="{{ data.partner_name }}"></div>
+      <div><label for="partner_flag">{% trans "Flag" %}</label><input id="partner_flag" name="partner_flag" value="{{ data.partner_flag }}"></div>
+      <div><label for="partner_kind">{% trans "Kind of vessel" %}</label><select id="partner_kind" name="partner_kind">{% for value, label in vessel_kinds %}<option value="{{ value }}" {% if data.partner_kind == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div><label for="partner_dwt">DWT</label><input id="partner_dwt" name="partner_dwt" type="number" min="0" value="{{ data.partner_dwt }}"></div>
+    </div></details>
+    <details class="action" {% if data.partner_agency_name %}open{% endif %}><summary>{% trans "Its agency is not in the list" %}</summary><div class="row">
+      <div><label for="partner_agency_name">{% trans "Name of the agency" %}</label><input id="partner_agency_name" name="partner_agency_name" maxlength="200" value="{{ data.partner_agency_name }}"></div>
+      <div><label for="partner_agency_email">{% trans "E-mail of the agency" %}</label><input id="partner_agency_email" name="partner_agency_email" type="email" value="{{ data.partner_agency_email }}"></div>
+    </div>
+    <p class="hint">{% trans "For a vessel without a call yet. The agency is registered in the port as a shipping agency: the port's administrator is told, completes its record and opens its accounts. It alone declares its vessel's call; until then you keep an associated-agency access on it." %}</p></details>
+  </fieldset>
+
+  <fieldset data-double-banking hidden>
+    <legend>{% trans "Double banking: the two vessels" %}</legend>
+    <p class="hint">{% trans "Two vessels moored side by side at the berth, each with its own call, agency and master. Say whether this vessel comes alongside the other (outside) or receives it (inside), then name the other vessel: a call of the port — of any agency shown on the placement conference —, a registered vessel, or a new one whose call is created at once under its own agency. The inner vessel loses its freedom to sail: its express consent is never presumed, and the harbour master authorises the configuration." %}</p>
+    <div class="checks" role="radiogroup">
+      <label><input type="radio" name="db_position" value="OUTER" {% if not data.db_position or data.db_position == "OUTER" %}checked{% endif %}> {% trans "This vessel comes alongside the vessel at the berth (outside)" %}</label>
+      <label><input type="radio" name="db_position" value="INNER" {% if data.db_position == "INNER" %}checked{% endif %}> {% trans "This vessel is at the berth and receives the other (inside)" %}</label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div><label for="db_partner_call">{% trans "The other vessel: a call of the port" %}</label>
+        <select id="db_partner_call" name="db_partner_call"><option value="">—</option>{% for p in db_candidates %}<option value="{{ p.pk }}" {% if data.db_partner_call == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.vessel.name }} — {{ p.reference }} — {{ p.agency }}{% if p.berth %} — {{ p.berth.code }}{% elif p.requested_berth %} — {{ p.requested_berth.code }}{% endif %}{% if p.etb %} — ETB {{ p.etb|date:"d/m H:i" }}{% endif %}</option>{% endfor %}</select></div>
+      <div><label for="db_partner_vessel">{% trans "Or a registered vessel without a call yet" %}</label>
+        <select id="db_partner_vessel" name="db_partner_vessel"><option value="">—</option>{% for v in vessels %}<option value="{{ v.pk }}" {% if data.db_partner_vessel == v.pk|stringformat:'s' %}selected{% endif %}>{{ v.name }} — IMO {{ v.imo }}</option>{% endfor %}</select></div>
+      <div><label for="db_partner_agency">{% trans "Agency of the other vessel" %}</label>
+        <select id="db_partner_agency" name="db_partner_agency"><option value="">{% trans "— mine —" %}</option>{% for o in agencies %}<option value="{{ o.pk }}" {% if data.db_partner_agency == o.pk|stringformat:'s' %}selected{% endif %}>{{ o.name }}</option>{% endfor %}</select>
+        <p class="hint">{% trans "For a vessel without a call yet; a call of the port already has its agency." %}</p></div>
+    </div>
+    <details class="action" {% if data.db_imo %}open{% endif %}><summary>{% trans "Or register the other vessel" %}</summary><div class="row">
+      <div><label for="db_imo">IMO</label><input id="db_imo" name="db_imo" inputmode="numeric" pattern="[0-9]{7}" value="{{ data.db_imo }}"></div>
+      <div><label for="db_name">{% trans "Name" %}</label><input id="db_name" name="db_name" value="{{ data.db_name }}"></div>
+      <div><label for="db_flag">{% trans "Flag" %}</label><input id="db_flag" name="db_flag" value="{{ data.db_flag }}"></div>
+      <div><label for="db_kind">{% trans "Kind of vessel" %}</label><select id="db_kind" name="db_kind">{% for value, label in vessel_kinds %}<option value="{{ value }}" {% if data.db_kind == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div><label for="db_dwt">DWT</label><input id="db_dwt" name="db_dwt" type="number" min="0" value="{{ data.db_dwt }}"></div>
+    </div></details>
+    <details class="action" {% if data.db_agency_name %}open{% endif %}><summary>{% trans "Its agency is not in the list" %}</summary><div class="row">
+      <div><label for="db_agency_name">{% trans "Name of the agency" %}</label><input id="db_agency_name" name="db_agency_name" maxlength="200" value="{{ data.db_agency_name }}"></div>
+      <div><label for="db_agency_email">{% trans "E-mail of the agency" %}</label><input id="db_agency_email" name="db_agency_email" type="email" value="{{ data.db_agency_email }}"></div>
+    </div>
+    <p class="hint">{% trans "For a vessel without a call yet. The agency is registered in the port as a shipping agency: the port's administrator is told, completes its record and opens its accounts. It alone declares its vessel's call; until then you keep an associated-agency access on it." %}</p></details>
+  </fieldset>
+
+  {% for t in intake %}
+  <fieldset data-intake="{{ t.code }}" hidden>
+    <legend><span class="code">{{ t.code }}</span> {{ t.name }} — {% trans "what the port asks for this operation" %}</legend>
+    <div class="row">{% include "registry/_schema_fields.html" with fields=t.fields prefix="op_"|add:t.code|add:"_" idprefix="op_"|add:t.code|add:"_" deferred="1" %}</div>
+  </fieldset>
+  {% endfor %}
+
   <fieldset>
-    <legend>{% trans "Times" %} <span class="hint">({% trans "port time" %} {{ PORT.timezone }})</span></legend>
+    <legend>{% trans "Times and validity of the announcement" %} <span class="hint">({% trans "port time" %} {{ PORT.timezone }})</span></legend>
     <div class="row">
       <div><label for="eta">ETA *</label><input type="datetime-local" id="eta" name="eta" required value="{{ data.eta }}"></div>
       <div><label for="etb">ETB</label><input type="datetime-local" id="etb" name="etb" value="{{ data.etb }}"></div>
       <div><label for="ets">{% trans "Start of operations (est.)" %}</label><input type="datetime-local" id="ets" name="ets" value="{{ data.ets }}"></div>
       <div><label for="etc">{% trans "Completion (est.)" %}</label><input type="datetime-local" id="etc" name="etc" value="{{ data.etc }}"></div>
       <div><label for="etd">ETD</label><input type="datetime-local" id="etd" name="etd" value="{{ data.etd }}"></div>
+      <div><label for="validity_days">{% trans "Validity of the announcement (days)" %} *</label><input type="number" id="validity_days" name="validity_days" min="1" max="{{ PORT.max_validity_days }}" required value="{{ data.validity_days|default:PORT.default_validity_days }}"></div>
     </div>
+    <p class="hint">{% blocktrans with max=PORT.max_validity_days %}The announcement is valid for this period, kept for billing. A call not yet alongside at its end becomes obsolete and is announced again; a call alongside is never cut off, its overrun is counted. Between 1 and {{ max }} days for this port.{% endblocktrans %}</p>
   </fieldset>
 
   <fieldset>
-    <legend>{% trans "Cargo and voyage" %}</legend>
+    <legend>{% trans "Voyage" %}</legend>
     <div class="row">
-      <div><label for="product">{% trans "Product" %}</label><input id="product" name="product" value="{{ data.product }}" placeholder="{% trans 'Gasoil 10 ppm' %}"></div>
-      <div><label for="quantity">{% trans "Declared quantity" %}</label><input id="quantity" name="quantity" type="number" step="0.001" min="0" value="{{ data.quantity }}"></div>
-      <div><label for="quantity_unit">{% trans "Unit" %}</label><select id="quantity_unit" name="quantity_unit"><option value="MT">MT</option><option value="M3">m³ @15 °C</option><option value="BBL">bbl @60 °F</option></select></div>
       <div><label for="voyage">{% trans "Voyage" %}</label><input id="voyage" name="voyage" value="{{ data.voyage }}"></div>
       <div><label for="last_port">{% trans "Last port" %}</label><input id="last_port" name="last_port" value="{{ data.last_port }}"></div>
       <div><label for="next_port">{% trans "Next port" %}</label><input id="next_port" name="next_port" value="{{ data.next_port }}"></div>
@@ -65,8 +147,43 @@
   </fieldset>
 
   <fieldset>
-    <legend>{% trans "Parties you invite" %}</legend>
-    <p class="hint">{% trans "The port authorities (harbour master, port authority, customs-immigration-health, security, marine services) are invited automatically. Add every other party of the call — terminal, surveyor, laboratory, owner, charterer, receiver, STS provider, bunker supplier, waste contractor, pilots… — the list is open: choose a registered organisation or name a new one, with its kind (suggested or free), its e-mail and its phone. A party without an account receives its own access by e-mail at the declaration." %}</p>
+    <legend>{% trans "Documents expected" %}</legend>
+    <p class="hint">{% trans "The documents the port's templates require are listed for the operations chosen; add the optional ones you expect, and any other document — the list is open. Each becomes a task of the party that issues it." %}</p>
+    <div class="label">{% trans "Required by the templates" %}</div>
+    <ul class="small" data-required-docs>
+      {% for code, docs in template_docs.items %}{% for d in docs %}<li data-template="{{ code }}" {% if code != "M0" %}hidden{% endif %}><span class="code">{{ code }}:{{ d.number }}</span> {{ d.title }} — <span class="role">{{ d.role }}</span></li>{% endfor %}{% endfor %}
+    </ul>
+    <div class="label" style="margin-top:10px">{% trans "Optional documents of the port's catalogue" %}</div>
+    <div class="checks" style="max-height:220px;overflow:auto">
+      {% for t in optional_doc_types %}<label title="{{ t.issuer_roles|join:', ' }}"><input type="checkbox" name="expected_documents" value="{{ t.code }}" {% if t.code in data.expected_documents_list %}checked{% endif %}> {{ t.label }} <span class="small muted">({{ t.issuer_roles|join:", " }})</span></label>{% endfor %}
+    </div>
+    <div class="label" style="margin-top:10px">{% trans "Other documents (open list)" %}</div>
+    <div class="tablewrap"><table class="grid" data-custom-docs>
+      <thead><tr><th>{% trans "Document" %}</th><th>{% trans "Provided by" %}</th><th>{% trans "Hours before ETA" %}</th><th></th></tr></thead>
+      <tbody>
+      {% for row in custom_rows %}
+      <tr data-custom-row>
+        <td><input name="custom_doc_label" value="{{ row.label }}" maxlength="200" aria-label="{% trans 'Document' %}" placeholder="{% trans 'e.g. certificate of origin, phytosanitary certificate…' %}"></td>
+        <td><select name="custom_doc_role" aria-label="{% trans 'Provided by' %}">{% for r in doc_roles %}<option value="{{ r }}" {% if row.role == r %}selected{% endif %}>{{ r }} — {{ r|role_name }}</option>{% endfor %}</select></td>
+        <td><input name="custom_doc_hours" type="number" min="0" value="{{ row.hours|default:'24' }}" aria-label="{% trans 'Hours before ETA' %}" style="width:90px"></td>
+        <td><button type="button" class="linkbtn small" data-remove-custom aria-label="{% trans 'Remove' %}">✕</button></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    <div class="actions" style="margin-top:6px"><button type="button" class="btn quiet small" data-add-custom>+ {% trans "Add a document" %}</button></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>{% trans "Parties you invite and their access" %}</legend>
+    <p class="hint">{% trans "The port authorities (harbour master, port authority, customs-immigration-health, security, marine services) are invited automatically. Add every other party of the call — terminal, surveyor, laboratory, owner, charterer, receiver, STS provider, bunker supplier, waste contractor, pilots, and a co-nominated agency for part of the operations — the list is open: choose a registered organisation or name a new one. You are the principal agent: you give each party all of the file, part of it, or reading only; you can change it later on the Parties tab. A party without an account receives its own access by e-mail at the declaration." %}</p>
+    <div data-party-hints hidden>
+      <div class="label">{% trans "Parties the operations chosen usually bring to the call" %} <span class="hint">{% trans "A suggestion from port practice: add the ones that take part, name or pick the organisation." %}</span></div>
+      <ul class="small plain">
+        {% for code, hints in party_hints.items %}{% for h in hints %}<li data-template="{{ code }}" hidden><span class="code">{{ code }}</span> <b>{{ h.role }}</b> — {{ h.label }} <span class="muted">— {{ h.why }}</span>
+          <button type="button" class="btn quiet small" data-add-party-role="{{ h.role }}" data-add-party-kind="{{ h.label }}">+ {% trans "Add" %}</button></li>{% endfor %}{% endfor %}
+      </ul>
+    </div>
     {% include "registry/_party_rows.html" with rows=party_rows kinds=party_kinds %}
   </fieldset>
   <div class="actions"><button class="btn">{% trans "Create the draft call" %}</button><a class="btn quiet" href="{% url 'registry:call_list' %}">{% trans "Cancel" %}</a></div>

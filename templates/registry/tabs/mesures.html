@@ -1,10 +1,15 @@
 {% load i18n fluxaa %}
-{% if measurements_hidden %}<section class="section"><p class="empty">{% trans "Quantities are not visible to your role." %}</p></section>{% else %}
-<div class="split">
-  <div>
+{% if measurements_hidden %}<section class="section"><p class="empty">{% trans "Quantities and the pumping log are not visible to your role." %}</p></section>{% else %}
+    {% if quantities_visible %}
     <section class="section">
       <div class="section-head"><h2>{% trans "Quantities — ship, shore, surveyor" %}</h2>
         <span class="small muted">{% trans "Each party enters its own figure. The platform computes the difference and never designates a reference value." %}</span></div>
+      {% if can_open %}<details class="action" style="margin-bottom:10px"><summary>{% trans "Open a measurement" %}</summary><div>
+        <form method="post" action="{% url 'registry:call_action' call.pk 'measurement_open' %}" class="form">{% csrf_token %}<input type="hidden" name="back" value="?tab=mesures">
+          <div class="row"><div><label for="mkind">{% trans "Kind" %}</label><select id="mkind" name="kind">{% for v, l in kinds %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+          <div><label for="munit">{% trans "Unit" %}</label><select id="munit" name="unit"><option value="MT">MT</option><option value="M3">m³ @15 °C</option><option value="BBL">bbl @60 °F</option></select></div></div>
+          <p class="hint">{% trans "Then each side enters its total and reads its tanks (the ship its cargo tanks, the terminal its shore tanks); the surveyor validates the tank readings before the other parties see them." %}</p>
+          <button class="btn secondary">{% trans "Open" context "verb" %}</button></form></div></details>{% endif %}
       {% for row in measure_rows %}{% with m=row.m %}
       <article style="border-top:1px solid var(--line);padding:12px 0" id="q{{ m.pk }}">
         <div class="section-head" style="margin:0"><b>{{ m.get_kind_display }}</b> <span class="small muted">{{ m.product }} — {{ m.unit }} — {% trans "tolerance" %} {{ m.tolerance_pct }} %</span></div>
@@ -16,7 +21,7 @@
             <td>{% for d in row.differences %}<div class="small" style="white-space:nowrap">{{ parties_labels|get:d.a }} − {{ parties_labels|get:d.b|lower }} <span class="num">{{ d.difference|floatformat:"3g" }} ({{ d.percent|floatformat:3 }} %)</span>
                 {% if d.a == "SHIP" and d.b == "SHORE" %}{% if d.exceeds %}<span class="chip late">{% trans "outside tolerance" %}</span>{% else %}<span class="chip done">{% trans "within tolerance" %}</span>{% endif %}{% endif %}</div>{% endfor %}
               {% if not m.is_complete %}<span class="chip pending">{% trans "ship or shore value missing — blocks closure" %}</span>{% endif %}</td></tr></table></div>
-        {% if my_parties %}<form method="post" action="{% url 'registry:call_action' call.pk 'measurement_value' %}" class="actions" style="margin-top:8px">{% csrf_token %}
+        {% if my_parties and not call.is_terminal_state %}<form method="post" action="{% url 'registry:call_action' call.pk 'measurement_value' %}" class="actions" style="margin-top:8px">{% csrf_token %}
           <input type="hidden" name="measurement_id" value="{{ m.pk }}"><input type="hidden" name="back" value="?tab=mesures#q{{ m.pk }}">
           <select name="party" aria-label="{% trans 'Party' %}" style="max-width:160px">{% for p in my_parties %}<option value="{{ p }}">{{ parties_labels|get:p }}</option>{% endfor %}</select>
           {% if assistant.bl_prefill and m.kind == "BL" %}<span class="prefill-tag">{% trans "pre-filled from the validated bill of lading" %}</span>{% endif %}
@@ -24,6 +29,65 @@
           <input name="temperature_c" inputmode="decimal" placeholder="°C" aria-label="{% trans 'Temperature' %}" style="max-width:90px">
           <input name="density" inputmode="decimal" placeholder="{% trans 'Density' %}" aria-label="{% trans 'Density' %}" style="max-width:110px">
           <button class="btn small">{% trans "Enter my value" %}</button></form>{% endif %}
+
+        {# ------------------------------------------------------------ tanks: the ship's, read by the ship; the terminal's, read by the terminal; validated by the surveyor #}
+        {% for side, side_label, side_hint in tank_sides %}
+        {% with t=row.tanks|get:side %}
+        <details class="action" style="margin-top:8px" {% if t.readings or my_side == side %}open{% endif %}>
+          <summary>{{ side_label }} <span class="small muted">({{ side_hint }})</span>
+            {% if t.count %}<span class="chip done">{{ t.count }} {% trans "validated" %} — <span class="num">{{ t.validated|floatformat:"-3g" }}</span></span>{% endif %}
+            {% if t.pending %}<span class="chip pending">{{ t.pending }} {% trans "awaiting the surveyor" %}</span>{% endif %}
+            {% if t.rejected %}<span class="chip contested">{{ t.rejected }} {% trans "rejected" %}</span>{% endif %}</summary>
+          <div>
+            {% if t.readings %}
+            <div class="tablewrap"><table class="grid">
+              <tr><th>{% trans "Tank" %}</th><th>{% trans "Level (mm)" %}</th><th>°C</th><th>{% trans "Free water (mm)" %}</th><th>{% trans "Density" %}</th><th>TOV</th><th>GOV</th><th>VCF</th><th>GSV</th><th>{% trans "Weight (t)" %}</th><th>{% trans "State" %}</th><th></th></tr>
+              {% for r in t.readings %}<tr>
+                <td><b>{{ r.tank }}</b> <span class="role" title="{{ r.entered_label }}">{{ r.entered_role }}</span><div class="small muted"><time>{{ r.declared_at|date:"d/m H:i" }}</time>{% if r.supersedes_id %} — {% trans "correction" %}{% endif %}</div>{% if r.note %}<div class="small">{{ r.note }}</div>{% endif %}</td>
+                <td class="num">{% if r.level_mm is not None %}{{ r.level_mm|floatformat:"-1" }}{% else %}—{% endif %}</td>
+                <td class="num">{% if r.temperature_c is not None %}{{ r.temperature_c|floatformat:"-2" }}{% else %}—{% endif %}</td>
+                <td class="num">{% if r.free_water_mm is not None %}{{ r.free_water_mm|floatformat:"-1" }}{% else %}—{% endif %}</td>
+                <td class="num">{% if r.density is not None %}{{ r.density|floatformat:"-4" }}{% else %}—{% endif %}</td>
+                <td class="num">{% if r.tov_m3 is not None %}{{ r.tov_m3|floatformat:"-3g" }}{% else %}—{% endif %}</td>
+                <td class="num">{% if r.gov_m3 is not None %}{{ r.gov_m3|floatformat:"-3g" }}{% else %}—{% endif %}</td>
+                <td class="num">{% if r.vcf is not None %}{{ r.vcf|floatformat:"-5" }}{% else %}—{% endif %}</td>
+                <td class="num">{% if r.gsv_m3 is not None %}{{ r.gsv_m3|floatformat:"-3g" }}{% else %}—{% endif %}</td>
+                <td class="num">{% if r.weight_mt is not None %}{{ r.weight_mt|floatformat:"-3g" }}{% else %}—{% endif %}</td>
+                <td>{% if r.state == "VALIDATED" %}<span class="chip done" title="{{ r.review.reviewer_label }}">{% trans "validated" %}</span><div class="small muted"><time>{{ r.review.reviewed_at|date:"d/m H:i" }}</time></div>
+                    {% elif r.state == "REJECTED" %}<span class="chip contested" title="{{ r.review.reviewer_label }}">{% trans "rejected" %}</span><div class="small">{{ r.review.note }}</div>
+                    {% else %}<span class="chip pending">{% trans "awaiting the surveyor" %}</span><div class="small muted">{% trans "your side and the surveyor only" %}</div>{% endif %}</td>
+                <td class="actions">
+                  {% if r.can_review %}<form method="post" action="{% url 'registry:call_action' call.pk 'tank_review' %}" class="inline">{% csrf_token %}<input type="hidden" name="reading_id" value="{{ r.pk }}"><input type="hidden" name="decision" value="validate"><input type="hidden" name="back" value="?tab=mesures#q{{ m.pk }}"><button class="btn small">{% trans "Validate" %}</button></form>
+                  <details class="action"><summary>{% trans "Reject" %}</summary><div><form method="post" action="{% url 'registry:call_action' call.pk 'tank_review' %}" class="form">{% csrf_token %}<input type="hidden" name="reading_id" value="{{ r.pk }}"><input type="hidden" name="decision" value="reject"><input type="hidden" name="back" value="?tab=mesures#q{{ m.pk }}"><input name="note" required placeholder="{% trans 'Reason' %}" aria-label="{% trans 'Reason' %}"><button class="btn small danger">{% trans "Reject the reading" %}</button></form></div></details>{% endif %}
+                  {% if r.can_correct %}<details class="action"><summary>{% trans "Correct" %}</summary><div><form method="post" action="{% url 'registry:call_action' call.pk 'tank_reading' %}" class="form">{% csrf_token %}<input type="hidden" name="measurement_id" value="{{ m.pk }}"><input type="hidden" name="supersedes" value="{{ r.pk }}"><input type="hidden" name="tank" value="{{ r.tank }}"><input type="hidden" name="back" value="?tab=mesures#q{{ m.pk }}">
+                    <div class="row"><div><label>{% trans "Level (mm)" %}<input name="level_mm" inputmode="decimal" value="{{ r.level_mm|default_if_none:'' }}"></label></div><div><label>°C<input name="temperature_c" inputmode="decimal" value="{{ r.temperature_c|default_if_none:'' }}"></label></div><div><label>GOV (m³)<input name="gov_m3" inputmode="decimal" value="{{ r.gov_m3|default_if_none:'' }}"></label></div><div><label>VCF<input name="vcf" inputmode="decimal" value="{{ r.vcf|default_if_none:'' }}"></label></div><div><label>{% trans "Density" %}<input name="density" inputmode="decimal" value="{{ r.density|default_if_none:'' }}"></label></div><div><label>{% trans "Weight (t)" %}<input name="weight_mt" inputmode="decimal" value="{{ r.weight_mt|default_if_none:'' }}"></label></div></div>
+                    <div><label>{% trans "Note" %}<input name="note" maxlength="300"></label></div><button class="btn small secondary">{% trans "Record the corrected reading" %}</button></form></div></details>{% endif %}
+                </td></tr>{% endfor %}
+              <tr><td colspan="9"><b>{% trans "Validated tanks total" %}</b> <span class="small muted">{% trans "vs the declared figure of the side" %}</span></td>
+                <td class="num"><b>{{ t.validated|floatformat:"-3g" }}</b>{% with declared=row.declared|get:side %}{% if declared is not None %}<div class="small muted">{% trans "declared" %} {{ declared|floatformat:"-3g" }}</div>{% endif %}{% endwith %}</td><td colspan="2"></td></tr>
+            </table></div>
+            {% else %}<p class="small muted">{% trans "No tank reading yet." %}</p>{% endif %}
+            {% if can_read_tanks and my_side == side %}
+            <details class="action" style="margin-top:6px"><summary>{% trans "Read a tank" %}</summary><div>
+              <form method="post" action="{% url 'registry:call_action' call.pk 'tank_reading' %}" class="form">{% csrf_token %}<input type="hidden" name="measurement_id" value="{{ m.pk }}"><input type="hidden" name="back" value="?tab=mesures#q{{ m.pk }}">
+                <div class="row"><div><label for="tk{{ m.pk }}">{% trans "Tank" %}</label><input id="tk{{ m.pk }}" name="tank" required maxlength="40" placeholder="{% if side == 'SHIP' %}3P{% else %}TK-101{% endif %}"></div>
+                  <div><label for="tl{{ m.pk }}">{% trans "Ullage / innage (mm)" %}</label><input id="tl{{ m.pk }}" name="level_mm" inputmode="decimal"></div>
+                  <div><label for="tt{{ m.pk }}">°C</label><input id="tt{{ m.pk }}" name="temperature_c" inputmode="decimal"></div>
+                  <div><label for="tw{{ m.pk }}">{% trans "Free water (mm)" %}</label><input id="tw{{ m.pk }}" name="free_water_mm" inputmode="decimal"></div></div>
+                <div class="row"><div><label for="to{{ m.pk }}">TOV (m³)</label><input id="to{{ m.pk }}" name="tov_m3" inputmode="decimal"></div>
+                  <div><label for="tg{{ m.pk }}">GOV (m³)</label><input id="tg{{ m.pk }}" name="gov_m3" inputmode="decimal"></div>
+                  <div><label for="tv{{ m.pk }}">VCF</label><input id="tv{{ m.pk }}" name="vcf" inputmode="decimal"></div>
+                  <div><label for="td{{ m.pk }}">{% trans "Density @15 °C" %}</label><input id="td{{ m.pk }}" name="density" inputmode="decimal"></div>
+                  <div><label for="ts{{ m.pk }}">GSV (m³)</label><input id="ts{{ m.pk }}" name="gsv_m3" inputmode="decimal"></div>
+                  <div><label for="tm{{ m.pk }}">{% trans "Weight (t)" %}</label><input id="tm{{ m.pk }}" name="weight_mt" inputmode="decimal"></div></div>
+                <div class="row"><div><label for="ta{{ m.pk }}">{% trans "Time of the reading" %}</label><input type="datetime-local" id="ta{{ m.pk }}" name="declared_at" data-default-now></div>
+                  <div><label for="tn{{ m.pk }}">{% trans "Note" %}</label><input id="tn{{ m.pk }}" name="note" maxlength="300"></div></div>
+                <p class="hint">{% trans "GSV = GOV × VCF and weight = GSV × density are computed when you leave them blank. The reading is shown to the other parties once the surveyor has validated it." %}</p>
+                <button class="btn small secondary">{% trans "Record the reading" %}</button></form></div></details>
+            {% endif %}
+          </div></details>
+        {% endwith %}{% endfor %}
+
         {% if can_contest %}<details class="action" style="margin-top:8px"><summary>{% trans "Contest this quantity" %}</summary><div>
           <form method="post" action="{% url 'registry:call_action' call.pk 'dispute_open' %}" class="form">{% csrf_token %}
             <input type="hidden" name="back" value="?tab=contestations"><input type="hidden" name="target_kind" value="MEASUREMENT"><input type="hidden" name="target_id" value="{{ m.pk }}">
@@ -35,24 +99,72 @@
       </article>
       {% endwith %}{% empty %}<p class="empty">{% trans "No measurement opened." %}</p>{% endfor %}
     </section>
-    <section class="section">
-      <h2>{% trans "Pumping log" %}</h2>
-      <div class="tablewrap"><table class="grid"><tr><th>{% trans "Time" %}</th><th>{% trans "Manifold pressure (bar)" %}</th><th>{% trans "Rate (m³/h)" %}</th><th>{% trans "Temperature (°C)" %}</th><th>{% trans "Entered by" %}</th></tr>
-        {% for p in pumping %}<tr><td><time>{{ p.declared_at|date:"d/m H:i" }}</time></td><td class="num">{% if p.manifold_pressure_bar is not None %}{{ p.manifold_pressure_bar|floatformat:"-2" }}{% else %}—{% endif %}</td><td class="num">{% if p.flow_rate_m3h is not None %}{{ p.flow_rate_m3h|floatformat:"-2g" }}{% else %}—{% endif %}</td><td class="num">{% if p.temperature_c is not None %}{{ p.temperature_c|floatformat:"-2" }}{% else %}—{% endif %}</td><td>{{ p.entered_label }} <span class="role">{{ p.role }}</span>{% if p.source == "AUTOMATIC" %} <span class="chip na">{% trans "automatic" %}</span>{% endif %}{% if p.deferred %} <span class="chip deferred">{% trans "deferred" %}</span>{% endif %}</td></tr>
-        {% empty %}<tr><td colspan="5" class="empty">{% trans "No reading yet." %}</td></tr>{% endfor %}</table></div>
+    {% endif %}
+
+    {% if pumping_visible %}
+    <section class="section" id="pompage">
+      <div class="section-head"><h2>{% if call.is_sts %}{% trans "Pumping log — the two vessels" %}{% else %}{% trans "Pumping log — ship and shore" %}{% endif %}</h2>
+        <span class="small muted">{% blocktrans with t=tolerance %}The ship keeps its readings, the terminal its own; the platform pairs them hour by hour and flags a deviation beyond {{ t }} % — stop for investigation, as the terminal practice requires.{% endblocktrans %}</span></div>
+      {% if can_pump %}
+      <div class="actions" style="margin-bottom:10px;align-items:flex-start;flex-wrap:wrap">
+      <details class="action"><summary>{% if my_side == "SHIP" %}{% trans "Ship pumping reading" %}{% else %}{% trans "Shore pumping reading" %}{% endif %}</summary><div>
+        <form method="post" action="{% url 'registry:call_action' call.pk 'pumping' %}" class="form">{% csrf_token %}<input type="hidden" name="back" value="?tab=mesures#pompage">
+          {% if my_sheets %}<div><label for="psheet">{% trans "Sheet (tank)" %}</label><select id="psheet" name="sheet_id">{% for sh in my_sheets %}<option value="{{ sh.pk }}">{{ sh.tank|default:"—" }} — {{ sh.product }}</option>{% endfor %}<option value="">{% trans "without sheet" %}</option></select></div>
+          {% else %}<p class="hint">{% trans "Open your sheet first: the levels are then converted into quantities with its calibration, density and VCF." %}</p>{% endif %}
+          <div><label for="pt">{% trans "Time" %}</label><input type="datetime-local" id="pt" name="declared_at" data-default-now></div>
+          <div class="row"><div><label for="pp">bar</label><input id="pp" name="pressure_bar" inputmode="decimal"></div><div><label for="pl">{% trans "Level (mm)" %}</label><input id="pl" name="level_mm" inputmode="decimal"></div><div><label for="ptc">°C</label><input id="ptc" name="temperature_c" inputmode="decimal"></div></div>
+          <div class="row"><div><label for="ph">{% trans "Moved since previous (m³)" %}</label><input id="ph" name="hourly_m3" inputmode="decimal"></div><div><label for="pc">{% trans "Cumulated (m³)" %}</label><input id="pc" name="cumulative_m3" inputmode="decimal"></div><div><label for="pr">m³/h</label><input id="pr" name="rate_m3h" inputmode="decimal"></div></div>
+          <div><label for="pn">{% trans "Remark" %}</label><input id="pn" name="note" maxlength="300" placeholder="{% trans 'e.g. start of discharge, tank switch' %}"></div>
+          <p class="hint">{% trans "Leave the quantities blank to have them computed from the level and the sheet; the rate is the average since the previous reading." %}</p>
+          <button class="btn secondary">{% trans "Add the reading" %}</button></form></div></details>
+      <details class="action"><summary>{% trans "Open a pumping log sheet" %}</summary><div>
+        <form method="post" action="{% url 'registry:call_action' call.pk 'sheet_open' %}" class="form">{% csrf_token %}<input type="hidden" name="back" value="?tab=mesures#pompage">
+          <div class="row"><div><label for="stank">{% trans "Tank" %}</label><input id="stank" name="tank" maxlength="40" placeholder="{% if my_side == 'SHIP' %}1P, 1S…{% else %}TK-101{% endif %}"></div><div><label for="sprod">{% trans "Product" %}</label><input id="sprod" name="product" value="{{ call.product }}"></div></div>
+          <div class="row"><div><label for="s0">{% trans "Start level (mm)" %}</label><input id="s0" name="start_level_mm" inputmode="decimal"></div><div><label for="s1">{% trans "Expected stop level (mm)" %}</label><input id="s1" name="expected_stop_level_mm" inputmode="decimal"></div><div><label for="sm">m³/m</label><input id="sm" name="m3_per_metre" inputmode="decimal"></div></div>
+          <div class="row"><div><label for="sd">{% trans "Density (t/m³)" %}</label><input id="sd" name="density" inputmode="decimal"></div><div><label for="sv">VCF</label><input id="sv" name="vcf" inputmode="decimal"></div><div><label for="sq">{% trans "Planned (m³)" %}</label><input id="sq" name="planned_quantity_m3" inputmode="decimal"></div><div><label for="sqt">{% trans "Planned (t)" %}</label><input id="sqt" name="planned_quantity_mt" inputmode="decimal"></div></div>
+          <div class="row"><div><label for="sr">{% trans "Expected rate (m³/h)" %}</label><input id="sr" name="expected_rate_m3h" inputmode="decimal"></div><div><label for="sp">{% trans "Expected pressure (bar)" %}</label><input id="sp" name="expected_pressure_bar" inputmode="decimal"></div></div>
+          <div class="row"><div><label for="ss">{% trans "Estimated start" %}</label><input type="datetime-local" id="ss" name="estimated_start"></div><div><label for="se">{% trans "Estimated completion" %}</label><input type="datetime-local" id="se" name="estimated_completion"></div></div>
+          <button class="btn secondary">{% trans "Open the sheet" %}</button></form></div></details>
+      </div>
+      {% endif %}
+      <div class="sides">
+        {% for side, s in pumping_summary.items %}
+        <div class="side"><b>{% if side == "SHIP" %}{% trans "Ship" %}{% else %}{% trans "Shore" %}{% endif %}</b>
+          <div class="num" style="font-size:20px">{% if s.cumulative_m3 is not None %}{{ s.cumulative_m3|floatformat:"-3g" }} m³{% else %}—{% endif %}</div>
+          <div class="small muted">{% if s.cumulative_mt is not None %}{{ s.cumulative_mt|floatformat:"-3g" }} t — {% endif %}{{ s.count }} {% trans "reading(s)" %}{% if s.average_rate_m3h is not None %} — {{ s.average_rate_m3h|floatformat:"-1g" }} m³/h{% endif %}{% if s.average_pressure_bar is not None %} — {{ s.average_pressure_bar|floatformat:"-2" }} bar{% endif %}</div>
+          {% for sh in s.sheets %}<div class="small" style="margin-top:4px"><span class="code">{{ sh.tank|default:"—" }}</span> {{ sh.product }}{% if sh.planned_quantity_m3 is not None %} — {% trans "planned" %} {{ sh.planned_quantity_m3|floatformat:"-3g" }} m³{% endif %}{% if sh.m3_per_metre is not None %} — {{ sh.m3_per_metre|floatformat:"-3g" }} m³/m{% endif %}{% if sh.density is not None %} — d {{ sh.density|floatformat:"-4" }}{% endif %}{% if sh.vcf is not None %} — VCF {{ sh.vcf|floatformat:"-4" }}{% endif %}{% if sh.expected_rate_m3h is not None %} — {{ sh.expected_rate_m3h|floatformat:"-1g" }} m³/h {% trans "expected" %}{% endif %}
+            {% if sh.closed_at %}<span class="chip na">{% trans "completed" %}{% if sh.final_volume_m3 is not None %} — {{ sh.final_volume_m3|floatformat:"-3g" }} m³{% endif %}</span>{% elif can_pump and my_side == side %}
+            <details class="action" style="display:inline-block"><summary>{% trans "Complete the sheet" %}</summary><div><form method="post" action="{% url 'registry:call_action' call.pk 'sheet_close' %}" class="form">{% csrf_token %}<input type="hidden" name="sheet_id" value="{{ sh.pk }}">
+              <div class="row"><div><label>{% trans "Actual stop level (mm)" %}<input name="actual_stop_level_mm" inputmode="decimal"></label></div><div><label>{% trans "Final volume (m³)" %}<input name="final_volume_m3" inputmode="decimal"></label></div></div>
+              <button class="btn small secondary">{% trans "Complete" %}</button></form></div></details>{% endif %}</div>{% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="tablewrap"><table class="grid">
+        <tr><th rowspan="2">{% trans "Time" %}</th><th colspan="6" style="text-align:center">{% if call.is_sts %}{{ counterpart|capfirst }}{% else %}{% trans "Shore" %}{% endif %}</th><th colspan="3" style="text-align:center">{% trans "Ship" %}</th><th colspan="3" style="text-align:center">{% if call.is_sts %}{% trans "Deviation partner − ship" %}{% else %}{% trans "Deviation shore − ship" %}{% endif %}</th><th rowspan="2">{% trans "Remarks" %}</th></tr>
+        <tr><th>bar</th><th>{% trans "Level (mm)" %}</th><th>{% trans "Moved (m³)" %}</th><th>{% trans "Cumulated (m³)" %}</th><th>{% trans "Cumulated (t)" %}</th><th>m³/h</th>
+            <th>bar</th><th>{% trans "Moved (m³)" %}</th><th>{% trans "Cumulated (m³)" %}</th><th>m³</th><th>{% trans "hourly" %}</th><th>{% trans "cumulated" %}</th></tr>
+        {% for r in pumping_rows %}{% with sh=r.shore sp=r.ship %}
+        <tr{% if r.exceeds %} class="late"{% endif %}>
+          <td><time>{{ r.at|date:"d/m H:i" }}</time>{% if sh and sh.deferred or sp and sp.deferred %} <span class="chip deferred">{% trans "deferred" %}</span>{% endif %}</td>
+          <td class="num">{% if sh and sh.manifold_pressure_bar is not None %}{{ sh.manifold_pressure_bar|floatformat:"-2" }}{% else %}—{% endif %}</td>
+          <td class="num">{% if sh and sh.level_mm is not None %}{{ sh.level_mm|floatformat:"-1" }}{% else %}—{% endif %}</td>
+          <td class="num">{% if sh and sh.hourly_m3 is not None %}{{ sh.hourly_m3|floatformat:"-3g" }}{% else %}—{% endif %}</td>
+          <td class="num">{% if sh and sh.cumulative_m3 is not None %}{{ sh.cumulative_m3|floatformat:"-3g" }}{% else %}—{% endif %}</td>
+          <td class="num">{% if sh and sh.cumulative_mt is not None %}{{ sh.cumulative_mt|floatformat:"-3g" }}{% else %}—{% endif %}</td>
+          <td class="num">{% if sh and sh.flow_rate_m3h is not None %}{{ sh.flow_rate_m3h|floatformat:"-1g" }}{% else %}—{% endif %}</td>
+          <td class="num">{% if sp and sp.manifold_pressure_bar is not None %}{{ sp.manifold_pressure_bar|floatformat:"-2" }}{% else %}—{% endif %}</td>
+          <td class="num">{% if sp and sp.hourly_m3 is not None %}{{ sp.hourly_m3|floatformat:"-3g" }}{% else %}—{% endif %}</td>
+          <td class="num">{% if sp and sp.cumulative_m3 is not None %}{{ sp.cumulative_m3|floatformat:"-3g" }}{% else %}—{% endif %}</td>
+          <td class="num">{% if r.hourly_deviation is not None %}{{ r.hourly_deviation|floatformat:"3g" }}{% else %}—{% endif %}</td>
+          <td class="num" style="white-space:nowrap">{% if r.hourly_pct is not None %}{{ r.hourly_pct|floatformat:3 }} %{% else %}—{% endif %}</td>
+          <td class="num" style="white-space:nowrap">{% if r.cumulative_pct is not None %}{{ r.cumulative_pct|floatformat:3 }} %{% else %}—{% endif %}{% if r.exceeds %} <span class="chip late">{% trans "stop for investigation" %}</span>{% endif %}</td>
+          <td class="small">{% if sh and sh.note %}<div><span class="role" title="{{ sh.entered_label }}">TER</span> {{ sh.note }}</div>{% endif %}{% if sp and sp.note %}<div><span class="role" title="{{ sp.entered_label }}">NAV</span> {{ sp.note }}</div>{% endif %}
+            {% if sh and sh.source == "AUTOMATIC" or sp and sp.source == "AUTOMATIC" %}<span class="chip na">{% trans "automatic" %}</span>{% endif %}</td>
+        </tr>{% endwith %}
+        {% empty %}<tr><td colspan="14" class="empty">{% trans "No reading yet." %}</td></tr>{% endfor %}</table></div>
+      <p class="small muted" style="margin-top:6px">{% trans "A shore reading and a ship reading taken within 45 minutes of each other are shown on the same line; the deviation is signed shore − ship and no figure is the reference. The printed pumping log is generated from these readings (Forms page)." %}{% if call.is_sts %} {% blocktrans with partner=counterpart %}In this ship-to-ship transfer the "shore" series is the log of the {{ partner }}, kept on its own call.{% endblocktrans %}{% endif %}</p>
     </section>
-  </div>
-  <aside>
-    {% if can_open %}<section class="section"><h2>{% trans "Open a measurement" %}</h2>
-      <form method="post" action="{% url 'registry:call_action' call.pk 'measurement_open' %}" class="form">{% csrf_token %}<input type="hidden" name="back" value="?tab=mesures">
-        <div><label for="mkind">{% trans "Kind" %}</label><select id="mkind" name="kind">{% for v, l in kinds %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
-        <div><label for="munit">{% trans "Unit" %}</label><select id="munit" name="unit"><option value="MT">MT</option><option value="M3">m³ @15 °C</option><option value="BBL">bbl @60 °F</option></select></div>
-        <button class="btn secondary">{% trans "Open" context "verb" %}</button></form></section>{% endif %}
-    {% if can_pump %}<section class="section"><h2>{% trans "Add a pumping reading" %}</h2>
-      <form method="post" action="{% url 'registry:call_action' call.pk 'pumping' %}" class="form">{% csrf_token %}<input type="hidden" name="back" value="?tab=mesures">
-        <div><label for="pt">{% trans "Time" %}</label><input type="datetime-local" id="pt" name="declared_at" data-default-now></div>
-        <div class="row"><div><label for="pp">bar</label><input id="pp" name="pressure_bar" inputmode="decimal"></div><div><label for="pr">m³/h</label><input id="pr" name="rate_m3h" inputmode="decimal"></div><div><label for="ptc">°C</label><input id="ptc" name="temperature_c" inputmode="decimal"></div></div>
-        <button class="btn secondary">{% trans "Add" %}</button></form></section>{% endif %}
-  </aside>
-</div>
+    {% endif %}
 {% endif %}
+

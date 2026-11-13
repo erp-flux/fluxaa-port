@@ -31,8 +31,8 @@
       <td class="small">{% if row.filed %}<a href="{% url 'registry:document_download' call.pk row.filed.pk %}?inline=1" target="_blank" rel="noopener">v{{ row.filed.version }}</a> — {{ row.filed.get_status_display }}<div class="muted"><time>{{ row.filed.issued_at|date:"d/m H:i" }}</time> {{ row.filed.issuer_label|truncatechars:40 }}</div>{% else %}<span class="muted">—</span>{% endif %}</td>
       <td class="actions">
         <a class="btn small secondary" href="{% url 'registry:form_preview' call.pk f.code %}" target="_blank" rel="noopener">{% trans "Preview / print" %}</a>
-        <form method="post" action="{% url 'registry:call_action' call.pk 'form_issue' %}">{% csrf_token %}<input type="hidden" name="code" value="{{ f.code }}"><input type="hidden" name="back" value="{% url 'registry:form_list' call.pk %}">
-          <button class="btn small" title="{% trans 'Generates the form from the registry and files it in the documents of the call, fingerprinted, under your role.' %}">{% trans "Issue and file" %}</button></form>
+        {% if can_issue %}<form method="post" action="{% url 'registry:call_action' call.pk 'form_issue' %}">{% csrf_token %}<input type="hidden" name="code" value="{{ f.code }}"><input type="hidden" name="back" value="{% url 'registry:form_list' call.pk %}">
+          <button class="btn small" title="{% trans 'Generates the form from the registry and files it in the documents of the call, fingerprinted, under your role.' %}">{% trans "Issue and file" %}</button></form>{% endif %}
       </td>
     </tr>
     {% endwith %}{% endfor %}

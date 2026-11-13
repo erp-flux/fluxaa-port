@@ -13,21 +13,28 @@ from apps.core.crypto import canonical_json, seal, sha256_hex
 
 from ..models import JournalEntry, PortCall
 from . import journal
+from .checklist import visible as checklist_visible
 from .errors import PermissionRefused
 from .milestones import overall_state, state_by_role
 from .rights import (
     alert_visible,
     can_export,
+    can_read_report,
     dispute_content_visible,
     dispute_header_visible,
     document_visible,
     measurements_visible,
     request_visible,
+    tank_reading_visible,
     task_visible,
     visible_milestones,
 )
 
-FORMAT_VERSION = "fluxaa-port-export/1.0"
+FORMAT_VERSION = "fluxaa-port-export/1.3"
+
+
+def _num(value):
+    return str(value) if value is not None else None
 
 
 def _dt(value):
@@ -42,20 +49,33 @@ def call_payload(call: PortCall, actor) -> tuple[dict, list]:
         "port": {"code": call.port.code, "name": call.port.name, "timezone": call.port.timezone},
         "status": call.status,
         "vessel": {"imo": call.vessel.imo, "name": call.vessel.name, "flag": call.vessel.flag,
-                   "type": call.vessel.vessel_type, "dwt": call.vessel.dwt},
+                   "kind": call.vessel.vessel_kind, "type": call.vessel.vessel_type, "dwt": call.vessel.dwt},
         "voyage": call.voyage_number,
         "agency": str(call.agency),
         "operating_area": call.requested_berth_kind,
         "berth": call.berth.code if call.berth else None,
+        "cargo_kind": call.cargo_kind,
         "product": call.product,
         "quantity": str(call.quantity) if call.quantity is not None else None,
         "quantity_unit": call.quantity_unit,
+        "planned_pump_hours": _num(call.planned_pump_hours),
+        "batch_reference": call.batch_reference,
+        # version 1.5 (format 1.2): the STS role, the validity of the announcement and the billing basis it gives
+        "sts_role": call.sts_role or None,
+        "linked_call": call.linked_call.reference if call.linked_call_id else None,
+        # version 1.6 (format 1.3): the kind of link and what the agency declared for each operation
+        "link_kind": call.link_kind or None,
+        "operation_details": call.operation_details or {},
+        "validity": {"days": call.validity_days, "valid_until": _dt(call.valid_until), "expired_at": _dt(call.expired_at),
+                     "renewed_from": call.renewed_from.reference if call.renewed_from_id else None},
+        "billing_basis": {k: (_dt(v) if hasattr(v, "isoformat") else v) for k, v in call.billing_basis().items()},
         "templates": [{"code": u.template_version.template.code, "version": u.template_version.number}
                       for u in call.template_uses.select_related("template_version__template")],
         "estimates": {k: _dt(getattr(call, k)) for k in ("eta", "etb", "ets", "etc", "etd")},
         "actuals": {k: _dt(getattr(call, k)) for k in ("ata", "nor_at", "atb", "t0", "t1", "atd")},
         "parties": [{"organization": str(p.organization), "role": p.role, "valid_from": _dt(p.valid_from),
-                     "valid_until": _dt(p.valid_until), "revoked_at": _dt(p.revoked_at)}
+                     "valid_until": _dt(p.valid_until), "revoked_at": _dt(p.revoked_at),
+                     "principal_agent": p.is_principal, "access": p.access, "scopes": p.scopes or []}
                     for p in call.parties.select_related("organization")],
         "milestones": [
             {"id": m.pk, "type": m.type.code, "declared_at": _dt(m.declared_at), "recorded_at": _dt(m.recorded_at),
@@ -69,7 +89,8 @@ def call_payload(call: PortCall, actor) -> tuple[dict, list]:
         "tasks": [
             {"code": t.code, "title_fr": t.title_fr, "title_en": t.title_en, "role": t.role, "nature": t.nature,
              "criticality": t.criticality, "due_at": _dt(t.due_at), "status": t.status,
-             "completed_at": _dt(t.completed_at), "completed_role": t.completed_role, "na_reason": t.na_reason}
+             "completed_at": _dt(t.completed_at), "completed_role": t.completed_role, "na_reason": t.na_reason,
+             "green_light": t.green_light, "requested_at_creation": t.requested_at_creation}
             for t in call.tasks.all() if task_visible(actor, t)
         ],
         "requests": [],
@@ -119,12 +140,39 @@ def call_payload(call: PortCall, actor) -> tuple[dict, list]:
                                  "percent": f"{d['percent']:.3f}" if d["percent"] is not None else None,
                                  "outside_tolerance": d["exceeds"] if (d["a"], d["b"]) == ("SHIP", "SHORE") else None}
                                 for d in m.differences()],
+                # the tank readings the actor may read: the validated ones, and its own side's pending ones
+                "tank_readings": [{"side": r.side, "tank": r.tank, "state": r.state, "quantity": _num(r.quantity),
+                                   "level_mm": _num(r.level_mm), "temperature_c": _num(r.temperature_c),
+                                   "free_water_mm": _num(r.free_water_mm), "density": _num(r.density), "tov_m3": _num(r.tov_m3),
+                                   "gov_m3": _num(r.gov_m3), "vcf": _num(r.vcf), "gsv_m3": _num(r.gsv_m3), "weight_mt": _num(r.weight_mt),
+                                   "by": r.entered_label, "declared_at": _dt(r.declared_at), "supersedes": r.supersedes_id, "seal": r.seal,
+                                   "reviews": [{"state": v.state, "by": v.reviewer_label, "at": _dt(v.reviewed_at), "note": v.note,
+                                                "seal": v.seal} for v in r.reviews.all()]}
+                                  for r in m.tank_readings.all() if tank_reading_visible(actor, r)],
             })
-        data["pumping_log"] = [{"declared_at": _dt(p.declared_at), "recorded_at": _dt(p.recorded_at), "role": p.role,
-                                "pressure_bar": str(p.manifold_pressure_bar) if p.manifold_pressure_bar is not None else None,
-                                "rate_m3h": str(p.flow_rate_m3h) if p.flow_rate_m3h is not None else None,
-                                "temperature_c": str(p.temperature_c) if p.temperature_c is not None else None,
+    if can_read_report(actor, "PUMPING_LOG"):
+        data["pumping_sheets"] = [{"id": s.pk, "side": s.side, "tank": s.tank, "product": s.product,
+                                   "start_level_mm": _num(s.start_level_mm), "expected_stop_level_mm": _num(s.expected_stop_level_mm),
+                                   "m3_per_metre": _num(s.m3_per_metre), "density": _num(s.density), "vcf": _num(s.vcf),
+                                   "planned_quantity_m3": _num(s.planned_quantity_m3), "planned_quantity_mt": _num(s.planned_quantity_mt),
+                                   "expected_rate_m3h": _num(s.expected_rate_m3h), "expected_pressure_bar": _num(s.expected_pressure_bar),
+                                   "estimated_start": _dt(s.estimated_start), "estimated_completion": _dt(s.estimated_completion),
+                                   "actual_stop_level_mm": _num(s.actual_stop_level_mm), "final_volume_m3": _num(s.final_volume_m3),
+                                   "closed_at": _dt(s.closed_at), "opened_by": s.opened_label} for s in call.pumping_sheets.all()]
+        data["pumping_log"] = [{"declared_at": _dt(p.declared_at), "recorded_at": _dt(p.recorded_at), "role": p.role, "side": p.side,
+                                "sheet": p.sheet_id, "tank": p.tank, "by": p.entered_label,
+                                "pressure_bar": _num(p.manifold_pressure_bar), "rate_m3h": _num(p.flow_rate_m3h),
+                                "temperature_c": _num(p.temperature_c), "level_mm": _num(p.level_mm), "hourly_m3": _num(p.hourly_m3),
+                                "cumulative_m3": _num(p.cumulative_m3), "cumulative_mt": _num(p.cumulative_mt), "note": p.note,
                                 "source": p.source, "deferred": p.deferred} for p in call.pumping_log.all()]
+    if checklist_visible(actor, call):
+        data["safety_checklists"] = [{
+            "version": c.version, "status": c.status, "opened_by": c.opened_label, "opened_at": _dt(c.opened_at),
+            "signed_at": _dt(c.signed_at), "repeat_interval_h": _num(c.repeat_interval_h), "items": c.items,
+            "answers": [{"item": a.item_code, "side": a.side, "state": a.state, "value": a.value, "remark": a.remark,
+                         "repetition": a.repetition, "by": a.author_label, "at": _dt(a.answered_at), "seal": a.seal} for a in c.answers.all()],
+            "signatures": [{"side": g.side, "by": g.signer_label, "at": _dt(g.signed_at), "seal": g.seal} for g in c.signatures.all()],
+        } for c in call.safety_checklists.all()]
     for d in call.disputes.all():
         if not dispute_header_visible(actor, d):
             continue

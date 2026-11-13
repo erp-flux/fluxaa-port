@@ -10,10 +10,12 @@ Le schéma OpenAPI 3 complet est servi par `/api/schema/` (documentation navigab
 | `POST` | `/api/v1/ais/` | `v1_ais_create` | AIS observation: {imo\|mmsi, event: ARRIVAL\|DEPARTED, time} |
 | `GET` | `/api/v1/ais/positions/` | `v1_ais_positions_retrieve` | Latest position of every vessel heard in the port waters (24 h) |
 | `POST` | `/api/v1/ais/positions/` | `v1_ais_positions_create` | AIS position reports: {reports: [{mmsi, lat, lon, observed_at?, speed_kn?, course_deg?, heading_deg?, nav_status?, imo?, name?, call_sign?, destination?, draught_m?}]} |
+| `GET` | `/api/v1/board/` | `v1_board_retrieve` | Port call board: every declared call of the port (vessel, agency, area, state, times) — no operational data of other agencies' calls |
+| `GET` | `/api/v1/board/occupation/` | `v1_board_occupation_retrieve` | Berth occupation plan of a period (?start=YYYY-MM-DD&end=YYYY-MM-DD): the calls per berth, as the terminals' sheets |
 | `GET` | `/api/v1/calls/` | `calls_list` | Calls on which your organisation holds a role |
 | `POST` | `/api/v1/calls/` | `v1_calls_create` | Create a call (shipping agency only) |
 | `GET` | `/api/v1/calls/{reference}/` | `calls_retrieve` | Call detail as visible by you |
-| `POST` | `/api/v1/calls/{reference}/actions/{action}/` | `v1_calls_actions_create` | Life-cycle action: declare \| estimates \| cancel \| close-request \| close \| archive \| statement-of-facts \| invite |
+| `POST` | `/api/v1/calls/{reference}/actions/{action}/` | `v1_calls_actions_create` | Life-cycle action: declare \| estimates \| cancel \| close-request \| close \| archive \| statement-of-facts \| invite \| remind \| renew \| party-access \| green-light-withdraw \| documents-request |
 | `GET` | `/api/v1/calls/{reference}/disputes/` | `v1_calls_disputes_retrieve` | Disputes |
 | `POST` | `/api/v1/calls/{reference}/disputes/` | `disputes_create` | Open a dispute |
 | `POST` | `/api/v1/calls/{reference}/disputes/{dispute_id}/{action}/` | `disputes_action` | respond \| close (agreed true/false) — no 'reject' exists |
@@ -26,18 +28,28 @@ Le schéma OpenAPI 3 complet est servi par `/api/schema/` (documentation navigab
 | `GET` | `/api/v1/calls/{reference}/forms/` | `forms_list` | Standard forms you may generate on this call (one structure: header, body, signatures, seal) |
 | `GET` | `/api/v1/calls/{reference}/forms/{code}/` | `forms_render` | The form rendered as a printable HTML page, pre-filled from the registry |
 | `POST` | `/api/v1/calls/{reference}/forms/{code}/` | `forms_file` | Generate the form and file it in the call's documents (fingerprinted, under your role) |
+| `GET` | `/api/v1/calls/{reference}/green-lights/` | `v1_calls_green_lights_retrieve` | The green-light panel of the call: each party's go-ahead, its state, who gave it, when |
 | `GET` | `/api/v1/calls/{reference}/journal/` | `v1_calls_journal_retrieve` | Call journal (hash-chained), filtered by your roles |
-| `GET` | `/api/v1/calls/{reference}/measurements/` | `v1_calls_measurements_retrieve` | Measurements (ship / shore / surveyor) |
+| `GET` | `/api/v1/calls/{reference}/measurements/` | `v1_calls_measurements_retrieve` | Measurements (ship / shore / surveyor) with the tank readings you may read |
 | `POST` | `/api/v1/calls/{reference}/measurements/` | `v1_calls_measurements_create` | Open a measurement |
+| `GET` | `/api/v1/calls/{reference}/measurements/{measurement_id}/tanks/` | `v1_calls_measurements_tanks_retrieve` | Tank readings of a measurement: validated ones, and your own side's pending ones |
+| `POST` | `/api/v1/calls/{reference}/measurements/{measurement_id}/tanks/` | `v1_calls_measurements_tanks_create` | Read a tank: the ship its cargo tanks, the terminal its shore tanks (awaits the surveyor's validation) |
+| `POST` | `/api/v1/calls/{reference}/measurements/{measurement_id}/tanks/{reading_id}/review/` | `v1_calls_measurements_tanks_review_create` | Surveyor: validate (decision=validate) or reject (decision=reject, note) a tank reading |
 | `POST` | `/api/v1/calls/{reference}/measurements/{measurement_id}/values/` | `v1_calls_measurements_values_create` | Add your party's value (single emitter) |
 | `GET` | `/api/v1/calls/{reference}/milestones/` | `v1_calls_milestones_retrieve` | Milestones (contradictory timeline) |
 | `POST` | `/api/v1/calls/{reference}/milestones/` | `v1_calls_milestones_create` | Record a milestone (single emitter; hold points apply) |
 | `POST` | `/api/v1/calls/{reference}/milestones/{milestone_id}/countersign/` | `v1_calls_milestones_countersign_create` | Countersign or contest a milestone |
-| `GET` | `/api/v1/calls/{reference}/pumping-log/` | `v1_calls_pumping_log_retrieve` | Pumping log |
-| `POST` | `/api/v1/calls/{reference}/pumping-log/` | `v1_calls_pumping_log_create` | Add a pumping-log reading (manual or automatic feed) |
+| `GET` | `/api/v1/calls/{reference}/pumping-log/` | `v1_calls_pumping_log_retrieve` | Pumping log: the readings of both sides, and their comparison reading by reading |
+| `POST` | `/api/v1/calls/{reference}/pumping-log/` | `v1_calls_pumping_log_create` | Add a pumping-log reading of your side (manual or automatic feed) |
+| `GET` | `/api/v1/calls/{reference}/pumping-sheets/` | `v1_calls_pumping_sheets_retrieve` | Pumping log sheets (ship and shore headers) |
+| `POST` | `/api/v1/calls/{reference}/pumping-sheets/` | `v1_calls_pumping_sheets_create` | Open your side's pumping log sheet (tank, calibration, density, VCF, planned quantity…) |
+| `POST` | `/api/v1/calls/{reference}/pumping-sheets/{sheet_id}/close/` | `v1_calls_pumping_sheets_close_create` | Complete your side's sheet: actual stop level, final volume |
 | `GET` | `/api/v1/calls/{reference}/requests/` | `v1_calls_requests_retrieve` | Requests and authorizations visible to you |
 | `POST` | `/api/v1/calls/{reference}/requests/` | `requests_create` | Create (and submit) a request |
 | `POST` | `/api/v1/calls/{reference}/requests/{request_id}/{action}/` | `requests_action` | submit \| review \| decide (2FA: X-MFA-Code) \| schedule \| execute \| cancel |
+| `GET` | `/api/v1/calls/{reference}/safety-checklist/` | `v1_calls_safety_checklist_retrieve` | The ship/shore safety checklist of the call, with every item and the answers of both sides |
+| `POST` | `/api/v1/calls/{reference}/safety-checklist/` | `v1_calls_safety_checklist_open` | Open the checklist (ship or terminal); optional repeat_interval_h |
+| `POST` | `/api/v1/calls/{reference}/safety-checklist/{action}/` | `v1_calls_safety_checklist_action` | answer (items: [{item_code, state, value, remark, repetition}]) \| sign (comment) \| cancel (reason) |
 | `POST` | `/api/v1/calls/{reference}/secure-deposit/` | `v1_calls_secure_deposit_create` | Write-only N4 deposit (armed guards, escort…) — returns a receipt |
 | `GET` | `/api/v1/calls/{reference}/stages/` | `stages_list` | Stages of the call (areas in sequence) |
 | `POST` | `/api/v1/calls/{reference}/stages/` | `stages_create` | Plan the next stage (agency or harbour master): berth_kind, operations[], berth?, planned_from?, planned_to?, reason? |
@@ -72,16 +84,25 @@ Le schéma OpenAPI 3 complet est servi par `/api/schema/` (documentation navigab
   },
   "operating_area": "JETTY",
   "berth": "LFW-APP",
-  "eta": "2026-11-01T21:45:56.471079+00:00",
-  "etb": "2026-11-02T05:45:56.471079+00:00",
-  "etd": "2026-11-03T23:45:56.471079+00:00",
-  "ata": "2026-11-01T22:45:56.471079+00:00",
-  "atb": "2026-11-02T05:55:56.471079+00:00",
+  "eta": "2026-11-12T15:20:03.382244+00:00",
+  "etb": "2026-11-12T23:20:03.382244+00:00",
+  "etd": "2026-11-14T17:20:03.382244+00:00",
+  "ata": "2026-11-12T16:20:03.382244+00:00",
+  "atb": "2026-11-12T23:30:03.382244+00:00",
   "atd": null,
   "templates": [
     "M0",
     "M1"
-  ]
+  ],
+  "cargo_kind": "LIQUID",
+  "sts_role": null,
+  "validity": {
+    "days": 15,
+    "valid_until": "2026-11-28T11:20:03.391178+00:00",
+    "expired_at": null,
+    "overrun": false,
+    "renewed_from": null
+  }
 }
 ```
 
@@ -98,16 +119,25 @@ Le schéma OpenAPI 3 complet est servi par `/api/schema/` (documentation navigab
   },
   "operating_area": "JETTY",
   "berth": "LFW-APP",
-  "eta": "2026-11-01T21:45:56.471079+00:00",
-  "etb": "2026-11-02T05:45:56.471079+00:00",
-  "etd": "2026-11-03T23:45:56.471079+00:00",
-  "ata": "2026-11-01T22:45:56.471079+00:00",
-  "atb": "2026-11-02T05:55:56.471079+00:00",
+  "eta": "2026-11-12T15:20:03.382244+00:00",
+  "etb": "2026-11-12T23:20:03.382244+00:00",
+  "etd": "2026-11-14T17:20:03.382244+00:00",
+  "ata": "2026-11-12T16:20:03.382244+00:00",
+  "atb": "2026-11-12T23:30:03.382244+00:00",
   "atd": null,
   "templates": [
     "M0",
     "M1"
   ],
+  "cargo_kind": "LIQUID",
+  "sts_role": null,
+  "validity": {
+    "days": 15,
+    "valid_until": "2026-11-28T11:20:03.391178+00:00",
+    "expired_at": null,
+    "overrun": false,
+    "renewed_from": null
+  },
   "port": {
     "code": "TGLFW",
     "name": "Lomé",
@@ -119,76 +149,159 @@ Le schéma OpenAPI 3 complet est servi par `/api/schema/` (documentation navigab
     "AGE"
   ],
   "estimates": {
-    "eta": "2026-11-01T21:45:56.471079+00:00",
-    "etb": "2026-11-02T05:45:56.471079+00:00",
+    "eta": "2026-11-12T15:20:03.382244+00:00",
+    "etb": "2026-11-12T23:20:03.382244+00:00",
     "ets": null,
     "etc": null,
-    "etd": "2026-11-03T23:45:56.471079+00:00"
+    "etd": "2026-11-14T17:20:03.382244+00:00"
   },
   "actuals": {
-    "ata": "2026-11-01T22:45:56.471079+00:00",
-    "nor_at": "2026-11-01T23:05:56.471079+00:00",
-    "atb": "2026-11-02T05:55:56.471079+00:00",
-    "t0": "2026-11-02T08:45:56.471079+00:00",
+    "ata": "2026-11-12T16:20:03.382244+00:00",
+    "nor_at": "2026-11-12T16:40:03.382244+00:00",
+    "atb": "2026-11-12T23:30:03.382244+00:00",
+    "t0": "2026-11-13T02:20:03.382244+00:00",
     "t1": null,
     "atd": null
   },
   "parties": [
     {
+      "id": 1,
       "organization": "Agence maritime (démo)",
-      "role": "AGE"
+      "role": "AGE",
+      "principal": true,
+      "access": "FULL",
+      "scopes": []
     },
     {
+      "id": 2,
       "organization": "Autorité portuaire (démo)",
-      "role": "DIR"
+      "role": "DIR",
+      "principal": false,
+      "access": "FULL",
+      "scopes": []
     },
     {
+      "id": 3,
       "organization": "Autorité portuaire (démo)",
-      "role": "APO"
+      "role": "APO",
+      "principal": false,
+      "access": "FULL",
+      "scopes": []
     },
     {
+      "id": 4,
       "organization": "Autorité portuaire (démo)",
-      "role": "CAP"
+      "role": "CAP",
+      "principal": false,
+      "access": "FULL",
+      "scopes": []
     },
     {
+      "id": 5,
       "organization": "Douanes, immigration et santé (démo)",
-      "role": "ADM"
+      "role": "ADM",
+      "principal": false,
+      "access": "FULL",
+      "scopes": []
     },
     {
+      "id": 6,
       "organization": "Sûreté portuaire et marine nationale (démo)",
-      "role": "SUR"
+      "role": "SUR",
+      "principal": false,
+      "access": "FULL",
+      "scopes": []
     },
     {
+      "id": 7,
       "organization": "Services nautiques (démo)",
-      "role": "SVC"
+      "role": "SVC",
+      "principal": false,
+      "access": "FULL",
+      "scopes": []
     },
     {
+      "id": 8,
       "organization": "Terminal pétrolier (démo)",
-      "role": "TER"
+      "role": "TER",
+      "principal": false,
+      "access": "FULL",
+      "scopes": []
     },
     {
+      "id": 9,
       "organization": "Surveyor et laboratoire (démo)",
-      "role": "INS"
+      "role": "INS",
+      "principal": false,
+      "access": "FULL",
+      "scopes": []
     },
     {
+      "id": 10,
       "organization": "Armateur / affréteur (démo)",
-      "role": "COM"
+      "role": "COM",
+      "principal": false,
+      "access": "FULL",
+      "scopes": []
     },
     {
+      "id": 11,
       "organization": "Prestataire déchets (démo)",
-      "role": "PRE"
+      "role": "PRE",
+      "principal": false,
+      "access": "FULL",
+      "scopes": []
     },
     {
+      "id": 12,
       "organization": "Réceptionnaire / importateur (démo)",
-      "role": "COM"
+      "role": "COM",
+      "principal": false,
+      "access": "FULL",
+      "scopes": []
     },
     {
+      "id": 13,
       "organization": "Correspondant P&I (démo)",
-      "role": "INS"
+      "role": "INS",
+      "principal": false,
+      "access": "FULL",
+      "scopes": []
     },
     {
+      "id": 14,
       "organization": "Fournisseur d'eau douce (démo)",
-      "role": "PRE"
+      "role": "PRE",
+      "principal": false,
+      "access": "FULL",
+      "scopes": []
+    }
+  ],
+  "your_access": {
+    "level": "FULL",
+    "tabs": null,
+    "principal_agent": true
+  },
+  "billing_basis": {
+    "validity_days": 15,
+    "valid_from": "2026-11-13T11:20:03.395734+00:00",
+    "valid_until": "2026-11-28T11:20:03.391178+00:00",
+    "arrived_at": "2026-11-12T16:20:03.382244+00:00",
+    "departed_at": null,
+    "closed_at": null,
+    "expired_at": null,
+    "hours_in_port": 19.3,
+    "overrun_hours": null
+  },
+  "linked_call": null,
+  "named_by": [
+    {
+      "reference": "TGLFW-2026-0017",
+      "vessel": "MT LAGUNE DEMO",
+      "agency": "Consignataire associé (démo)",
+      "kind": "OUTER",
+      "sts_role": null,
+      "status": "DECLARED"
     }
   ],
   "stages": [
@@ -200,13 +313,55 @@ Le schéma OpenAPI 3 complet est servi par `/api/schema/` (documentation navigab
         "M1"
       ],
       "status": "CURRENT",
-      "atb": "2026-11-02T05:55:56.471079+00:00",
+      "atb": "2026-11-12T23:30:03.382244+00:00",
       "atd": null
     }
   ],
   "product": "Gasoil 10 ppm",
   "quantity": "32000.000",
   "quantity_unit": "MT",
+  "operation_details": {
+    "M1": {
+      "inert_gas": "YES",
+      "max_rate_m3h": 1200,
+      "stripping_rob": "≤ 25 m³",
+      "vapour_return": "NO",
+      "manifold_connections": "2 × 12\" ANSI 150",
+      "max_manifold_pressure_bar": 7
+    }
+  },
+  "declared": [
+    {
+      "template": "M1",
+      "name": "Déchargement (import)",
+      "items": [
+        {
+          "label": "Débit maximal de déchargement (m³/h)",
+          "value": "1 200"
+        },
+        {
+          "label": "Pression maximale au collecteur (bar)",
+          "value": "7"
+        },
+        {
+          "label": "Collecteur : nombre et diamètre des raccords",
+          "value": "2 × 12\" ANSI 150"
+        },
+        {
+          "label": "Citernes inertées à l'arrivée",
+          "value": "Oui"
+        },
+        {
+          "label": "Retour de vapeurs demandé",
+          "value": "Non"
+        },
+        {
+          "label": "ROB attendu après assèchement",
+          "value": "≤ 25 m³"
+        }
+      ]
+    }
+  ],
   "hold_points": {
     "GREEN_LIGHT": {
       "ready": true,
@@ -256,7 +411,7 @@ Le schéma OpenAPI 3 complet est servi par `/api/schema/` (documentation navigab
   "joint": false,
   "nature": "R",
   "blocking": true,
-  "due_at": "2026-11-02T17:45:56.484500+00:00",
+  "due_at": "2026-11-13T11:20:03.395734+00:00",
   "timing": "à la nomination",
   "status": "DONE",
   "alert_level": "NONE",
@@ -265,7 +420,9 @@ Le schéma OpenAPI 3 complet est servi par `/api/schema/` (documentation navigab
   "document_type": "",
   "continuous": false,
   "ad_hoc": false,
-  "completed_at": "2026-11-02T17:45:56.560126+00:00",
+  "green_light": false,
+  "requested_at_creation": false,
+  "completed_at": "2026-11-13T11:20:03.465374+00:00",
   "completed_role": "AGE",
   "na_reason": "",
   "signed_roles": []
@@ -279,8 +436,8 @@ Le schéma OpenAPI 3 complet est servi par `/api/schema/` (documentation navigab
   "id": 1,
   "type": "GREEN_LIGHT",
   "label": "Feu vert / escale acceptée",
-  "declared_at": "2026-11-02T17:45:56.930522+00:00",
-  "recorded_at": "2026-11-02T17:45:56.958484+00:00",
+  "declared_at": "2026-11-13T11:20:03.853006+00:00",
+  "recorded_at": "2026-11-13T11:20:03.894999+00:00",
   "device_recorded_at": null,
   "deferred": false,
   "source": "SYSTEM",
@@ -311,11 +468,11 @@ Le schéma OpenAPI 3 complet est servi par `/api/schema/` (documentation navigab
   "confidentiality": "N1",
   "requester_role": "AGE",
   "data": {},
-  "submitted_at": "2026-11-02T17:45:56.683999+00:00",
-  "due_at": "2026-11-03T05:45:56.683999+00:00",
+  "submitted_at": "2026-11-13T11:20:03.581598+00:00",
+  "due_at": "2026-11-13T23:20:03.581598+00:00",
   "decision": "APPROVED",
   "decision_role": "CAP",
-  "decided_at": "2026-11-02T17:45:56.930522+00:00",
+  "decided_at": "2026-11-13T11:20:03.853006+00:00",
   "conditions": "",
   "decision_roles": [
     "CAP"
@@ -324,9 +481,9 @@ Le schéma OpenAPI 3 complet est servi par `/api/schema/` (documentation navigab
   "provider": null,
   "authorization": {
     "number": "AUT-TGLFW-2026-000002",
-    "valid_from": "2026-11-02T17:45:56.930522+00:00",
-    "valid_until": "2026-11-09T17:45:56.930522+00:00",
-    "verification_code": "758K34GTFG",
+    "valid_from": "2026-11-13T11:20:03.853006+00:00",
+    "valid_until": "2026-11-20T11:20:03.853006+00:00",
+    "verification_code": "MGEQG8ABUR",
     "berth": null,
     "cancelled": false
   }
@@ -346,7 +503,7 @@ Le schéma OpenAPI 3 complet est servi par `/api/schema/` (documentation navigab
   "confidentiality": "N2",
   "issuer_role": "AGE",
   "issuer": "Agent maritime TGLFW — Agence maritime (démo)",
-  "issued_at": "2026-11-02T17:45:56.570002+00:00",
+  "issued_at": "2026-11-13T11:20:03.480620+00:00",
   "sha256": "1694e51d6b03cfba0e2b736cf7759364a7d7679d11417afc8a5cc713abaef106",
   "size": 975,
   "mime_type": "application/pdf",
@@ -370,19 +527,19 @@ Le schéma OpenAPI 3 complet est servi par `/api/schema/` (documentation navigab
     "SHIP": {
       "value": "32000.000",
       "by": "Capt. Demo — Capitaine (MT ATLANTIC DEMO)",
-      "at": "2026-11-02T17:45:58.266689+00:00",
+      "at": "2026-11-13T11:20:06.249111+00:00",
       "deferred": false
     },
     "SHORE": {
       "value": "32000.000",
       "by": "Opérateur terminal TGLFW — Terminal pétrolier (démo)",
-      "at": "2026-11-02T17:45:58.279706+00:00",
+      "at": "2026-11-13T11:20:06.271071+00:00",
       "deferred": false
     },
     "SURVEYOR": {
       "value": "32000.000",
       "by": "Expert surveyor TGLFW — Surveyor et laboratoire (démo)",
-      "at": "2026-11-02T17:45:58.293719+00:00",
+      "at": "2026-11-13T11:20:06.294236+00:00",
       "deferred": false
     }
   },
@@ -424,14 +581,14 @@ Le schéma OpenAPI 3 complet est servi par `/api/schema/` (documentation navigab
 {
   "id": 1,
   "reference": "DSP-TGLFW-2026-00001",
-  "subject": "Interruption — début — 02/11/2026 12:45 UTC",
+  "subject": "Interruption — début — 13/11/2026 06:20 UTC",
   "target": "MILESTONE",
   "target_id": 19,
   "status": "ANSWERED",
   "opened_role": "NAV",
   "opened_by": "Capt. Demo — Capitaine (MT ATLANTIC DEMO)",
   "counterpart_role": "TER",
-  "opened_at": "2026-11-02T17:45:58.215385+00:00",
+  "opened_at": "2026-11-13T11:20:06.199956+00:00",
   "closed_at": null,
   "automatic": false
 }

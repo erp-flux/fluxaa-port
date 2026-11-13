@@ -1,4 +1,5 @@
-"""Task actions (EF-5): complete, sign jointly, countersign, mark not applicable, ad hoc tasks."""
+"""Task actions (EF-5): complete, sign jointly, countersign, mark not applicable, ad hoc tasks; since 1.5 the
+green lights (given and withdrawn, EXG-R-03) and the documents asked for at the announcement (EXG-R-06)."""
 from __future__ import annotations
 
 from django.db import transaction
@@ -8,9 +9,10 @@ from django.utils.translation import gettext as _
 from apps.core.crypto import seal
 from apps.core.roles import ANY_PARTY, role_label
 
-from ..models import Anchor, Criticality, Nature, Task, TaskSignature, TaskStatus
+from ..models import Anchor, CallStatus, Criticality, DocumentType, Nature, Task, TaskSignature, TaskStatus
 from . import journal
 from .errors import PermissionRefused, RuleViolation, ensure_open
+from .notifications import notify
 from .rights import task_visible
 
 
@@ -94,7 +96,7 @@ def complete_task(task: Task, actor, *, note: str = "", role: str | None = None)
         raise RuleViolation(_("The call is closed."))
     allowed = set(actor.roles) if task.role == ANY_PARTY else ({task.role} | (set(task.co_roles) if task.nature == Nature.C else set()))
     acting = actor.pick_role(allowed, role)
-    if acting == "COM":
+    if acting == "COM" and not task.green_light:
         raise PermissionRefused(_("Owners and charterers have no data-entry right: they provide the documents requested from them."))
     if task.joint:
         raise RuleViolation(_("This task requires the signature of each party: use “Sign”."))
@@ -111,7 +113,131 @@ def complete_task(task: Task, actor, *, note: str = "", role: str | None = None)
             raise StrongAuthRequired()
     if task.continuous:
         _check_continuous(task)
-    return _finish(task, actor, role=acting, evidence=f"manual:{acting}", note=note)
+    done = _finish(task, actor, role=acting, evidence=f"manual:{acting}", note=note)
+    if task.green_light:
+        notify(call, ["AGE", "CAP", "NAV", "TER"], key=f"green:{task.pk}:given:{timezone.now():%Y%m%d%H%M}", realtime=True,
+               exclude_user=actor.user, url=f"/escales/{call.pk}/?tab=apercu#feux-verts",
+               title_fr=f"{call.reference} : feu vert donné par {role_label(acting)} — {task.title_fr}",
+               title_en=f"{call.reference}: green light given by {acting} — {task.title_en}")
+    return done
+
+
+@transaction.atomic
+def withdraw_green_light(task: Task, actor, reason: str, *, role: str | None = None) -> Task:
+    """A green light given is withdrawn by the party that gave it (or by the harbour master), with a reason: the
+    task is pending again, the hold points it guards close again, everyone concerned is told at once (EXG-R-03).
+    The harbour master's own green light is a decision on a request: it is withdrawn by cancelling the
+    authorization, not here."""
+    call = task.call
+    ensure_open(call)
+    if not task.green_light:
+        raise RuleViolation(_("Only a green light can be withdrawn."))
+    if task.request_type_code:
+        raise RuleViolation(_("This green light is a decision on a request: withdraw it by cancelling the authorization."))
+    if task.status != TaskStatus.DONE:
+        raise RuleViolation(_("This green light has not been given."))
+    if not reason.strip():
+        raise RuleViolation(_("A reason is required."))
+    acting = actor.pick_role({task.role, "CAP"}, role)
+    task.status = TaskStatus.PENDING
+    task.completion_note = f"{task.completion_note}\n" if task.completion_note else ""
+    task.completion_note += _("withdrawn by %(role)s: %(reason)s") % {"role": role_label(acting), "reason": reason.strip()}
+    task.completed_at = None
+    task.completed_role = ""
+    task.completed_by = None
+    task.completed_by_master = None
+    task.evidence = ""
+    task.save(update_fields=["status", "completion_note", "completed_at", "completed_role", "completed_by",
+                             "completed_by_master", "evidence"])
+    journal.record(port=call.port, call=call, actor=actor, role=acting, action="task.green_light_withdrawn", obj=task,
+                   visible_roles=task_roles_visible(task),
+                   summary_fr=f"Feu vert retiré — {task.title_fr} — {reason}",
+                   summary_en=f"Green light withdrawn — {task.title_en} — {reason}", payload={"reason": reason})
+    notify(call, ["AGE", "CAP", "NAV", "TER", "APO"], key=f"green:{task.pk}:withdrawn:{timezone.now():%Y%m%d%H%M}", realtime=True,
+           exclude_user=actor.user, url=f"/escales/{call.pk}/?tab=apercu#feux-verts",
+           title_fr=f"{call.reference} : FEU VERT RETIRÉ par {role_label(acting)} — {task.title_fr} — {reason}",
+           title_en=f"{call.reference}: GREEN LIGHT WITHDRAWN by {acting} — {task.title_en} — {reason}")
+    return task
+
+
+def green_lights(call) -> list[dict]:
+    """The green-light panel of a call: every green light of its templates, with its state, who gave it and when."""
+    rows = []
+    for task in call.tasks.filter(green_light=True).order_by("order", "number"):
+        state = "GIVEN" if task.status == TaskStatus.DONE else ("NA" if task.status == TaskStatus.NOT_APPLICABLE else "PENDING")
+        decision = None
+        if task.request_type_code:
+            req = call.requests.filter(type__code=task.request_type_code).order_by("-submitted_at", "-pk").first()
+            if req is not None and req.decision:
+                decision = req
+                if req.decision == "REFUSED":
+                    state = "REFUSED"
+        rows.append({"task": task, "state": state, "request": decision,
+                     "by": task.completed_by_master.master_name if task.completed_by_master else (task.completed_by.get_full_name() or task.completed_by.email if task.completed_by else ""),
+                     "at": task.completed_at, "withdrawable": state == "GIVEN" and not task.request_type_code})
+    return rows
+
+
+@transaction.atomic
+def request_documents(call, actor, *, document_types: list[str], custom: list[dict]) -> list[Task]:
+    """The documents the agency asks for at the announcement beyond the templates (EXG-R-06): types of the port's
+    catalogue, and others named freely (an open list). Each becomes a "provide a document" task of the type's
+    issuing role — never blocking: a blocking task comes from the templates."""
+    acting = actor.pick_role({"AGE", "CAP"})
+    created = []
+    existing = {(t.document_type_code, t.title_fr.strip().lower()) for t in call.tasks.all()}
+    types = {d.code: d for d in DocumentType.objects.filter(port=call.port, is_active=True)}
+    order = call.tasks.count()
+    for code in document_types:
+        dtype = types.get(code)
+        if dtype is None or any(t[0] == code for t in existing):
+            continue  # unknown type, or already expected by a template task
+        role = (dtype.issuer_roles or ["AGE"])[0]
+        order += 1
+        created.append(Task(
+            call=call, template_code="", number=f"D{order:02d}", title_fr=f"Fournir : {dtype.label_fr}",
+            title_en=f"Provide: {dtype.label_en}", role=role, co_roles=["AGE"] if role != "AGE" else [], nature=Nature.F,
+            criticality=Criticality.NORMAL, anchor=Anchor.ETA, offset_minutes=-24 * 60, timing_fr="ETA − 24 h",
+            timing_en="ETA − 24 h", document_type_code=code, requested_at_creation=True, created_by=actor.user, order=order,
+        ))
+        existing.add((code, ""))
+    for row in custom:
+        label = (row.get("label") or "").strip()
+        if not label or ("OTHER", label.lower()) in existing:
+            continue
+        role = row.get("role") or "AGE"
+        if role not in ("AGE", "NAV", "TER", "COM", "INS", "PRE", "SVC", "ADM", "SUR", "CAP", "APO"):
+            raise RuleViolation(_("Unknown role for a document: %(role)s") % {"role": role})
+        try:
+            hours = int(row.get("hours_before_eta") or 24)
+        except (TypeError, ValueError):
+            hours = 24
+        order += 1
+        created.append(Task(
+            call=call, template_code="", number=f"D{order:02d}", title_fr=f"Fournir : {label}", title_en=f"Provide: {label}",
+            role=role, co_roles=["AGE"] if role != "AGE" else [], nature=Nature.F, criticality=Criticality.NORMAL,
+            anchor=Anchor.ETA, offset_minutes=-hours * 60, timing_fr=f"ETA − {hours} h", timing_en=f"ETA − {hours} h",
+            document_type_code="OTHER", requested_at_creation=True, created_by=actor.user, order=order,
+        ))
+        existing.add(("OTHER", label.lower()))
+    if not created:
+        return []
+    tasks = Task.objects.bulk_create(created)
+    from .calls import compute_due
+
+    for task in tasks:
+        task.due_at = compute_due(task, call)
+    Task.objects.bulk_update(tasks, ["due_at"])
+    journal.record(port=call.port, call=call, actor=actor, role=acting, action="documents.requested", obj=call,
+                   summary_fr="Documents demandés à l'annonce : " + ", ".join(f"{t.title_fr[10:]} ({role_label(t.role)})" for t in tasks),
+                   summary_en="Documents asked for at the announcement: " + ", ".join(f"{t.title_en[9:]} ({t.role})" for t in tasks),
+                   payload={"tasks": [t.number for t in tasks]})
+    if call.status != CallStatus.DRAFT:  # at the announcement the parties learn it with the declaration
+        notify(call, sorted({t.role for t in tasks}), key=f"documents:{call.pk}:requested:{timezone.now():%Y%m%d%H%M}",
+               exclude_user=actor.user, url=f"/escales/{call.pk}/?tab=documents",
+               title_fr=f"{call.reference} : documents attendus — " + ", ".join(t.title_fr[10:] for t in tasks),
+               title_en=f"{call.reference}: documents expected — " + ", ".join(t.title_en[9:] for t in tasks))
+    return tasks
 
 
 def _check_continuous(task: Task) -> None:

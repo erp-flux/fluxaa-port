@@ -67,14 +67,17 @@ Nature : BASE · ordre 0 · zones : toutes zones · Instancié pour toute escale
 | Tâche | Section | Rôle (+ co-rôles) | Nat. | Échéance | Crit. | Conf. | Intitulé FR / EN | Objet lié | Particularités | Base |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `M0:01` | Nomination et déclaration | AGE | R | à la nomination | B | N2 | Créer l'escale et inviter les parties prenantes / Create the call and invite the stakeholders | auto `call.created` | jamais sans objet | FLX-SPEC-001 règle 1 — l'agence crée l'escale |
-| `M0:02` | Nomination et déclaration | AGE | F | ETA − 7 j | B | N2 | Fournir le jeu de données navire : Q88 ou VPQ, plans, particularités du collecteur, débit de pompage / Provide the vessel dataset: Q88 or VPQ, plans, manifold particulars, pumping rate | document `Q88` |  | PRO-MAR-001 §3.2 — dossier navire / OCIMF |
-| `M0:03` | Nomination et déclaration | NAV | F | ETA − 72 h | B | N2 | Fournir les certificats statutaires et d'assurance — validité contrôlée à la date de départ prévue / Provide statutory and insurance certificates — validity checked against the planned departure date | document `CERTIFICATES` |  | SOLAS / MARPOL / CLC — certificats statutaires |
+| `M0:02` | Nomination et déclaration | AGE | F | ETA − 7 j | B | N2 | Fournir le jeu de données navire : Q88 ou VPQ pour un pétrolier, fiche de particularités et plans pour tout autre navire (grues, rampes, cales) / Provide the vessel dataset: Q88 or VPQ for a tanker, ship's particulars and plans for any other vessel (cranes, ramps, holds) | document `Q88` |  | PRO-MAR-001 §3.2 — dossier navire / OCIMF |
+| `M0:03` | Nomination et déclaration | NAV + AGE | F | ETA − 72 h | B | N2 | Fournir les certificats statutaires et d'assurance — validité contrôlée à la date de départ prévue / Provide statutory and insurance certificates — validity checked against the planned departure date | document `CERTIFICATES` |  | SOLAS / MARPOL / CLC — certificats statutaires |
 | `M0:04` | Nomination et déclaration | COM | F | ETA − 72 h | N | N2 | Fournir l'extrait de recap ou de charte-partie et les clauses d'escale / Provide the recap or charter-party extract and the port-call clauses | document `CP_RECAP` |  |  |
 | `M0:05` | Nomination et déclaration | AGE | C | ETA − 72 h | B | N2 | Confirmer le contrôle des listes de sanctions (navire, armateur, affréteur, cargaison, origine) / Confirm the sanctions screening (vessel, owner, charterer, cargo, origin) |  |  | Obligations de sanctions / sanctions compliance |
 | `M0:06` | Nomination et déclaration | TER | F | ETA − 7 j | B | N2 | Demander l'acceptation du navire (vetting) avec rapport SIRE/CDI, historique PSC, trois dernières cargaisons / Request vessel acceptance (vetting) with SIRE/CDI report, PSC history, last three cargoes | demande `VESSEL_ACCEPTANCE` (submit) |  | PRO-MAR-001 §3.2.2.1 — circuit de vetting |
 | `M0:07` | Nomination et déclaration | CAP + APO | D | ETA − 5 j | B | N2 | Décider l'acceptation du navire, avec durée de validité et conditions — motif de refus en N3 / Decide vessel acceptance, with validity and conditions — refusal reason is N3 | demande `VESSEL_ACCEPTANCE` (decide) |  | PRO-MAR-001 §3.2.2.1 — acceptation du navire |
 | `M0:08` | Nomination et déclaration | AGE | R | ETA − 72 h | B | N2 | Déclarer l'escale et solliciter le green light / Declare the call and request the green light | auto `call.declared` |  | Règlement d'exploitation du port — déclaration d'escale |
-| `M0:09` | Nomination et déclaration | CAP | D | ETA − 48 h | B | N2 | Accorder le green light / Grant the green light | demande `GREEN_LIGHT` (decide) |  | PRO-MAR-001 — green light de la capitainerie |
+| `M0:09` | Nomination et déclaration | CAP | D | ETA − 48 h | B | N2 | Accorder le green light de la capitainerie / Grant the harbour master's green light | demande `GREEN_LIGHT` (decide) |  | PRO-MAR-001 — green light de la capitainerie |
+| `M0:09b` | Nomination et déclaration | SUR | C | ETA − 24 h | B | N2 | Donner le feu vert de la base navale / sûreté à l'entrée du navire dans les eaux du port / Give the naval base / security green light for the vessel's entry into the port waters |  |  | Sûreté portuaire — contrôle d'accès des navires (ISPS, autorité navale) |
+| `M0:09c` | Nomination et déclaration | TER | C | ETB − 6 h | B | N2 | Donner le feu vert du terminal : bacs ou aires, lignes ou moyens de manutention et personnel prêts / Give the terminal's green light: tanks or yards, lines or handling means and staff ready |  | zones JETTY/SPM | PRO-MAR-001 — mise à disposition du terminal |
+| `M0:09d` | Nomination et déclaration | COM | C | ETB − 6 h | B | N2 | Donner le feu vert commercial : cargaison libérée, instruction d'opérer donnée au navire et au terminal / Give the commercial green light: cargo released, instruction to operate given to the vessel and the terminal |  |  | Charte-partie / contrat de vente — libération de la cargaison |
 | `M0:10` | Nomination et déclaration | AGE | F | ETA − 72 h | B | N2 | Demander le poste et le créneau / Request the berth and the slot | demande `BERTH` (submit) |  | Règlement d'exploitation — attribution des postes |
 | `M0:11` | Nomination et déclaration | APO | D | ETA − 24 h | B | N2 | Attribuer le poste et le créneau / Assign the berth and the slot | demande `BERTH` (decide) |  | PRO-MAR-001 — attribution du poste |
 | `M0:12` | Nomination et déclaration | CAP + TER | F | ETA − 24 h | N | N2 | Publier les conditions limites d'exploitation du poste (vent, houle, courant, visibilité) / Publish the berth operating limits (wind, swell, current, visibility) | document `BERTH_LIMITS` | zones JETTY/SPM |  |
@@ -93,10 +96,11 @@ Nature : BASE · ordre 0 · zones : toutes zones · Instancié pour toute escale
 | `M0:25` | Arrivée et mise à disposition | CAP | D | ETB − 2 h | B | N2 | Délivrer l'autorisation de mouvement / Issue the movement authorization | demande `MOVEMENT` (decide) | zones JETTY/SPM | PRO-MAR-001 — autorisation de mouvement |
 | `M0:26` | Accostage et interface navire/terre | SVC + NAV | R | événement | B | N2 | Enregistrer pilote à bord, première amarre, all fast, passerelle en place / Record pilot on board, first line, all fast, gangway in place | jalons `PILOT_ON_BOARD_ARR`, `FIRST_LINE`, `ALL_FAST`, `GANGWAY` | zones JETTY/SPM | PRO-MAR-001 — accostage |
 | `M0:27` | Accostage et interface navire/terre | TER + NAV | S | ATB + 2 h | B | N2 | Tenir la réunion pré-transfert et signer le compte rendu / Hold the pre-transfer meeting and sign the minutes |  | conjointe, zones JETTY/SPM | ISGOTT — réunion pré-transfert |
-| `M0:28` | Accostage et interface navire/terre | TER + NAV | S | avant T0 | B | N2 | Compléter et signer conjointement la liste de contrôle navire/terre / Complete and jointly sign the ship/shore safety checklist |  | conjointe, jamais sans objet, zones JETTY/SPM | ISGOTT chap. 26 — SSSCL |
+| `M0:28` | Accostage et interface navire/terre | TER + NAV | S | avant T0 | B | N2 | Compléter et signer conjointement la liste de contrôle navire/terre / Complete and jointly sign the ship/shore safety checklist |  | conjointe, jamais sans objet, zones JETTY/SPM | ISGOTT chap. 26 — SSSCL ; Code BLU — liste de contrôle vrac sec |
 | `M0:29` | Accostage et interface navire/terre | TER + NAV | R | avant T0 | B | N2 | Réaliser et consigner l'essai d'arrêt d'urgence / Perform and record the emergency shutdown test | jalons `ESD_TEST` | jamais sans objet, zones JETTY/SPM | ISGOTT — essai ESD |
 | `M0:30` | Accostage et interface navire/terre | SUR + NAV | S | ATB + 2 h | N | N2 | Établir la déclaration de sûreté si requise / Establish the declaration of security if required |  | conjointe |  |
 | `M0:31` | Accostage et interface navire/terre | TER | C | avant T0 | B | N2 | Confirmer la mise en sécurité du poste : dalots obturés, plateaux, kit antipollution, moyens incendie / Confirm berth safety: scuppers plugged, drip trays, spill kit, firefighting means |  | zones JETTY/SPM | ISGOTT / MARPOL — prévention de la pollution |
+| `M0:31b` | Accostage et interface navire/terre | TER | C | avant T0 | B | N2 | Confirmer la mise en sécurité du poste : aires balisées, éclairage, moyens de levage contrôlés, moyens incendie, accès / Confirm berth safety: areas marked out, lighting, lifting gear checked, firefighting means, access |  | zones JETTY/SPM | Convention OIT n° 152 / Recueil BIT — sécurité et santé dans les ports |
 | `M0:32` | Clôture et appareillage | PRE | F | avant ATD | B | N2 | Remettre les déchets et fournir le bordereau de réception / Deliver the waste and issue the waste receipt | jalons `WASTE_DELIVERED` |  | MARPOL — installations de réception |
 | `M0:33` | Clôture et appareillage | ADM | D | ATD − 4 h | B | N2 | Traiter les formalités de sortie / Process outward formalities | demande `OUTWARD_FORMALITIES` (decide) |  | Code des douanes — formalités de sortie |
 | `M0:34` | Clôture et appareillage | CAP | D | ATD − 2 h | B | N2 | Délivrer le congé de départ / Issue the departure clearance | demande `DEPARTURE_CLEARANCE` (decide) |  | PRO-MAR-001 — congé de départ |
@@ -303,6 +307,132 @@ Nature : MODULE · ordre 12 · zones : toutes zones · Ajouté automatiquement p
 | `MA3:A3.03` |  | NAV | C | quotidien | B | N2 | Confirmer qu'aucune opération non autorisée n'est conduite au mouillage / Confirm no unauthorized operation is conducted at anchorage |  |  | Règlement de la rade |
 | `MA3:A3.04` |  | SUR + NAV | C | à l'arrivée | N | N2 | Confirmer le report de sûreté au centre régional compétent / Confirm the security report to the competent regional centre |  |  |  |
 
+### `MB1` — Déchargement de vrac sec (import) / Dry bulk discharge (import)
+
+Nature : OPERATION · ordre 21 · zones : JETTY · Minerais, céréales, clinker, engrais, charbon… En complément de M0 ; Code BLU, Code IMSBC, draft survey.
+
+| Tâche | Section | Rôle (+ co-rôles) | Nat. | Échéance | Crit. | Conf. | Intitulé FR / EN | Objet lié | Particularités | Base |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `MB1:B1.01` |  | AGE | F | ETA − 7 j | B | N2 | Fournir le manifeste de cargaison et le connaissement / Provide the cargo manifest and the bill of lading | document `CARGO_MANIFEST` |  | Convention FAL / Code des douanes |
+| `MB1:B1.02` |  | NAV | F | ETB − 24 h | B | N2 | Fournir le plan de déchargement : séquence des cales, déballastage, contraintes de structure, tirants d'eau / Provide the discharge plan: hold sequence, deballasting, structural limits, drafts | document `STOWAGE_PLAN` |  | Code BLU §3 — plan de déchargement convenu |
+| `MB1:B1.03` |  | TER | R | ETB − 12 h | B | N2 | Confirmer la capacité de réception : aire ou magasin, moyens de manutention (grues, bennes, trémies, bande), cadence / Confirm the receiving capacity: yard or warehouse, handling means (cranes, grabs, hoppers, belt), rate |  |  | Code BLU — plan convenu entre le navire et le terminal |
+| `MB1:B1.04` |  | NAV | R | ETB − 6 h | B | N2 | Confirmer l'état des cales : panneaux manœuvrables, éclairage, échelles, cargaison non déplacée, aération / Confirm the holds' condition: hatch covers operable, lighting, ladders, cargo not shifted, ventilation |  |  | Code BLU / Code IMSBC |
+| `MB1:B1.05` |  | INS + NAV/TER | R | avant T0 | B | N2 | Réaliser le draft survey initial : tirants d'eau, densité de l'eau, ballast, consommables / Perform the initial draft survey: drafts, water density, ballast, consumables | jalons `DRAFT_SURVEY_INITIAL` |  | UNECE — code de procédures uniformes pour les draft surveys |
+| `MB1:B1.06` |  | INS + NAV | R | avant T0 | B | N2 | Inspecter les cales et accepter la cargaison à la vue : état, humidité, contamination, réserves / Inspect the holds and accept the cargo as seen: condition, moisture, contamination, remarks | jalons `HOLDS_ACCEPTED` |  | Pratique d'inspection des cargaisons sèches |
+| `MB1:B1.07` |  | TER | F | avant T0 | B | N2 | Enregistrer l'accord de déchargement navire/terminal : séquence, cadence, déballastage, arrêts, communication / Record the ship/terminal unloading agreement: sequence, rate, deballasting, stoppages, communication | document `BLU_AGREEMENT` |  | Code BLU, appendice 2 — plan de chargement / déchargement |
+| `MB1:B1.08` |  | TER + NAV | R | événement | B | N2 | Enregistrer le début des opérations de déchargement / Record the start of the discharge operations | jalons `CARGO_OPS_START` |  | PRO-MAR-001 — démarrage des opérations |
+| `MB1:B1.09` |  | TER + INS | R | en continu | B | N2 | Tenir le relevé des quantités déchargées par cale et par équipe : tonnage pesé ou compté, cadence / Keep the record of the quantities discharged per hold and per shift: weighed or counted tonnage, rate |  | continue | Code BLU — suivi du déchargement |
+| `MB1:B1.10` |  | ANY | R | immédiat | B | N2 | Déclarer chaque interruption : début, fin et cause en liste fermée / Declare every interruption: start, end and cause from the closed list |  | continue | FLX-SPEC-001 §7 — événement 18 |
+| `MB1:B1.11` |  | TER + NAV | R | événement | B | N2 | Enregistrer la fin du déchargement et le nettoyage des cales et des aires / Record the end of the discharge and the cleaning of the holds and the areas | jalons `CARGO_OPS_END` |  | PRO-MAR-001 — fin des opérations |
+| `MB1:B1.12` |  | INS + NAV/TER | R | T1 + 4 h | B | N2 | Réaliser le draft survey final / Perform the final draft survey | jalons `DRAFT_SURVEY_FINAL` |  | UNECE — draft survey final |
+| `MB1:B1.13` |  | INS | F | T1 + 12 h | B | N2 | Produire le rapport de draft survey et le constat de quantité déchargée / Issue the draft survey report and the discharged-quantity statement | document `DRAFT_SURVEY_REPORT` |  | UNECE — rapport de draft survey |
+| `MB1:B1.14` |  | TER | F | T1 + 12 h | N | N2 | Émettre le rapport de réception (out-turn) et le relevé des pesées à terre / Issue the out-turn report and the shore weighing record | document `OUTTURN_REPORT` |  |  |
+| `MB1:B1.15` |  | ANY | F | T1 + 24 h | N | N2 | Établir le constat de dommages ou de manquants s'il y a lieu (navire, cargaison, installations) / Establish the damage or shortage report if any (vessel, cargo, facilities) | document `CARGO_DAMAGE_REPORT` |  |  |
+| `MB1:B1.16` |  | AGE | F | T1 + 24 h | B | N2 | Déposer la déclaration douanière de cargaison / File the customs cargo declaration | document `CARGO_DECLARATION` |  | Code des douanes |
+| `MB1:B1.17` |  | ANY | F | T1 + 24 h | N | N2 | Émettre une lettre de protêt si l'écart bord/terre ou les réserves l'exigent / Issue a letter of protest if the ship/shore difference or the remarks call for it | document `PROTEST` |  |  |
+
+### `MB2` — Chargement de vrac sec (export) / Dry bulk loading (export)
+
+Nature : OPERATION · ordre 22 · zones : JETTY · Minerais, clinker, céréales, engrais… En complément de M0 ; Code BLU, Code IMSBC (TML, humidité), draft survey.
+
+| Tâche | Section | Rôle (+ co-rôles) | Nat. | Échéance | Crit. | Conf. | Intitulé FR / EN | Objet lié | Particularités | Base |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `MB2:B2.01` |  | AGE | F | ETA − 7 j | B | N2 | Fournir la déclaration de cargaison du chargeur : nature, groupe IMSBC, teneur en humidité, TML, certificats / Provide the shipper's cargo declaration: nature, IMSBC group, moisture content, TML, certificates | document `CARGO_INFO_IMSBC` |  | Code IMSBC §4 — informations sur la cargaison |
+| `MB2:B2.02` |  | AGE | F | ETA − 7 j | B | N2 | Fournir l'autorisation d'exportation et les documents du chargeur / Provide the export authorization and the shipper's documents | document `EXPORT_AUTH` |  | Réglementation des exportations |
+| `MB2:B2.03` |  | NAV | F | ETB − 24 h | B | N2 | Fournir le plan de chargement : séquence, déballastage, contraintes de structure, tirant d'eau final / Provide the loading plan: sequence, deballasting, structural limits, final draft | document `STOWAGE_PLAN` |  | Code BLU §3 — plan de chargement convenu |
+| `MB2:B2.04` |  | TER | R | ETB − 12 h | B | N2 | Confirmer le stock prêt, la chaîne de chargement (bande, chargeur, grues, bennes) et la cadence / Confirm the stock ready, the loading chain (belt, shiploader, cranes, grabs) and the rate |  |  | Code BLU — plan convenu |
+| `MB2:B2.05` |  | INS + NAV/TER | R | ETB − 6 h | B | N2 | Inspecter les cales : propreté, sèches, étanches, prêtes à charger — certificat ou réserves / Inspect the holds: clean, dry, watertight, ready to load — certificate or remarks | jalons `HOLDS_ACCEPTED` |  | Pratique d'inspection des cales (hold inspection) |
+| `MB2:B2.06` |  | INS + NAV/TER | R | avant T0 | B | N2 | Réaliser le draft survey initial / Perform the initial draft survey | jalons `DRAFT_SURVEY_INITIAL` |  | UNECE — draft survey |
+| `MB2:B2.07` |  | TER | F | avant T0 | B | N2 | Enregistrer l'accord de chargement navire/terminal : séquence, cadence, déballastage, arrêts, nivellement / Record the ship/terminal loading agreement: sequence, rate, deballasting, stoppages, trimming | document `BLU_AGREEMENT` |  | Code BLU, appendice 2 |
+| `MB2:B2.08` |  | TER + NAV | R | événement | B | N2 | Enregistrer le début du chargement / Record the start of loading | jalons `CARGO_OPS_START` |  | PRO-MAR-001 — démarrage des opérations |
+| `MB2:B2.09` |  | TER + INS | R | en continu | B | N2 | Tenir le relevé des quantités chargées par cale : bascule, bande, pesée, cadence / Keep the record of the quantities loaded per hold: weighbridge, belt scale, weighing, rate |  | continue | Code BLU — suivi du chargement |
+| `MB2:B2.10` |  | ANY | R | immédiat | B | N2 | Déclarer chaque interruption : début, fin et cause en liste fermée / Declare every interruption: start, end and cause from the closed list |  | continue | FLX-SPEC-001 §7 — événement 18 |
+| `MB2:B2.11` |  | NAV | R | en continu | N | N2 | Suivre le déballastage, la stabilité et les contraintes de coque pendant le chargement / Monitor deballasting, stability and hull stresses during loading |  | continue | Code BLU — surveillance pendant le chargement |
+| `MB2:B2.12` |  | TER + NAV | R | événement | B | N2 | Enregistrer la fin du chargement et le nivellement des cales / Record the end of loading and the trimming of the holds | jalons `CARGO_OPS_END` |  | PRO-MAR-001 — fin des opérations |
+| `MB2:B2.13` |  | INS + NAV/TER | R | T1 + 4 h | B | N2 | Réaliser le draft survey final et établir la quantité chargée / Perform the final draft survey and establish the loaded quantity | jalons `DRAFT_SURVEY_FINAL` |  | UNECE — draft survey final |
+| `MB2:B2.14` |  | INS | F | T1 + 12 h | B | N2 | Produire le rapport de draft survey / Issue the draft survey report | document `DRAFT_SURVEY_REPORT` |  | UNECE — rapport de draft survey |
+| `MB2:B2.15` |  | NAV | F | T1 + 12 h | B | N2 | Émettre les reçus de bord (mate's receipts) avec les réserves éventuelles / Issue the mate's receipts with any remarks | document `MATES_RECEIPT` |  | Pratique maritime — reçu de bord avant connaissement |
+| `MB2:B2.16` |  | COM | F | T1 + 12 h | B | N3 | Transmettre l'instruction documentaire écrite pour le connaissement / Send the written documentary instructions for the bill of lading | document `DOC_INSTRUCTIONS` |  | FLX-SPEC-001 — verrou du connaissement |
+| `MB2:B2.17` |  | AGE | F | T1 + 24 h | B | N2 | Émettre le connaissement conformément aux reçus de bord et à l'instruction / Issue the bill of lading in accordance with the mate's receipts and the instructions | document `BILL_OF_LADING` |  | Règles de La Haye-Visby — connaissement |
+| `MB2:B2.18` |  | AGE | F | T1 + 24 h | B | N2 | Déposer le manifeste et la déclaration d'exportation / File the export manifest and declaration | document `CARGO_DECLARATION` |  | Code des douanes |
+| `MB2:B2.19` |  | ANY | F | T1 + 24 h | N | N2 | Émettre une lettre de protêt si l'écart bord/terre ou les réserves l'exigent / Issue a letter of protest if the ship/shore difference or the remarks call for it | document `PROTEST` |  |  |
+
+### `MC1` — Opérations conteneurs (import, export, transbordement) / Container operations (import, export, transhipment)
+
+Nature : OPERATION · ordre 23 · zones : JETTY · En complément de M0 ; plan de chargement (bay plan), marchandises dangereuses (Code IMDG), mouvements par équipe.
+
+| Tâche | Section | Rôle (+ co-rôles) | Nat. | Échéance | Crit. | Conf. | Intitulé FR / EN | Objet lié | Particularités | Base |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `MC1:C1.01` |  | AGE | F | ETA − 48 h | B | N2 | Transmettre la liste de déchargement et le plan de chargement prévisionnel (bay plan, messages EDI) / Send the discharge list and the provisional loading plan (bay plan, EDI messages) | document `BAY_PLAN` |  | Pratique des terminaux à conteneurs — BAPLIE / COPRAR |
+| `MC1:C1.02` |  | AGE | F | ETA − 24 h | B | N2 | Déclarer les marchandises dangereuses : liste, classes IMDG, positions, ségrégation / Declare the dangerous goods: list, IMDG classes, positions, segregation | document `DG_DECLARATION` |  | Code IMDG chap. 5.4 — déclaration de marchandises dangereuses |
+| `MC1:C1.03` |  | AGE | F | ETA − 24 h | B | N2 | Fournir le manifeste de cargaison et les listes de conteneurs : import, export, transbordement, vides, reefers / Provide the cargo manifest and the container lists: import, export, transhipment, empties, reefers | document `CARGO_MANIFEST` |  | Convention FAL / Code des douanes |
+| `MC1:C1.04` |  | TER | R | ETB − 12 h | B | N2 | Confirmer l'allocation des portiques ou grues, des équipes, des aires et la cadence (mouvements par heure) / Confirm the allocation of the gantries or cranes, the gangs, the yard and the rate (moves per hour) |  |  | Pratique des terminaux à conteneurs — planification du navire |
+| `MC1:C1.05` |  | NAV | R | ETB − 6 h | B | N2 | Confirmer le plan de chargement final, la stabilité, le saisissage et les contraintes de pont / Confirm the final loading plan, stability, lashing and deck limits |  |  | SOLAS VI/5 et VII — manuel d'assujettissement de la cargaison |
+| `MC1:C1.06` |  | TER + NAV | R | événement | B | N2 | Enregistrer le début des opérations (premier mouvement) / Record the start of the operations (first move) | jalons `CARGO_OPS_START` |  | PRO-MAR-001 — démarrage des opérations |
+| `MC1:C1.07` |  | TER + NAV | R | en continu | B | N2 | Tenir le relevé des mouvements par équipe : déchargés, chargés, reefers branchés, DG, hors gabarit, restow / Keep the record of the moves per shift: discharged, loaded, reefers plugged, DG, out-of-gauge, restows |  | continue | Pratique des terminaux — rapport d'opération |
+| `MC1:C1.08` |  | ANY | R | immédiat | B | N2 | Déclarer chaque interruption : début, fin et cause en liste fermée / Declare every interruption: start, end and cause from the closed list |  | continue | FLX-SPEC-001 §7 — événement 18 |
+| `MC1:C1.09` |  | TER + NAV | R | événement | B | N2 | Enregistrer la fin des opérations (dernier mouvement) et la libération du poste / Record the end of the operations (last move) and the release of the berth | jalons `CARGO_OPS_END` |  | PRO-MAR-001 — fin des opérations |
+| `MC1:C1.10` |  | NAV | F | T1 + 2 h | B | N2 | Confirmer le plan de chargement final tel qu'arrimé et le saisissage vérifié / Confirm the final loading plan as stowed and the lashing checked | document `BAY_PLAN` |  | SOLAS VI — plan de chargement final |
+| `MC1:C1.11` |  | TER | F | T1 + 12 h | B | N2 | Émettre le rapport d'opération du terminal : mouvements, temps, incidents, conteneurs endommagés (EIR) / Issue the terminal operation report: moves, times, incidents, damaged containers (EIR) | document `OUTTURN_REPORT` |  | PRO-MAR-001 — point d'arrêt / hold point |
+| `MC1:C1.12` |  | ANY | F | T1 + 24 h | N | N2 | Établir le constat de dommages ou de manquants s'il y a lieu (navire, cargaison, installations) / Establish the damage or shortage report if any (vessel, cargo, facilities) | document `CARGO_DAMAGE_REPORT` |  |  |
+| `MC1:C1.13` |  | AGE | F | T1 + 24 h | B | N2 | Déposer la déclaration douanière de cargaison (manifestes import et export) / File the customs cargo declaration (import and export manifests) | document `CARGO_DECLARATION` |  | Code des douanes |
+
+### `MG1` — Marchandises diverses, colis lourds et projets (import / export) / General cargo, breakbulk and project cargo (import / export)
+
+Nature : OPERATION · ordre 24 · zones : JETTY · Sacs, palettes, colis, ferrailles, équipements, colis lourds… En complément de M0 ; pointage, réserves, reçus de bord.
+
+| Tâche | Section | Rôle (+ co-rôles) | Nat. | Échéance | Crit. | Conf. | Intitulé FR / EN | Objet lié | Particularités | Base |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `MG1:G1.01` |  | AGE | F | ETA − 48 h | B | N2 | Fournir le manifeste de cargaison et la liste de colisage / Provide the cargo manifest and the packing list | document `CARGO_MANIFEST` |  | Convention FAL / Code des douanes |
+| `MG1:G1.02` |  | AGE | F | ETA − 24 h | N | N2 | Déclarer les marchandises dangereuses s'il y a lieu / Declare the dangerous goods if any | document `DG_DECLARATION` |  | Code IMDG chap. 5.4 |
+| `MG1:G1.03` |  | NAV | F | ETB − 24 h | B | N2 | Fournir le plan d'arrimage, la séquence de manutention et les contraintes : colis lourds, SWL des grues, calage / Provide the stowage plan, the handling sequence and the limits: heavy lifts, crane SWL, shoring | document `STOWAGE_PLAN` |  | Code CSS — assujettissement de la cargaison |
+| `MG1:G1.04` |  | TER | R | ETB − 12 h | B | N2 | Confirmer les moyens de manutention (grues, SWL, élingues, chariots), les aires et les équipes / Confirm the handling means (cranes, SWL, slings, forklifts), the areas and the gangs |  |  | Convention OIT n° 152 — manutention portuaire |
+| `MG1:G1.05` |  | INS + NAV/TER | R | avant T0 | B | N2 | Inspecter la cargaison avant manutention : état, marquage, emballage, réserves / Inspect the cargo before handling: condition, marking, packaging, remarks | jalons `HOLDS_ACCEPTED` |  | Pratique d'inspection des marchandises diverses |
+| `MG1:G1.06` |  | TER + NAV | R | événement | B | N2 | Enregistrer le début des opérations de manutention / Record the start of the cargo operations | jalons `CARGO_OPS_START` |  | PRO-MAR-001 — démarrage des opérations |
+| `MG1:G1.07` |  | TER + INS | R | en continu | B | N2 | Tenir le pointage (tally) des colis manutentionnés par cale, par équipe et par lot / Keep the tally of the packages handled per hold, per shift and per lot |  | continue | Pratique — pointage contradictoire |
+| `MG1:G1.08` |  | ANY | R | immédiat | B | N2 | Déclarer chaque interruption : début, fin et cause en liste fermée / Declare every interruption: start, end and cause from the closed list |  | continue | FLX-SPEC-001 §7 — événement 18 |
+| `MG1:G1.09` |  | TER + NAV | R | événement | B | N2 | Enregistrer la fin des opérations de manutention / Record the end of the cargo operations | jalons `CARGO_OPS_END` |  | PRO-MAR-001 — fin des opérations |
+| `MG1:G1.10` |  | INS | F | T1 + 12 h | B | N2 | Produire le rapport de pointage et le constat de réception (out-turn) / Issue the tally report and the out-turn statement | document `TALLY_SHEET` |  | Pratique — rapport de pointage |
+| `MG1:G1.11` |  | NAV | F | T1 + 12 h | N | N2 | Émettre les reçus de bord (mate's receipts) — export / Issue the mate's receipts — export | document `MATES_RECEIPT` |  | Pratique maritime — reçu de bord |
+| `MG1:G1.12` |  | ANY | F | T1 + 24 h | N | N2 | Établir le constat de dommages ou de manquants s'il y a lieu (navire, cargaison, installations) / Establish the damage or shortage report if any (vessel, cargo, facilities) | document `CARGO_DAMAGE_REPORT` |  |  |
+| `MG1:G1.13` |  | AGE | F | T1 + 24 h | B | N2 | Déposer la déclaration douanière de cargaison / File the customs cargo declaration | document `CARGO_DECLARATION` |  | Code des douanes |
+| `MG1:G1.14` |  | ANY | F | T1 + 24 h | N | N2 | Émettre une lettre de protêt si l'écart bord/terre ou les réserves l'exigent / Issue a letter of protest if the ship/shore difference or the remarks call for it | document `PROTEST` |  |  |
+
+### `MR1` — Roulier — véhicules et engins (ro-ro) / Ro-ro — vehicles and rolling equipment
+
+Nature : OPERATION · ordre 25 · zones : JETTY · Véhicules neufs ou d'occasion, camions, engins, remorques… En complément de M0 ; plan de pont, pointage des unités, réserves.
+
+| Tâche | Section | Rôle (+ co-rôles) | Nat. | Échéance | Crit. | Conf. | Intitulé FR / EN | Objet lié | Particularités | Base |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `MR1:R1.01` |  | AGE | F | ETA − 48 h | B | N2 | Fournir le manifeste et la liste des unités : châssis / VIN, type, poids, dimensions, destination / Provide the manifest and the list of units: chassis / VIN, type, weight, dimensions, destination | document `CARGO_MANIFEST` |  | Convention FAL / Code des douanes |
+| `MR1:R1.02` |  | NAV | F | ETB − 24 h | B | N2 | Fournir le plan de pont et la séquence de débarquement ou d'embarquement par rampe / Provide the deck plan and the discharge or loading sequence over the ramp | document `STOWAGE_PLAN` |  | Code CSS — saisissage des véhicules |
+| `MR1:R1.03` |  | TER | R | ETB − 12 h | B | N2 | Confirmer la rampe ou le linkspan, les aires de parc, les chauffeurs et la cadence / Confirm the ramp or linkspan, the parking areas, the drivers and the rate |  |  | Pratique des terminaux rouliers |
+| `MR1:R1.04` |  | INS + NAV/TER | R | avant T0 | B | N2 | Inspecter l'état des unités avant mouvement et consigner les réserves : dommages, clés, carburant, kilométrage / Inspect the units before moving them and record the remarks: damage, keys, fuel, mileage | jalons `HOLDS_ACCEPTED` |  | Pratique — inspection contradictoire des véhicules |
+| `MR1:R1.05` |  | TER + NAV | R | événement | B | N2 | Enregistrer le début des opérations / Record the start of the operations | jalons `CARGO_OPS_START` |  | PRO-MAR-001 — démarrage des opérations |
+| `MR1:R1.06` |  | TER + INS | R | en continu | B | N2 | Tenir le pointage des unités par pont et par lot : débarquées, embarquées, en attente / Keep the tally of the units per deck and per lot: discharged, loaded, waiting |  | continue | Pratique — pointage des unités |
+| `MR1:R1.07` |  | ANY | R | immédiat | B | N2 | Déclarer chaque interruption : début, fin et cause en liste fermée / Declare every interruption: start, end and cause from the closed list |  | continue | FLX-SPEC-001 §7 — événement 18 |
+| `MR1:R1.08` |  | TER + NAV | R | événement | B | N2 | Enregistrer la fin des opérations / Record the end of the operations | jalons `CARGO_OPS_END` |  | PRO-MAR-001 — fin des opérations |
+| `MR1:R1.09` |  | INS | F | T1 + 12 h | B | N2 | Produire le rapport d'inspection et de pointage des unités (out-turn) / Issue the inspection and tally report of the units (out-turn) | document `TALLY_SHEET` |  | Pratique — rapport de pointage |
+| `MR1:R1.10` |  | ANY | F | T1 + 24 h | N | N2 | Établir le constat de dommages ou de manquants s'il y a lieu (navire, cargaison, installations) / Establish the damage or shortage report if any (vessel, cargo, facilities) | document `CARGO_DAMAGE_REPORT` |  |  |
+| `MR1:R1.11` |  | AGE | F | T1 + 24 h | B | N2 | Déposer la déclaration douanière de cargaison / File the customs cargo declaration | document `CARGO_DECLARATION` |  | Code des douanes |
+| `MR1:R1.12` |  | ANY | F | T1 + 24 h | N | N2 | Émettre une lettre de protêt si l'écart bord/terre ou les réserves l'exigent / Issue a letter of protest if the ship/shore difference or the remarks call for it | document `PROTEST` |  |  |
+
+### `MX1` — Autre escale ou cargaison non listée / Any other call or cargo not listed
+
+Nature : OPERATION · ordre 26 · zones : toutes zones · Passagers, navire d'État, pêche, recherche, cargaison hors catalogue, escale sans manutention… Le gabarit décrit l'opération et en suit les temps ; tout ce qui ne s'applique pas est marqué sans objet.
+
+| Tâche | Section | Rôle (+ co-rôles) | Nat. | Échéance | Crit. | Conf. | Intitulé FR / EN | Objet lié | Particularités | Base |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `MX1:X1.01` |  | AGE | F | ETA − 48 h | B | N2 | Décrire l'opération et fournir les documents de cargaison ou de séjour applicables : manifeste, listes, déclarations / Describe the operation and provide the applicable cargo or stay documents: manifest, lists, declarations | document `CARGO_MANIFEST` |  | Convention FAL — documents d'escale |
+| `MX1:X1.02` |  | AGE | F | ETA − 24 h | N | N2 | Déclarer les marchandises dangereuses s'il y a lieu / Declare the dangerous goods if any | document `DG_DECLARATION` |  | Code IMDG chap. 5.4 |
+| `MX1:X1.03` |  | TER | R | ETB − 12 h | B | N2 | Confirmer les moyens, les aires et le personnel pour l'opération décrite / Confirm the means, the areas and the staff for the operation described |  |  | PRO-MAR-001 — préparation de l'opération |
+| `MX1:X1.04` |  | TER + NAV | R | événement | B | N2 | Enregistrer le début de l'opération / Record the start of the operation | jalons `CARGO_OPS_START` |  | PRO-MAR-001 — démarrage des opérations |
+| `MX1:X1.05` |  | TER | R | en continu | N | N2 | Tenir le relevé de l'opération : quantités, unités, temps / Keep the record of the operation: quantities, units, times |  | continue |  |
+| `MX1:X1.06` |  | ANY | R | immédiat | B | N2 | Déclarer chaque interruption : début, fin et cause en liste fermée / Declare every interruption: start, end and cause from the closed list |  | continue | FLX-SPEC-001 §7 — événement 18 |
+| `MX1:X1.07` |  | TER + NAV | R | événement | B | N2 | Enregistrer la fin de l'opération / Record the end of the operation | jalons `CARGO_OPS_END` |  | PRO-MAR-001 — fin des opérations |
+| `MX1:X1.08` |  | TER | F | T1 + 12 h | N | N2 | Émettre le rapport d'opération / Issue the operation report | document `OUTTURN_REPORT` |  |  |
+| `MX1:X1.09` |  | AGE | F | T1 + 24 h | B | N2 | Déposer la déclaration douanière de cargaison / File the customs cargo declaration | document `CARGO_DECLARATION` |  | Code des douanes |
+
 ## 4.3 Points d'arrêt (`HOLD_POINTS`)
 
 Chaque transition est refusée tant qu'une des tâches requises est « à faire » ou que l'autorisation issue d'une tâche de décision n'est pas en vigueur à l'heure du fait. Les tâches d'une autre étape de l'escale ne gardent pas la transition. Invariants non paramétrables en plus : voir chapitre 5.
@@ -312,13 +442,13 @@ Chaque transition est refusée tant qu'une des tâches requises est « à faire 
 | `DECLARE` | `M0:02`, `M0:03`, `M0:05` |
 | `GREEN_LIGHT` | `M0:06`, `M0:07` |
 | `BERTH_ASSIGN` | `M0:06`, `M0:07`, `M0:09` |
-| `MOVEMENT_AUTH` | `M0:21`, `M0:22`, `M5:5.04` |
+| `MOVEMENT_AUTH` | `M0:21`, `M0:22`, `M5:5.04`, `M0:09b` |
 | `PILOT_BOARDING` | `M0:25` |
-| `BERTHING` | `M0:25`, `M3:3.03`, `MA2:A2.02` |
-| `START_TRANSFER` | `M0:27`, `M0:28`, `M0:29`, `M0:31`, `M1:1.04`, `M1:1.05`, `M1:1.06`, `M1:1.07`, `M2:2.04`, `M2:2.05`, `M2:2.06`, `M2:2.07`, `M2:2.08`, `M2:2.09`, `M3:3.01`, `M3:3.02`, `M3:3.03`, `M3:3.04`, `M3:3.05`, `M3:3.06`, `M3:3.07`, `M3:3.08`, `M3:3.09`, `M3:3.10`, `M3:3.11`, `M4:4.01`, `M4:4.02`, `M4:4.03`, `M4:4.04`, `M4:4.05`, `M4:4.06` |
+| `BERTHING` | `M0:25`, `M3:3.03`, `MA2:A2.02`, `M0:09b` |
+| `START_TRANSFER` | `M0:27`, `M0:28`, `M0:29`, `M0:31`, `M1:1.04`, `M1:1.05`, `M1:1.06`, `M1:1.07`, `M2:2.04`, `M2:2.05`, `M2:2.06`, `M2:2.07`, `M2:2.08`, `M2:2.09`, `M3:3.01`, `M3:3.02`, `M3:3.03`, `M3:3.04`, `M3:3.05`, `M3:3.06`, `M3:3.07`, `M3:3.08`, `M3:3.09`, `M3:3.10`, `M3:3.11`, `M4:4.01`, `M4:4.02`, `M4:4.03`, `M4:4.04`, `M4:4.05`, `M4:4.06`, `M0:09c`, `M0:09d`, `M0:31b`, `MB1:B1.04`, `MB1:B1.05`, `MB1:B1.06`, `MB1:B1.07`, `MB2:B2.05`, `MB2:B2.06`, `MB2:B2.07`, `MC1:C1.02`, `MC1:C1.05`, `MG1:G1.03`, `MG1:G1.05`, `MR1:R1.02`, `MR1:R1.04`, `MX1:X1.03` |
 | `DOUBLE_BANKING` | `M9:9.02`, `M9:9.04`, `M9:9.06`, `M9:9.08` |
 | `HOT_WORK` | `M7:7.04`, `M7:7.05`, `M7:7.06` |
-| `BL_ISSUE` | `M2:2.16` |
+| `BL_ISSUE` | `M2:2.16`, `MB2:B2.16` |
 | `DEPARTURE_CLEARANCE` | `M0:32`, `M0:33`, `M7:7.12` |
 | `PILOT_BOARDING_DEP` | `M0:34` |
 | `DEPARTURE` | `M0:34` |
@@ -364,6 +494,11 @@ Chaque transition est refusée tant qu'une des tâches requises est « à faire 
 | 31 | `STS_TRANSFER_START` | PRE | NAV | AGE, COM | STS — début du transfert / STS — start of transfer | sets_anchor=T0 ; sets_status=IN_OPERATION ; hold_point=START_TRANSFER ; completes_tasks=['M3:3.13'] |
 | 32 | `STS_TRANSFER_END` | PRE | NAV | AGE, COM | STS — fin du transfert / STS — end of transfer | sets_anchor=T1 ; sets_status=OPS_COMPLETE ; completes_tasks=['M3:3.13'] |
 | 33 | `STS_SEPARATED` | PRE | NAV | — | STS — séparation des navires / STS — vessels separated | completes_tasks=['M3:3.13'] |
+| 14 | `HOLDS_ACCEPTED` | INS | NAV, TER | COM | Cales / cargaison inspectées et acceptées / Holds / cargo inspected and accepted | completes_tasks=['MB1:B1.06', 'MB2:B2.05', 'MG1:G1.05', 'MR1:R1.04'] |
+| 14 | `DRAFT_SURVEY_INITIAL` | INS | NAV, TER | COM | Draft survey initial terminé / Initial draft survey completed | completes_tasks=['MB1:B1.05', 'MB2:B2.06'] |
+| 16 | `CARGO_OPS_START` | TER | NAV | AGE, COM | Début des opérations de manutention / Start of cargo operations | sets_anchor=T0 ; sets_status=IN_OPERATION ; hold_point=START_TRANSFER ; completes_tasks=['MB1:B1.08', 'MB2:B2.08', 'MC1:C1.06', 'MG1:G1.06', 'MR1:R1.05', 'MX1:X1.04'] |
+| 20 | `CARGO_OPS_END` | TER | NAV | AGE, COM | Fin des opérations de manutention / End of cargo operations | sets_anchor=T1 ; sets_status=OPS_COMPLETE ; completes_tasks=['MB1:B1.11', 'MB2:B2.12', 'MC1:C1.09', 'MG1:G1.09', 'MR1:R1.08', 'MX1:X1.07'] |
+| 23 | `DRAFT_SURVEY_FINAL` | INS | NAV, TER | COM | Draft survey final terminé / Final draft survey completed | completes_tasks=['MB1:B1.12', 'MB2:B2.13'] |
 
 ## 4.5 Types de demande (`REQUEST_TYPES`) et leurs formulaires
 
@@ -565,7 +700,8 @@ demandeurs : AGE, TER · décideurs : CAP · exécutant : — · confidentialit�
 | `SECURITY_DECLARATION` | Déclaration de sûreté / Declaration of security | SUR, NAV | N2 | — | — |  |  | 10 |
 | `WASTE_RECEIPT` | Bordereau de réception des déchets / Waste delivery receipt | PRE | N2 | — | APO, NAV |  |  | 10 |
 | `SOF` | Rapport des faits / Statement of facts | AGE | N1 | NAV, TER | — | oui |  | 10 |
-| `TIME_SHEET` | Time sheet / Time sheet | AGE | N2 | — | COM, TER | oui |  | 10 |
+| `TIME_SHEET` | Time sheet / Time sheet | AGE, TER, NAV | N1 | — | — | oui |  | 10 |
+| `PUMPING_LOG` | Journal de pompage (relevés bord et terre, écart) / Pumping log (ship and shore readings, deviation) | TER, NAV | N2 | — | NAV, TER, CAP, INS, COM, DIR | oui |  | 10 |
 | `PORT_ACCOUNT` | Compte d'escale final / Final port-call account | AGE | N3 | — | COM |  |  | 10 |
 | `IMPORT_AUTH` | Autorisation d'importation / Import authorization | AGE | N2 | — | ADM, TER |  |  | 10 |
 | `EXPORT_AUTH` | Autorisation d'exportation / Export authorization | AGE | N2 | — | ADM, TER |  |  | 10 |
@@ -575,7 +711,7 @@ demandeurs : AGE, TER · décideurs : CAP · exécutant : — · confidentialit�
 | `EMPTY_TANKS_CERT` | Certificat de citernes vides / constat de ROB / Empty tanks certificate / ROB statement | INS | N2 | — | NAV, TER |  |  | 10 |
 | `CLEANLINESS_CERT` | Certificat de propreté des citernes / Tank cleanliness certificate | INS | N2 | NAV, TER | — |  |  | 10 |
 | `QQ_CERT` | Certificat de quantité et de qualité / Quantity and quality certificate | INS | N2 | — | NAV, TER |  |  | 10 |
-| `QUALITY_CERT` | Certificat de qualité à terre / Shore quality certificate | INS | N2 | — | NAV, TER |  |  | 10 |
+| `QUALITY_CERT` | Certificat de qualité (laboratoire) / Quality certificate (laboratory) | INS | N2 | — | NAV, TER, COM, CAP, APO, DIR |  |  | 10 |
 | `TERMINAL_RECEIPT` | Bon de réception du terminal / Terminal receipt | TER | N2 | — | INS |  |  | 10 |
 | `CARGO_DECLARATION` | Déclaration douanière de cargaison / Customs cargo declaration | AGE | N2 | — | ADM |  |  | 10 |
 | `PROTEST` | Lettre de protêt / Letter of protest | AGE, NAV, TER, INS, PRE | N2 | — | NAV, TER, INS |  |  | 10 |
@@ -619,6 +755,24 @@ demandeurs : AGE, TER · décideurs : CAP · exécutant : — · confidentialit�
 | `BUNKER_CHECKLIST` | Liste de contrôle sécurité soutage / Bunkering safety checklist | PRE, NAV | N2 | — | CAP, AGE |  |  | 10 |
 | `LOI` | Lettre de garantie (livraison sans connaissement original) / Letter of indemnity (delivery without original bill of lading) | COM | N3 | — | AGE |  |  | 10 |
 | `OTHER` | Autre document / Other document | AGE, NAV, TER, INS, ADM, SUR, PRE, CAP, APO, SVC, COM, DIR | N2 | — | — |  |  | 10 |
+| `CARGO_MANIFEST` | Manifeste de cargaison et listes (colisage, conteneurs, unités) / Cargo manifest and lists (packing, containers, units) | AGE, NAV | N2 | — | TER, ADM, CAP, APO, INS |  |  | 10 |
+| `STOWAGE_PLAN` | Plan d'arrimage / de chargement ou de déchargement (cales, ponts, séquence) / Stowage / loading or discharge plan (holds, decks, sequence) | NAV, AGE | N2 | — | TER, INS, CAP |  |  | 10 |
+| `BAY_PLAN` | Plan de chargement conteneurs (bay plan, listes EDI) / Container bay plan (EDI lists) | AGE, NAV | N2 | — | TER, INS |  |  | 10 |
+| `DG_DECLARATION` | Déclaration de marchandises dangereuses (Code IMDG, FAL 7) / Dangerous goods declaration (IMDG Code, FAL 7) | AGE, NAV | N2 | — | TER, CAP, APO, SUR, ADM, SVC |  |  | 10 |
+| `CARGO_INFO_IMSBC` | Déclaration de cargaison du chargeur (Code IMSBC : groupe, humidité, TML) / Shipper's cargo declaration (IMSBC Code: group, moisture, TML) | AGE, COM | N2 | — | NAV, TER, INS, CAP |  |  | 10 |
+| `BLU_AGREEMENT` | Accord de chargement / déchargement navire-terminal (Code BLU) / Ship/terminal loading / unloading agreement (BLU Code) | TER, NAV | N2 | NAV, TER | INS, CAP |  |  | 10 |
+| `DRAFT_SURVEY_REPORT` | Rapport de draft survey / Draft survey report | INS | N2 | — | NAV, TER, COM |  |  | 10 |
+| `HOLD_INSPECTION` | Rapport d'inspection des cales / de la cargaison / Hold / cargo inspection report | INS, TER | N2 | — | NAV, TER, COM |  |  | 10 |
+| `TALLY_SHEET` | Feuille de pointage et constat de réception (out-turn) / Tally sheet and out-turn statement | TER, INS | N2 | NAV, TER | INS, COM |  |  | 10 |
+| `MATES_RECEIPT` | Reçu de bord (mate's receipt) / Mate's receipt | NAV | N2 | — | AGE, TER, COM |  |  | 10 |
+| `OUTTURN_REPORT` | Rapport d'opération / de réception du terminal (out-turn, mouvements, pesées) / Terminal operation / out-turn report (moves, weighings) | TER | N2 | — | INS, NAV, COM |  |  | 10 |
+| `CARGO_DAMAGE_REPORT` | Constat de dommages ou de manquants / Damage or shortage report | INS, TER, NAV, AGE | N2 | NAV, TER | INS, COM, CAP |  |  | 10 |
+| `BLU_CHECKLIST` | Liste de contrôle navire/terre — vrac sec (Code BLU) / Ship/shore safety checklist — dry bulk (BLU Code) | TER, NAV | N2 | — | INS |  |  | 10 |
+| `CARGO_SAFETY_CHECKLIST` | Liste de contrôle sécurité des opérations de manutention (conteneurs, divers, roulier) / Cargo operations safety checklist (containers, general cargo, ro-ro) | TER, NAV | N2 | — | INS |  |  | 10 |
+| `PAEC` | Échange d'informations avant l'arrivée navire-terminal (ISGOTT 22.2) / Pre-arrival ship/terminal exchange of information (ISGOTT 22.2) | NAV, AGE, TER | N2 | — | TER, CAP, SVC, INS | oui |  | 10 |
+| `VETTING_CHECKLIST` | Grille de vetting du navire au regard des limites du poste / Vessel vetting checklist against the berth limits | TER, CAP | N2 | — | CAP, APO, COM | oui |  | 10 |
+| `CARGO_HANDLING_PLAN` | Plan de manutention de la cargaison (terminal) / Cargo handling plan (terminal) | TER | N2 | NAV, TER | INS, CAP | oui |  | 10 |
+| `BERTH_OCCUPATION` | Plan d'occupation des postes / conférence de placement / Berth occupation plan / placement conference | CAP, APO | N1 | — | — | oui |  | 10 |
 
 ## 4.7 Causes d'interruption (`CAUSES`, liste fermée)
 

@@ -30,7 +30,7 @@
 
 ### Ports pilotes, parties par défaut et postes
 
-`PORTS` : pour chaque port pilote, ses réglages, ses organisations par défaut (`PortDefaultParty`, invitées d'office) et ses postes (`Berth`, nature de zone, LOA et tirant d'eau maximaux, récupération des vapeurs).
+`PORTS` : pour chaque port pilote, ses réglages, ses organisations par défaut (`PortDefaultParty`, invitées d'office) et ses postes (`Berth`, nature de zone, LOA et tirant d'eau maximaux, récupération des vapeurs). Depuis la 1.5 chaque port porte la **validité par défaut d'une annonce** (15 jours), sa **validité maximale** (90 jours) et le réglage *le tableau des escales montre la nature de la cargaison et le tonnage* (vrai) ; chaque poste peut porter ses **limites d'acceptation** (LOA, tirant d'eau, DWT, largeur, déplacement, hauteur du collecteur, pied de pilote, âge, SWL des grues, tirant d'air) et les **natures de cargaison** qu'il traite — l'amorçage les laisse vides : le port les renseigne, la grille de vetting les lit.
 
 
 #### SLFNA — Freetown (SL, Africa/Freetown, langue en)
@@ -52,6 +52,25 @@ Cadre de la carte AIS : latitude 5.950000 à 6.160000, longitude 1.180000 à 1.4
 | `LFW-APP` | JETTY | Appontement pétrolier de Lomé | Lomé oil jetty | 6.128000 | 1.287000 | — |
 | `LFW-RADE` | ANCHORAGE | Rade de Lomé — mouillage | Lomé roads — anchorage | 6.080000 | 1.300000 | 1500 |
 | `LFW-STS` | STS_AREA | Zone STS au large de Lomé | Lomé offshore STS area | 6.000000 | 1.350000 | 2500 |
+
+### Accès aux rapports (`ReportAccess`, `DEFAULT_REPORT_READERS`)
+
+Créés à l'amorçage de chaque port, modifiables par l'administrateur (administration → *Accès aux rapports*), jamais écrasés par un nouvel amorçage :
+
+| Code | Rapport | Rôles lecteurs par défaut |
+| --- | --- | --- |
+| `PUMPING_LOG` | journal de pompage (relevés bord et terre, écart) | NAV, TER, CAP, INS, COM, DIR, AGE |
+| `MEASUREMENTS` | mesures et relevés de citernes validés | NAV, TER, CAP, INS, COM, DIR, AGE |
+| `SAFETY_CHECKLIST` | liste de contrôle navire/terre (lecture ; les deux bords lisent toujours) | NAV, TER, CAP, APO, INS, AGE, SUR, DIR |
+| `CALL_BOARD` | conférence de placement (tableau des escales du port) et plan d'occupation des postes | AGE, TER, CAP, APO, SVC, ADM, SUR, INS, COM, PRE, DIR |
+
+### Points des listes de contrôle de sécurité (`apps/registry/ssscl.py`, `apps/registry/checklists.py`)
+
+**ISGOTT (vrac liquide, `SSSCL`)** : quarante-cinq points en sept parties (1A navire avant l'arrivée · 1B terminal avant l'arrivée · 2 navire après l'amarrage · 3 terminal après l'amarrage · 4 navire et terminal avant le transfert · 5A accords écrits · 6 vérifications répétées), chacun avec le côté qui répond (navire, terre, les deux), sa nature (case à cocher ou valeur convenue) et sa répétition (R) ; copiés dans chaque liste ouverte. La liste complète est au chapitre 6 (formulaire `SSSCL`).
+
+**Code BLU (vrac sec, `BLU_CHECKLIST`, 1.5)** : vingt-deux points en quatre parties — 1 avant l'arrivée (profondeur et limites du poste, plan de chargement ou de déchargement convenu, cadences, ballastage, trimming, cargaison IMSBC, contacts), 2 avant les opérations (cales prêtes, accès, engins et trémies, éclairage, communications, procédure d'arrêt d'urgence, pollution), 3 pendant (séquence respectée, contraintes de structure, draft survey, modifications convenues par écrit), 4 après (cales et ponts nettoyés, draft survey final, dommages constatés) — côté navire, terminal ou les deux ; répétés : séquence et contraintes.
+
+**Opérations de manutention (conteneurs, divers, roulier, autre — `CARGO_SAFETY_CHECKLIST`, 1.5)** : vingt points en quatre parties — A accès et passerelle, B engins, grues et zones de travail, C arrimage, saisissage et marchandises dangereuses, D communications, arrêt d'urgence et météo — même mécanique de réponses, de signatures et de répétitions. Les deux catalogues sont au chapitre 6 (formulaires `BLU_CHECKLIST`, `CARGO_SAFETY_CHECKLIST`).
 
 ## 12.2 Natures de parties — liste non exhaustive (`PARTY_KINDS`)
 
@@ -141,20 +160,31 @@ Chaque écriture du registre est une `JournalEntry` chaînée (SHA-256 de l'entr
 | Comptes et liens | `login`, `master.access`, `master.denied`, `assistant` (chaque exécution de l'assistant, avec l'inventaire transmis) |
 | Espace sûreté (journal propre, base sûreté) | `CREATE`, `LIST`, `VIEW`, `DECIDE`, `CONFIRM`, `ATTACH`, `DOWNLOAD` |
 
+Natures ajoutées en 1.6 avec les parties proposées par l'opération (`PARTIES_BY_OPERATION`) : `BULK_TERMINAL`, `CONTAINER_TERMINAL`, `GENERAL_CARGO_TERMINAL` (TER) ; `TALLY_COMPANY`, `BUNKER_SURVEYOR` (INS) ; `FREIGHT_FORWARDER` (COM) ; `STEVEDORE`, `LASHING`, `FUMIGATION`, `WEIGHBRIDGE` (PRE).
+
+Natures ajoutées en 1.4 pour les parties du contrôle des pertes (rôle COM) : `SUPERINTENDENT` (superintendant, représentant de l'armateur ou de l'affréteur), `SUPERCARGO` (subrécargue), `LOSS_CONTROL` (contrôle des pertes de l'affréteur ou du négociant) ; le time sheet lit le *trader* et le *subrécargue* parmi les parties COM de ces natures.
+
 ## 12.4 Données de démonstration (`load_demo`)
 
 `python manage.py load_demo --port <SLFNA|TGLFW> [--password …] [--domain demo.fluxaa.test] [--history 8] [--no-calls] [--refresh-ais]` charge, dans un port déjà amorcé par `bootstrap_ports`, un jeu fictif de formation ; chaque nom porte le suffixe « (démo) » / « (demo) » et **rien ne doit jamais être chargé sur un port en production** (rien ne s'efface). Le mot de passe est celui de l'appel (sinon aléatoire, affiché) ; les secrets TOTP des rôles décideurs (CAP, APO, ADM, SUR) et de la direction (DIR) sont affichés par la commande.
 
 | Ce qui est créé | Détail |
 |---|---|
-| 17 organisations | autorité portuaire (CAP, APO, DIR), douanes-immigration-santé (ADM), sûreté et marine nationale (SUR), services nautiques (SVC), agence maritime (AGE), terminal pétrolier (TER), surveyor et laboratoire (INS), armateur / affréteur (COM), prestataire déchets et prestataire STS (PRE) ; et six organisations **sans compte**, enregistrées au port et invitées par l'agence quand l'escale les requiert : laboratoire indépendant (INS, convoqué par lien), avitailleur de soutes, fournisseur d'eau douce (PRE), correspondant P&I (INS), réceptionnaire / importateur (COM), remorquage et lamanage (SVC) ; chacune avec sa nature (`kind`) de la liste non exhaustive |
+| 19 organisations | autorité portuaire (CAP, APO, DIR), douanes-immigration-santé (ADM), sûreté et marine nationale (SUR), services nautiques (SVC), agence maritime (AGE), terminal pétrolier (TER), surveyor et laboratoire (INS), armateur / affréteur (COM), prestataire déchets et prestataire STS (PRE) ; et six organisations **sans compte**, enregistrées au port et invitées par l'agence quand l'escale les requiert : laboratoire indépendant (INS, convoqué par lien), avitailleur de soutes, fournisseur d'eau douce (PRE), correspondant P&I (INS), réceptionnaire / importateur (COM), remorquage et lamanage (SVC) ; chacune avec sa nature (`kind`) de la liste non exhaustive ; et depuis la 1.5 un **consignataire associé** (AGE, agence co-nominée) et un **terminal conteneurs et vrac** (TER, toutes cargaisons) |
 | Parties par défaut | les quatre organisations d'autorité et de service (CAP, APO, DIR, ADM, SUR, SVC) sont `PortDefaultParty` : invitées d'office à chaque escale |
-| 12 utilisateurs | un par rôle : `cap`, `apo`, `dir`, `adm`, `sur`, `svc`, `age`, `ter`, `ins`, `com`, `pre`, `sts` — adresse `<login>.<port>@<domaine>` (ex. `age.tglfw@demo.fluxaa.test`), langue du port ; second facteur enrôlé pour les décideurs |
-| 4 navires | MT ATLANTIC DEMO (OMI 9999993, Liberia, 45 000 t), MT GULF DEMO (9999981, Îles Marshall, 38 000 t), MT HARMATTAN DEMO (9999979, Panama, pétrolier brut 105 000 t), MT SAVANNAH DEMO (9999967, Malte, 50 000 t), avec MMSI pour le tableau AIS |
+| 14 utilisateurs | un par rôle : `cap`, `apo`, `dir`, `adm`, `sur`, `svc`, `age`, `ter`, `ins`, `com`, `pre`, `sts`, et depuis la 1.5 `age2` (agence associée) et `ter2` (terminal conteneurs et vrac) — adresse `<login>.<port>@<domaine>` (ex. `age.tglfw@demo.fluxaa.test`), langue du port ; second facteur enrôlé pour les décideurs |
+| 10 navires | MT ATLANTIC DEMO (OMI 9999993, Liberia, 45 000 t), MT GULF DEMO (9999981, Îles Marshall, 38 000 t), MT HARMATTAN DEMO (9999979, Panama, pétrolier brut 105 000 t), MT SAVANNAH DEMO (9999967, Malte, 50 000 t), et depuis la 1.5 MV CLINKER DEMO (9311012, vraquier gréé), MSC LOME DEMO (9074743, porte-conteneurs), GRANDE DEMO (9074755, roulier PCTC), MV SAHEL DEMO (9074767, cargo divers) — avec MMSI pour le tableau AIS et, depuis la 1.5, leurs caractéristiques (LOA, largeur, tirant d'eau, année, déplacement, collecteur, tirant d'air, grues) pour la grille de vetting ; les **postes du port de démonstration reçoivent des limites d'acceptation illustratives** (appontement : LOA 250 m, tirant d'eau 13 m, 80 000 t, 25 ans… ; zone STS ; rade) que l'administrateur remplace par les vraies ; et depuis la 1.6 MT LAGUNE DEMO (9999955, Togo, pétrolier côtier 6 500 t) et MT KARA DEMO (9999943, Liberia, 47 000 t), tous deux annoncés par le consignataire associé |
 | Escale A | déchargement M1 à quai, **en opération** : ETA − 20 h, feu vert et poste accordés (actes déposés automatiquement), jalons jusqu'au début de transfert avec une interruption contestée, mesures bord / terre / inspecteur, documents, échanges, contestation ouverte par le capitaine |
 | Escale B | chargement M2, **acceptée**, en attente de poste ; lien d'accès du capitaine émis, certificats déposés par le capitaine via son lien |
-| Escales C et D | paire STS (M3) en zone offshore, **déclarées** et reliées (`link_kind` STS) ; le laboratoire indépendant, sans compte, est convoqué par lien à la déclaration ; l'escale C a une **seconde étape** planifiée à quai (M1) |
-| Historique | `--history` escales closes réparties sur l'année écoulée (8 par défaut), rejouées par les mêmes services qu'une escale réelle, pour nourrir statistiques et indicateurs |
+| Escales C et D | paire STS (M3) en zone offshore, **déclarées** et reliées (`link_kind` STS) — C **livre** la cargaison (`sts_role` DONOR, 90 000 t de brut), D en **reçoit** 60 000 t (RECEIVER) ; le laboratoire indépendant, sans compte, est convoqué par lien à la déclaration ; l'escale C a une **seconde étape** planifiée à quai (M1) |
+| Feux verts (1.5) | sur l'escale A, les quatre feux verts sont donnés (capitainerie par sa décision, sûreté et base navale, terminal, mandant) ; sur B ceux de la base navale et du terminal ; les escales de l'historique les portent tous |
+| Escale E (1.5) | **vrac sec** : MV CLINKER DEMO, déchargement de clinker (MB1, 38 242 t), **acceptée** après vetting du terminal conteneurs et vrac et feux verts de la capitainerie et de la base navale ; validité de 10 jours ; le **consignataire associé** y a un accès partiel (tâches, documents) ; documents attendus demandés à l'annonce : attestation d'assurance (catalogue) et certificat d'origine (liste ouverte) ; Q88, certificats et manifeste déposés |
+| Escale F (1.5) | **conteneurs** : MSC LOME DEMO, opérations conteneurs (MC1, 1 501 mouvements), **déclarée** |
+| Escale G (1.5) | **roulier** : GRANDE DEMO, 1 850 véhicules (MR1), **brouillon** |
+| Escale H (1.5) | **marchandises diverses** : MV SAHEL DEMO, riz en sacs (MG1, 11 200 t), annoncée avec une validité de 3 jours échue avant l'arrivée → **obsolète** (`expire_call`) : l'agence la refait depuis l'aperçu |
+| Escale I (1.6) | **accostage à couple, autre agence** : MT LAGUNE DEMO, annoncé par le **consignataire associé** à couple de MT ATLANTIC DEMO (escale A, première agence) pour un allègement au poste (M2 + M9, 5 000 t, 12 h, défenses du terminal) ; **déclarée** ; lien **à sens unique**, à confirmer ; demande d'accostage à couple déposée (préremplie depuis l'annonce) et **en attente de la capitainerie**, que le point d'arrêt refuse tant que manquent l'accord exprès du navire intérieur, l'analyse d'amarrage, la matrice SIMOPS et le plan de déhalage ; créée après l'historique (référence 0017) |
+| Escale J (1.6) | **STS, navire-mère d'une autre agence** : MT KARA DEMO, second navire-fille annoncé par le consignataire associé, désigne MT HARMATTAN DEMO (escale C) depuis la conférence de placement et en reçoit 30 000 t ; rôle receveur pris d'office ; **déclarée** ; lien à confirmer par l'autorisation de zone et de fenêtre STS, **demandée et en attente** ; le dossier de C liste MT KARA DEMO sous *Autres navires désignant cette escale* (référence 0018) |
+| Historique | `--history` escales closes réparties sur l'année écoulée (8 par défaut, pétroliers), rejouées par les mêmes services qu'une escale réelle — feux verts compris —, pour nourrir statistiques et indicateurs |
 | Image AIS | positions des quatre navires autour des postes du port (quai, rade, zone STS) pour le tableau AIS ; `--refresh-ais` ne recharge que cette image |
 
 Les ports pilotes eux-mêmes (réglages, postes, organisations par défaut) viennent de `bootstrap_ports` (`catalog.PORTS`, section 12.1) ; `load_demo` ne crée aucune donnée N4.

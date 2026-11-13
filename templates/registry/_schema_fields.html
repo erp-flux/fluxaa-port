@@ -1,0 +1,19 @@
+{% load i18n l10n %}{% comment %}
+Fields of a form schema (request types, questions of an operation model at the announcement — v1.6):
+  fields     list of field views (key, label, help, type, required, choices, value)
+  prefix     name prefix (e.g. "op_M4_"), empty for a request form
+  idprefix   id prefix, unique on the page
+  deferred   "1": the required attribute is carried as data-required and applied by the script only when the
+             block is shown (a hidden required field would block the whole form)
+A stored number reaches a number input unlocalized (450.5, never the French 450,5 the browser would discard).
+{% endcomment %}{% for f in fields %}
+<div class="q">{% if f.type == "boolean" %}<label class="checks"><span><input type="checkbox" id="{{ idprefix }}{{ f.key }}" name="{{ prefix }}{{ f.key }}" value="1" {% if f.value %}checked{% endif %}> {{ f.label }}</span></label>
+  {% else %}<label for="{{ idprefix }}{{ f.key }}">{{ f.label }}{% if f.required %} *{% endif %}</label>
+  {% if f.type == "textarea" %}<textarea id="{{ idprefix }}{{ f.key }}" name="{{ prefix }}{{ f.key }}" rows="2" {% if f.required %}{% if deferred %}data-required="1"{% else %}required{% endif %}{% endif %}>{{ f.value|default:"" }}</textarea>
+  {% elif f.type == "select" %}<select id="{{ idprefix }}{{ f.key }}" name="{{ prefix }}{{ f.key }}" {% if f.required %}{% if deferred %}data-required="1"{% else %}required{% endif %}{% endif %}><option value="">—</option>{% for v, l in f.choices %}<option value="{{ v }}" {% if f.value == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  {% elif f.type == "datetime" %}<input type="datetime-local" id="{{ idprefix }}{{ f.key }}" name="{{ prefix }}{{ f.key }}" value="{{ f.value|default_if_none:'' }}" {% if f.required %}{% if deferred %}data-required="1"{% else %}required{% endif %}{% endif %}>
+  {% elif f.type == "number" %}<input type="number" step="any" id="{{ idprefix }}{{ f.key }}" name="{{ prefix }}{{ f.key }}" value="{{ f.value|default_if_none:''|unlocalize }}" {% if f.required %}{% if deferred %}data-required="1"{% else %}required{% endif %}{% endif %}>
+  {% elif f.type == "integer" %}<input type="number" step="1" min="0" id="{{ idprefix }}{{ f.key }}" name="{{ prefix }}{{ f.key }}" value="{{ f.value|default_if_none:''|unlocalize }}" {% if f.required %}{% if deferred %}data-required="1"{% else %}required{% endif %}{% endif %}>
+  {% else %}<input id="{{ idprefix }}{{ f.key }}" name="{{ prefix }}{{ f.key }}" value="{{ f.value|default_if_none:'' }}" maxlength="300" {% if f.required %}{% if deferred %}data-required="1"{% else %}required{% endif %}{% endif %}>{% endif %}{% endif %}
+  {% if f.help %}<p class="hint">{{ f.help }}</p>{% endif %}</div>
+{% endfor %}

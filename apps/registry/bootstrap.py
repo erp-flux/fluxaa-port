@@ -12,12 +12,14 @@ from apps.core.models import Berth, Port
 
 from . import catalog
 from .models import (
+    DEFAULT_REPORT_READERS,
     CallTemplate,
     DocumentType,
     HoldPoint,
     HoldPointRequirement,
     InterruptionCause,
     MilestoneType,
+    ReportAccess,
     RequestType,
     TemplateTask,
     TemplateVersion,
@@ -45,7 +47,7 @@ def bootstrap_port(code: str, *, refresh: bool = False, user=None) -> dict:
                              "default_language": spec["default_language"]},
     )
     counts = {"berths": 0, "templates": 0, "tasks": 0, "milestone_types": 0, "request_types": 0,
-              "document_types": 0, "causes": 0, "hold_points": 0}
+              "document_types": 0, "causes": 0, "hold_points": 0, "report_access": 0}
     box = spec.get("map") or {}
     if box and port.map_lat_min is None and port.map_lon_min is None:  # never over the administrator's own box
         port.map_lat_min, port.map_lat_max = box["lat_min"], box["lat_max"]
@@ -66,8 +68,10 @@ def bootstrap_port(code: str, *, refresh: bool = False, user=None) -> dict:
         template, _ = _upsert(CallTemplate, {"port": port, "code": spec_t["code"]}, {
             "kind": spec_t["kind"], "name_fr": spec_t["name_fr"], "name_en": spec_t["name_en"],
             "description_fr": spec_t.get("description_fr", ""), "description_en": spec_t.get("description_en", ""),
-            "berth_kinds": spec_t.get("berth_kinds", []), "requires_linked_call": spec_t.get("requires_linked_call", False),
+            "berth_kinds": spec_t.get("berth_kinds", []), "cargo_kinds": spec_t.get("cargo_kinds", []),
+            "requires_linked_call": spec_t.get("requires_linked_call", False),
             "never_alone": spec_t.get("never_alone", False), "order": spec_t["order"],
+            "intake_schema": catalog.INTAKE.get(spec_t["code"], []),
         }, refresh)
         if template.versions.exists():
             continue
@@ -85,6 +89,7 @@ def bootstrap_port(code: str, *, refresh: bool = False, user=None) -> dict:
                 document_type_code=task["document_type_code"], auto_event=task["auto_event"],
                 continuous=task["continuous"], per_vessel=task["per_vessel"],
                 not_applicable_allowed=task["not_applicable_allowed"], berth_kinds=task["berth_kinds"], order=order,
+                green_light=task.get("green_light", False), cargo_kinds=task.get("cargo_kinds", []),
             )
             counts["tasks"] += 1
         version.status = TemplateVersion.Status.PUBLISHED
@@ -126,4 +131,9 @@ def bootstrap_port(code: str, *, refresh: bool = False, user=None) -> dict:
                 HoldPointRequirement.objects.get_or_create(hold_point=hold_point, template_code=template_code,
                                                            task_number=number)
         counts["hold_points"] += int(created)
+
+    # who reads each live report: created with the catalogue's defaults, then the port administrator's own
+    for code, readers in DEFAULT_REPORT_READERS.items():
+        _obj, created = ReportAccess.objects.get_or_create(port=port, code=code, defaults={"reader_roles": list(readers)})
+        counts["report_access"] += int(created)
     return {"port": port.code, **counts}

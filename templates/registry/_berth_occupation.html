@@ -1,0 +1,25 @@
+{% load i18n %}{% if berth and start %}
+{% if rows %}
+<div class="notice warn" data-berth-occupation>
+  <b>{{ berth.code }}</b> — {% blocktrans count n=rows|length %}{{ n }} call holds or expects this berth over the window asked{% plural %}{{ n }} calls hold or expect this berth over the window asked{% endblocktrans %} :
+  <ul class="small">{% for o in rows %}<li><b>{{ o.vessel.name }}</b> <span class="code">{{ o.reference }}</span> — {{ o.agency }} — {{ o.get_status_display }}
+    {% if o.atb %}{% trans "alongside since" %} {{ o.atb|date:"d/m H:i" }}{% elif o.etb %}ETB {{ o.etb|date:"d/m H:i" }}{% else %}ETA {{ o.eta|date:"d/m H:i" }}{% endif %}{% if o.etd %} → ETD {{ o.etd|date:"d/m H:i" }}{% endif %}</li>{% endfor %}</ul>
+  <span class="small">{% trans "Ask for another berth, revise the times, or — if the terminal and the harbour master accept it — announce a double banking (module M9) and name the vessel at the berth." %}</span>
+</div>
+{% else %}
+<p class="small muted" data-berth-occupation>{{ berth.code }} — {% trans "no other call holds or expects this berth over the window asked." %}</p>
+{% endif %}
+{% endif %}
+{% if berth and kind_mismatch %}
+<div class="notice warn" data-berth-kind><b>{{ berth.code }}</b> — {% blocktrans with kinds=berth_kinds|join:", " %}this berth receives: {{ kinds }} — not the kind of cargo chosen. Ask for another berth or check with the terminal.{% endblocktrans %}</div>
+{% endif %}
+{% if berth and vessel and fit %}
+<div class="notice{% if unsuitable %} warn{% endif %}" data-berth-fit>
+  <b>{% trans "Vessel against the berth's acceptance limits" %}</b> — {{ verdict }}
+  <ul class="small plain">{% for r in fit %}<li><span class="fit-mark {% if r.status == "Y" %}ok{% elif r.status == "N" %}no{% else %}warn{% endif %}">{% if r.status == "Y" %}✓{% elif r.status == "N" %}✗{% else %}!{% endif %}</span>
+    {% if LANGUAGE_CODE == "en" %}{{ r.en }}{% else %}{{ r.fr }}{% endif %} : {{ r.actual }} / {% trans "limit" %} {{ r.limit }}</li>{% endfor %}</ul>
+  <span class="small">{% trans "Read at the announcement from the port's berth limits and the vessel's particulars; the terminal's full vetting grid is issued from the Forms page once the call exists." %}</span>
+</div>
+{% elif berth and vessel %}
+<p class="small muted" data-berth-fit>{% trans "The vessel's particulars or the berth's limits are not recorded: the vetting grid will say." %}</p>
+{% endif %}

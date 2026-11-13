@@ -8,12 +8,14 @@
       <h1 class="vessel">{{ call.vessel.name }}</h1>
       <div class="muted">IMO <span class="num">{{ call.vessel.imo }}</span>{% if call.vessel.flag %} — {{ call.vessel.flag }}{% endif %}{% if call.vessel.vessel_type %} — {{ call.vessel.vessel_type }}{% endif %}
         — {{ call.agency }} — {% if call.berth %}<b>{{ call.berth.code }}</b> {{ call.berth.name }}{% else %}{{ call.get_requested_berth_kind_display }}{% endif %}</div>
-      {% if full and call.product %}<div class="small">{{ call.product }}{% if call.quantity %} — <span class="num">{{ call.quantity|floatformat:"-3g" }}</span> {{ call.quantity_unit }}{% endif %}</div>{% endif %}
+      {% if full and call.product %}<div class="small">{{ call.get_cargo_kind_display }} — {{ call.product }}{% if call.quantity %} — <span class="num">{{ call.quantity|floatformat:"-3g" }}</span> {{ call.get_quantity_unit_display }}{% endif %}</div>{% elif full %}<div class="small">{{ call.get_cargo_kind_display }}</div>{% endif %}
+      {% if call.valid_until %}<div class="small {% if call.validity_overrun %}late{% else %}muted{% endif %}">{% trans "Announcement valid until" %} <time>{{ call.valid_until|date:"d/m/Y H:i" }}</time>{% if call.status == "EXPIRED" %} — <b>{% trans "obsolete" %}</b>{% elif call.validity_overrun %} — <b>{% trans "overrun" %}</b>{% endif %}</div>{% endif %}
+      {% if access != "FULL" %}<div class="small"><span class="chip hold">{% if access == "READ" %}{% trans "Reading only" %}{% else %}{% trans "Partial access" %}: {{ access_scopes|join:", " }}{% endif %}</span> <span class="muted">{% trans "given by the principal agent" %}</span></div>{% endif %}
     </div>
     <div class="actions">
       <span class="chip status st-{{ call.status }}">{{ call.get_status_display }}</span>
       {% for code in call.template_codes %}<span class="code" title="{% trans 'Call template' %}">{{ code }}</span>{% endfor %}
-      {% if linked %}<a class="small" href="{% url 'registry:call_detail' linked.pk %}">{% blocktrans with name=linked.vessel.name %}Partner: {{ name }}{% endblocktrans %}</a>{% endif %}
+      {% if linked %}{% if linked_open %}<a class="small" href="{% url 'registry:call_detail' linked.pk %}">{% else %}<span class="small">{% endif %}{% if call.link_kind == "OUTER" %}{% blocktrans with name=linked.vessel.name %}Alongside {{ name }} (double banking){% endblocktrans %}{% elif call.link_kind == "INNER" %}{% blocktrans with name=linked.vessel.name %}Receives {{ name }} alongside (double banking){% endblocktrans %}{% else %}{% if call.is_sts %}STS — {% endif %}{% blocktrans with name=linked.vessel.name %}Partner: {{ name }}{% endblocktrans %}{% endif %}{% if linked_open %}</a>{% else %}</span>{% endif %}{% endif %}
       <a class="btn secondary small" href="{% url 'registry:field_app' call.pk %}">{% trans "Field app" %}</a>
       {% if full %}<a class="btn secondary small" href="{% url 'registry:statement_preview' call.pk %}" target="_blank" rel="noopener">{% trans "Statement of facts" %}</a>{% endif %}
       <a class="btn secondary small" href="{% url 'registry:form_list' call.pk %}">{% trans "Forms" %}</a>

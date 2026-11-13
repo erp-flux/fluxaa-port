@@ -1,4 +1,4 @@
-"""Standard forms of a tanker call — one structure, one family of forms per issuing party (docs/FORMULAIRES.md).
+"""Standard forms of a call, every kind of cargo — one structure, one family of forms per issuing party (docs/FORMULAIRES.md).
 
 The public surface is the one of the former single module: ``FORMS``, ``available``, ``for_call``, ``grouped``,
 ``context``, ``render``, ``issue``; the families register their forms when the package is imported, and the
@@ -36,6 +36,7 @@ from . import surveyor  # noqa: E402, F401
 from . import services  # noqa: E402, F401
 from . import provider  # noqa: E402, F401
 from . import owner  # noqa: E402, F401
+from . import cargo  # noqa: E402, F401  — v1.5: dry bulk, containers, general cargo, ro-ro; PAEC, vetting grid, handling plan
 # isort: on
 
 __all__ = ["FAMILIES", "FORMS", "F", "Form", "Pair", "auto_issue", "available", "checklist", "context", "dt", "fields", "for_call", "grouped",

@@ -113,6 +113,7 @@ main { padding: 24px 0 64px; }
 .section-head.tight { flex-wrap: nowrap; }
 .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
 .split { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 18px; align-items: start; }
+.split > * { min-width: 0; }  /* a grid item never widens the page for a table: the table scrolls in its wrapper */
 @media (max-width: 960px) { .split { grid-template-columns: 1fr; } }
 
 /* ------------------------------------------------------------------ messages */
@@ -166,6 +167,8 @@ input:not([type]), input[type=text], input[type=email], input[type=password], in
   width: 100%; min-height: 40px; padding: 8px 10px; border: 1.5px solid var(--line-strong); border-radius: var(--r-s); background: var(--surface); color: var(--ink); font: inherit; }
 textarea { min-height: 84px; resize: vertical; }
 input:focus, select:focus, textarea:focus { border-color: var(--focus); outline: 2px solid color-mix(in srgb, var(--focus) 30%, transparent); }
+/* a field that does not apply (v1.6: the partner vessel and its agency once the partner's call is named) */
+input:disabled:not([type=checkbox]):not([type=radio]), select:disabled, textarea:disabled { background: var(--surface-2); color: var(--ink-3); border-style: dashed; cursor: not-allowed; }
 fieldset { border: 1px solid var(--line); border-radius: var(--r-m); padding: 12px 14px; margin: 0; }
 legend { font-weight: 600; padding: 0 6px; }
 fieldset.picks { border: 0; padding: 0; margin: 0; display: grid; gap: 6px; align-content: start; }
@@ -180,6 +183,7 @@ details.action > summary::-webkit-details-marker { display: none; }
 details.action > summary::before { content: "+ "; font-family: var(--mono); }
 details.action[open] > summary::before { content: "− "; }
 details.action > div { padding: 4px 12px 12px; }
+details.action > p { margin: 0; padding: 0 12px 12px; }
 
 dl.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px 16px; margin: 8px 0; font-size: 13px; }
 dl.facts dt { color: var(--ink-2); font-size: 12px; }
@@ -200,6 +204,9 @@ table.grid th { font-size: 12px; font-weight: 600; color: var(--ink-2); backgrou
 table.grid tr:hover td { background: #F8FAFB; }
 table.grid td.actions { display: table-cell; white-space: nowrap; }
 table.grid td.actions > form, table.grid td.actions > details { display: block; }
+table.grid td.actions > details > div { white-space: normal; }
+table.grid td.actions > details .form { display: grid; gap: 6px; min-width: 120px; max-width: 170px; }
+table.grid td.actions > details .form input { min-width: 0; width: 100%; }
 table.grid td.actions > .btn { display: flex; }
 table.grid td.actions > * + * { margin-top: 6px; }
 .hashshort { white-space: nowrap; font-family: var(--mono); font-size: 11px; }
@@ -316,7 +323,7 @@ table.grid time { white-space: nowrap; }
    gloves: every target is at least 56 px high and inputs use 16 px text (no zoom on focus); statuses
    always carry a word and a glyph (.chip). Everything is scoped under .field or an f-prefixed class. */
 .field { max-width: 760px; margin: 0 auto; }
-.field [hidden] { display: none !important; }
+.field [hidden], [hidden] { display: none !important; }
 .field .section { padding: 16px; }
 .field h3 { margin: 4px 0 10px; }
 .field .hint { margin: 4px 0 0; }
@@ -464,8 +471,59 @@ table.grid time { white-space: nowrap; }
 /* open list of the parties of a call (announcement, Parties tab) */
 table.parties { table-layout: fixed; width: 100%; }
 table.parties th, table.parties td { padding: 5px 6px; vertical-align: middle; }
-table.parties th:nth-child(1) { width: 14%; } table.parties th:nth-child(2) { width: 21%; } table.parties th:nth-child(3) { width: 20%; }
-table.parties th:nth-child(4) { width: 18%; } table.parties th:nth-child(5) { width: 15%; } table.parties th:nth-child(6) { width: 12%; } table.parties th:nth-child(7) { width: 30px; }
+table.parties th:nth-child(1) { width: 13%; } table.parties th:nth-child(2) { width: 20%; } table.parties th:nth-child(3) { width: 16%; }
+table.parties th:nth-child(4) { width: 15%; } table.parties th:nth-child(5) { width: 12%; } table.parties th:nth-child(6) { width: 9%; }
+table.parties th:nth-child(7) { width: 15%; } table.parties th:nth-child(8) { width: 28px; }
 table.parties input, table.parties select { width: 100%; min-width: 0; }
 table.parties td:last-child { text-align: center; }
 .form table.parties select, .form table.parties input { font-size: 14px; }
+
+/* ---- 1.4: the two sides of the pumping log and of the checklist; a reading outside tolerance ---- */
+.sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-bottom: 10px; }
+.side { border: 1px solid var(--line); border-radius: var(--r-m); background: var(--surface); padding: 10px 12px; }
+.side > b { display: block; font-size: 12px; color: var(--ink-2); }
+table.grid tr.late td { background: var(--st-late-bg); }
+/* the on-line checklist: one row per item, a tick per side */
+.cl-part { margin-top: 14px; }
+.cl-part h3 { font-size: 14px; margin: 0 0 6px; }
+.cl-item { display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; padding: 8px 0; border-top: 1px solid var(--line); align-items: start; }
+.cl-item .cl-text { font-size: 14px; } .cl-item .cl-text .en { color: var(--ink-3); font-size: 12px; display: block; }
+.cl-item .cl-code { font-family: var(--mono); font-size: 12px; color: var(--ink-3); margin-right: 6px; }
+.cl-ticks { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.cl-ticks label { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer; }
+.cl-ticks input[type=radio] { width: 18px; height: 18px; }
+.cl-ticks input[name^=remark_], .cl-ticks input[name^=value_] { min-width: 220px; }
+.cl-state { font-size: 12px; color: var(--ink-2); }
+.cl-other { font-size: 12px; color: var(--ink-3); }
+@media (max-width: 700px) { .cl-item { grid-template-columns: 1fr; } }
+
+/* ---- version 1.5: green lights, placement conference, occupation plan, access ---- */
+.lights { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.light { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--paper, #fff); border-left: 6px solid #B8C4CC; }
+.light-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.light .lamp { width: 14px; height: 14px; border-radius: 50%; background: #B8C4CC; box-shadow: inset 0 0 0 2px rgba(0,0,0,.08); }
+.light-given { border-left-color: var(--st-done, #2E8B57); } .light-given .lamp { background: var(--st-done, #2E8B57); }
+.light-pending { border-left-color: #D9A441; } .light-pending .lamp { background: #D9A441; }
+.light-refused { border-left-color: #B23A48; } .light-refused .lamp { background: #B23A48; }
+.light-na { opacity: .7; }
+.light .actions { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
+table.conference { font-size: 12.5px; }
+table.conference th, table.conference td time, table.conference td .code, table.conference td .chip { white-space: nowrap; }
+table.conference td { white-space: normal; vertical-align: top; }
+table.conference td:nth-child(2) { min-width: 130px; }
+table.grid tr.occ-completed td { color: var(--ink-3); }
+table.grid tr.occ-ongoing td { background: rgba(46, 139, 87, .06); }
+td.access-cell { white-space: normal; max-width: 300px; }
+td.access-cell .form { max-width: 230px; }
+td.access-cell .checks { gap: 6px 12px; }
+td.access-cell .checks label { white-space: normal; }
+.inline-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.inline-form input[type=date] { width: auto; }
+.small.late { color: #B23A48; }
+@media print { nav, .pagehead .actions, .inline-form { display: none !important; } table.conference { font-size: 11px; } }
+/* the vessel against the berth limits, read at the announcement (1.6) */
+.fit-mark { display: inline-block; min-width: 18px; text-align: center; font-weight: 700; border-radius: 99px; margin-right: 4px; line-height: 1.4; }
+.fit-mark.ok { color: var(--st-done); background: var(--st-done-bg); } .fit-mark.no { color: var(--st-refused, #b42318); background: var(--st-refused-bg, #fbebeb); } .fit-mark.warn { color: var(--st-late); background: var(--st-late-bg); }
+[data-party-hints] li { margin: 2px 0; } [data-party-hints] .btn.small { margin-left: 6px; padding: 0 8px; line-height: 1.6; }
+/* the questions of an operation model: labels of one or two lines keep their inputs on one line */
+fieldset[data-intake] .q > label[for] { min-height: 2.9em; display: flex; align-items: flex-end; }

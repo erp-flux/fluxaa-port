@@ -136,6 +136,21 @@
           <input type="text" inputmode="decimal" autocomplete="off" id="f-pump-temp" name="temperature_c">
         </div>
       </div>
+      <div class="frow">
+        <div>
+          <label for="f-pump-level">{% trans "Tank level" %} <span class="hint">(mm)</span></label>
+          <input type="text" inputmode="decimal" autocomplete="off" id="f-pump-level" name="level_mm">
+        </div>
+        <div>
+          <label for="f-pump-moved">{% trans "Moved since previous" %} <span class="hint">(m³)</span></label>
+          <input type="text" inputmode="decimal" autocomplete="off" id="f-pump-moved" name="hourly_m3">
+        </div>
+        <div>
+          <label for="f-pump-cumul">{% trans "Cumulated" %} <span class="hint">(m³)</span></label>
+          <input type="text" inputmode="decimal" autocomplete="off" id="f-pump-cumul" name="cumulative_m3">
+        </div>
+      </div>
+      <p class="hint">{% trans "The level and the quantities go to your side's open pumping log sheet; what you leave blank is computed from the sheet once synchronised." %}</p>
       <p class="fmsg error" id="f-pump-error" role="alert" hidden></p>
       <div class="factions">
         <button type="submit" class="btn big" id="f-pump-submit">{% trans "Add the reading" %}</button>
@@ -231,6 +246,9 @@
   {% trans "Manifold pressure" as s %}"field_pressure": "{{ s|escapejs }}",
   {% trans "Flow rate" as s %}"field_rate": "{{ s|escapejs }}",
   {% trans "Temperature" as s %}"field_temperature": "{{ s|escapejs }}",
+  {% trans "Tank level" as s %}"field_level": "{{ s|escapejs }}",
+  {% trans "Moved since previous" as s %}"field_moved": "{{ s|escapejs }}",
+  {% trans "Cumulated" as s %}"field_cumulated": "{{ s|escapejs }}",
   {% trans "hold point" as s %}"hold_point": "{{ s|escapejs }}",
   {% trans "Guarded by a hold point: the registry refuses this milestone while its prerequisites are missing." as s %}"hold_point_hint": "{{ s|escapejs }}",
   {% trans "Contest" as s %}"kind_contest": "{{ s|escapejs }}",

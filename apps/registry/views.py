@@ -3,12 +3,14 @@ hold points and invariants; the views only collect input and present results."""
 from __future__ import annotations
 
 import functools
-from datetime import timedelta
+from datetime import datetime, timedelta
+from datetime import timezone as dt_timezone
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Q
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
@@ -21,13 +23,18 @@ from django.views.decorators.http import require_POST
 
 from apps.core import mfa, throttle
 from apps.core.models import Berth, Organization, Port, pick
-from apps.core.parties import kinds_for_role
+from apps.core.parties import kinds_for_role, parties_for_operation
 from apps.core.roles import ALL_ROLES, role_label
 
+from . import checklists
 from .models import (
     ACTIVE_STATUSES,
+    QUANTITY_UNITS,
+    UNITS_BY_CARGO,
+    CallParty,
     CallStatus,
     CallTemplate,
+    CargoKind,
     Document,
     DocumentType,
     InterruptionCause,
@@ -36,18 +43,25 @@ from .models import (
     Milestone,
     MilestoneType,
     PortCall,
+    PumpingLogSheet,
     RequestType,
     ServiceRequest,
+    StsRole,
+    TankReading,
     Task,
     TaskStatus,
     TemplateKind,
     Thread,
     Vessel,
+    VesselKind,
 )
+from .services import board as board_svc
 from .services import calls as call_svc
-from .services import correspondence, disputes, exports, holdpoints, journal, reports, rights, stats
+from .services import checklist as checklist_svc
+from .services import correspondence, disputes, exports, holdpoints, journal, preparation, reports, rights, stats
 from .services import documents as doc_svc
 from .services import forms as form_svc
+from .services import intake as intake_svc
 from .services import measurements as meas_svc
 from .services import milestones as ms_svc
 from .services import requests as req_svc
@@ -55,7 +69,8 @@ from .services import stages as stage_svc
 from .services import tasks as task_svc
 from .services.access import MASTER_SESSION_KEY, call_and_actor, master_from_session
 from .services.context import port_actor
-from .services.errors import HoldPointRefused, NotVisible, RegistryError, StrongAuthRequired
+from .services.errors import HoldPointRefused, NotVisible, RegistryError, RuleViolation, StrongAuthRequired
+from .services.forms import cargo as cargo_forms
 
 TABS = [
     ("apercu", gettext_noop("Overview")), ("taches", gettext_noop("Tasks")), ("jalons", gettext_noop("Milestones")), ("demandes", gettext_noop("Requests")),
@@ -93,6 +108,28 @@ def refusal_context(exc: HoldPointRefused) -> dict:
 
 def pop_refusal(request):
     return request.session.pop("fluxaa_refusal", None)
+
+
+def enrich_refusal(refusal: dict | None, call, actor) -> dict | None:
+    """The refusal box names, for each missing task, the organisations that answer for it and whether they can
+    act, and offers the actor its own way out: provide the document, confirm, remind the party, hand the master his
+    access (FLX-CDC-002 v1.4, EXG-Q-09)."""
+    if not refusal:
+        return refusal
+    tasks = {t.code: t for t in call.tasks.filter(status=TaskStatus.PENDING)}
+    for item in refusal.get("missing", []):
+        task = tasks.get(item["task"])
+        if task is None:
+            continue
+        item["id"] = task.pk
+        item["responsible"] = preparation.responsible(call, task)
+        item["hint"] = preparation.hint(task)
+        item["can_act"] = (task.role in actor.roles or bool(set(task.co_roles) & set(actor.roles)) or task.role == "ANY") \
+            and not actor.has("COM")
+        item["can_remind"] = actor.has("AGE", "CAP")
+        item["needs_master_link"] = task.role == "NAV" and preparation.master_link(call) is None
+    refusal["can_manage_parties"] = actor.has("AGE", "CAP")
+    return refusal
 
 
 def call_url(call, tab=None) -> str:
@@ -383,27 +420,50 @@ def pk_of(value):
         return None
 
 
+# The access a party row may be given at the announcement (v1.5): presets of CallParty.access + scopes; the
+# Parties tab offers the fine-grained choice afterwards
+ACCESS_PRESETS = [
+    ("FULL", _("Full access")), ("READ", _("Reading only")),
+    ("PARTIAL:taches,documents", _("Partial — tasks and documents")),
+    ("PARTIAL:apercu,jalons,journal", _("Partial — follow-up (overview, milestones, journal)")),
+    ("PARTIAL:mesures,documents", _("Partial — measurements and documents")),
+    ("PARTIAL:demandes,taches", _("Partial — requests and tasks")),
+    ("PARTIAL:apercu,taches,demandes,documents", _("Partial — operations (overview, tasks, requests, documents)")),
+]
+SCOPE_LABELS = [("apercu", _("Overview")), ("parties", _("Parties")), ("taches", _("Tasks")), ("demandes", _("Requests")),
+                ("jalons", _("Milestones")), ("documents", _("Documents")), ("mesures", _("Measurements")),
+                ("contestations", _("Disputes")), ("echanges", _("Correspondence")), ("journal", _("Journal"))]
+DOC_ROLES = ["AGE", "NAV", "TER", "COM", "INS", "PRE", "SVC"]
+
+
+def parse_access(value: str) -> tuple[str, list[str]]:
+    value = (value or "FULL").strip()
+    if value.startswith("PARTIAL"):
+        return "PARTIAL", [c for c in value.partition(":")[2].split(",") if c]
+    return ("READ" if value == "READ" else "FULL"), []
+
+
 def party_rows(data) -> list[dict]:
     """The rows of the open party list as posted (empty rows kept for the form); three blank rows by default."""
     roles, orgs = data.getlist("party_role"), data.getlist("party_org")
     names, kinds = data.getlist("party_name"), data.getlist("party_kind")
-    emails, phones = data.getlist("party_email"), data.getlist("party_phone")
+    emails, phones, access = data.getlist("party_email"), data.getlist("party_phone"), data.getlist("party_access")
     rows = []
     for i in range(max(len(roles), len(orgs), len(names))):
         pick_ = lambda values: values[i] if i < len(values) else ""  # noqa: E731
         rows.append({"role": pick_(roles), "org": pick_(orgs), "name": pick_(names).strip(), "kind": pick_(kinds).strip(),
-                     "email": pick_(emails).strip(), "phone": pick_(phones).strip()})
+                     "email": pick_(emails).strip(), "phone": pick_(phones).strip(), "access": pick_(access) or "FULL"})
     for role in call_svc.AGENCY_INVITABLE_ROLES:  # the former fixed slots (party_TER=<id>…) are still accepted
         for org_id in data.getlist(f"party_{role}"):
-            rows.append({"role": role, "org": org_id, "name": "", "kind": "", "email": "", "phone": ""})
+            rows.append({"role": role, "org": org_id, "name": "", "kind": "", "email": "", "phone": "", "access": "FULL"})
     while len(rows) < 3:
-        rows.append({"role": ["TER", "INS", "PRE"][len(rows)], "org": "", "name": "", "kind": "", "email": "", "phone": ""})
+        rows.append({"role": ["TER", "INS", "PRE"][len(rows)], "org": "", "name": "", "kind": "", "email": "", "phone": "", "access": "FULL"})
     return rows
 
 
-def resolve_parties(actor, rows: list[dict]) -> list[tuple[Organization, str]]:
-    """(organisation, role) pairs of the posted rows: a registered organisation by id, or a new one registered on
-    the spot (services.calls.register_organization); rows without organisation nor name are ignored."""
+def resolve_parties(actor, rows: list[dict]) -> list[tuple]:
+    """(organisation, role, access, scopes) of the posted rows: a registered organisation by id, or a new one
+    registered on the spot (services.calls.register_organization); rows without organisation nor name are ignored."""
     parties = []
     for row in rows:
         role = row["role"]
@@ -416,9 +476,105 @@ def resolve_parties(actor, rows: list[dict]) -> list[tuple[Organization, str]]:
                                                  phone=row["phone"])
         else:
             continue
-        if (org, role) not in parties:
-            parties.append((org, role))
+        if all((org, role) != (p[0], p[1]) for p in parties):
+            access, scopes = parse_access(row.get("access", "FULL"))
+            parties.append((org, role, access, scopes))
     return parties
+
+
+def custom_doc_rows(data) -> list[dict]:
+    labels, roles, hours = data.getlist("custom_doc_label"), data.getlist("custom_doc_role"), data.getlist("custom_doc_hours")
+    rows = []
+    for i in range(max(len(labels), 1)):
+        rows.append({"label": (labels[i] if i < len(labels) else "").strip(), "role": roles[i] if i < len(roles) else "AGE",
+                     "hours": hours[i] if i < len(hours) else "24"})
+    return rows
+
+
+def template_documents(port) -> dict[str, list[dict]]:
+    """The documents each published template requires: shown at the announcement for the operations chosen."""
+    docs = {}
+    for template in CallTemplate.objects.filter(port=port, is_active=True).order_by("order"):
+        version = template.published_version
+        if version is None:
+            continue
+        rows = [{"number": tt.number, "title": tt.title, "role": tt.role}
+                for tt in version.tasks.exclude(document_type_code="").order_by("order", "number")]
+        if rows:
+            docs[template.code] = rows
+    return docs
+
+
+def _new_vessel(port, data, prefix: str):
+    imo = (data.get(f"{prefix}_imo") or "").strip()
+    if not imo:
+        return None
+    known = Vessel.objects.filter(port=port, imo=imo).first()
+    if known is not None:
+        raise RuleViolation(_("IMO %(imo)s is already registered in the port: %(name)s. Choose it in the list of registered vessels instead of registering it again.")
+                            % {"imo": imo, "name": known.name})
+    vessel = Vessel(port=port, imo=imo, name=(data.get(f"{prefix}_name") or "").strip().upper(),
+                    flag=data.get(f"{prefix}_flag", ""), vessel_type=data.get(f"{prefix}_type", ""),
+                    vessel_kind=data.get(f"{prefix}_kind") or "TANKER_PRODUCT", dwt=data.get(f"{prefix}_dwt") or None)
+    vessel.full_clean()
+    vessel.save()
+    return vessel
+
+
+def _announce(user, actor, port, data):
+    """The announcement form turned into a call — and, for a transfer or a double banking whose other vessel has no
+    call yet, into that vessel's call under its own agency. Every refusal is raised: the caller holds the
+    transaction, so that nothing registered on the way (a new vessel, a new organisation) outlives a refusal."""
+    vessel = Vessel.objects.filter(port=port, pk=pk_of(data.get("vessel"))).first()
+    if vessel is None and data.get("new_imo"):
+        vessel = _new_vessel(port, data, "new")
+    if vessel is None:
+        raise RuleViolation(_("Choose a vessel or register a new one."))
+    parties = resolve_parties(actor, party_rows(data))
+    berth = Berth.objects.filter(port=port, pk=pk_of(data.get("requested_berth"))).first() if data.get("requested_berth") else None
+    partner = PortCall.objects.filter(port=port, pk=pk_of(data.get("linked_call"))).first() if data.get("linked_call") else None
+
+    def agency_of(select: str, name: str, email: str):
+        # a registered agency of the port, or one the port does not know yet, named on the spot (v1.6)
+        chosen = Organization.objects.filter(port=port, pk=pk_of(data.get(select))).first() if data.get(select) else None
+        return call_svc.partner_agency(actor, organization=chosen, name=data.get(name, ""), email=data.get(email, ""))
+
+    sts_partner = None
+    if partner is None and ("M3" in data.getlist("operations") or data.get("sts_role")):
+        partner_vessel = Vessel.objects.filter(port=port, pk=pk_of(data.get("partner_vessel"))).first() if data.get("partner_vessel") else None
+        if partner_vessel is None and data.get("partner_imo"):
+            partner_vessel = _new_vessel(port, data, "partner")
+        if partner_vessel is not None:
+            sts_partner = {"vessel": partner_vessel, "agency": agency_of("partner_agency", "partner_agency_name", "partner_agency_email")}
+    custom = [row for row in custom_doc_rows(data) if row["label"]]
+    codes = ["M0", *data.getlist("operations"), *data.getlist("modules")]
+    db_partner = None
+    if "M9" in codes:
+        db_call = PortCall.objects.filter(port=port, pk=pk_of(data.get("db_partner_call"))).first() if data.get("db_partner_call") else None
+        db_vessel = Vessel.objects.filter(port=port, pk=pk_of(data.get("db_partner_vessel"))).first() if data.get("db_partner_vessel") else None
+        if db_call is None and db_vessel is None and data.get("db_imo"):
+            db_vessel = _new_vessel(port, data, "db")
+        if db_call is None and db_vessel is None:
+            raise RuleViolation(_("A double banking names the other vessel: a call of the port, a registered vessel or a new one."))
+        db_agency = agency_of("db_partner_agency", "db_agency_name", "db_agency_email") if db_call is None else None
+        db_partner = {"call": db_call, "vessel": db_vessel, "agency": db_agency, "position": data.get("db_position") or "OUTER"}
+    operation_details = intake_svc.parse_intake(port, codes, data.get)
+    call = call_svc.create_call(
+        user, vessel=vessel, eta=parse_local(data.get("eta")), requested_berth_kind=data.get("kind", ""),
+        operations=data.getlist("operations"), modules=data.getlist("modules"), requested_berth=berth,
+        etb=parse_local(data.get("etb")), ets=parse_local(data.get("ets")), etc=parse_local(data.get("etc")),
+        etd=parse_local(data.get("etd")), product=data.get("product", ""), quantity=data.get("quantity") or None,
+        quantity_unit=data.get("quantity_unit", "MT"), voyage_number=data.get("voyage", ""),
+        last_port=data.get("last_port", ""), next_port=data.get("next_port", ""), parties=parties,
+        linked_call=partner, link_kind="STS" if partner else "",
+        planned_pump_hours=data.get("planned_pump_hours") or None, batch_reference=data.get("batch_reference", ""),
+        cargo_kind=data.get("cargo_kind") or "LIQUID", validity_days=data.get("validity_days") or None,
+        sts_role=data.get("sts_role", ""), sts_partner=sts_partner,
+        expected_documents=data.getlist("expected_documents"),
+        custom_documents=[{"label": r["label"], "role": r["role"], "hours_before_eta": r["hours"]} for r in custom],
+        operation_details=operation_details, db_partner=db_partner,
+    )
+    return call, sts_partner, db_partner, berth, codes
 
 
 @login_required
@@ -431,53 +587,132 @@ def call_create(request):
         return redirect("registry:call_list")
     port = actor.port
     templates = CallTemplate.objects.filter(port=port, is_active=True)
+    data = request.POST
+    posted = dict(data.items()) if request.method == "POST" else {}
+    posted.update({"operations_list": data.getlist("operations"), "modules_list": data.getlist("modules"),
+                   "expected_documents_list": data.getlist("expected_documents")})
     context = {
         "vessels": Vessel.objects.filter(port=port).order_by("name"),
+        "vessel_kinds": VesselKind.choices, "cargo_kinds": CargoKind.choices, "sts_roles": StsRole.choices,
+        "units": [(value, label, " ".join(k for k, allowed in UNITS_BY_CARGO.items() if value in allowed)) for value, label in QUANTITY_UNITS],
         "operations": templates.filter(kind=TemplateKind.OPERATION),
         "modules": templates.filter(kind=TemplateKind.MODULE),
         "berths": Berth.objects.filter(port=port, is_active=True),
         "kinds": Berth.Kind.choices,
         # the parties of a call: an open list — any number of rows, registered organisations or new ones
         "orgs": Organization.objects.filter(port=port, is_active=True).exclude(allowed_roles=[]).order_by("name"),
-        "invitable": sorted(call_svc.AGENCY_INVITABLE_ROLES, key=["TER", "INS", "COM", "PRE", "SVC"].index),
+        "invitable": sorted(call_svc.AGENCY_INVITABLE_ROLES, key=["TER", "INS", "COM", "PRE", "SVC", "AGE"].index),
         "party_kinds": {role: kinds_for_role(role) for role in call_svc.AGENCY_INVITABLE_ROLES},
-        "party_rows": party_rows(request.POST),
+        "party_hints": {t.code: parties_for_operation(t.code, get_language() or "fr") for t in templates.order_by("order")
+                        if parties_for_operation(t.code)},
+        "party_rows": party_rows(data), "access_presets": ACCESS_PRESETS,
+        "agencies": Organization.objects.filter(port=port, is_active=True, allowed_roles__contains=["AGE"]).exclude(pk=user.organization_id).order_by("name"),
         # only the agency's own calls: another agency's call is linked by the harbour master
         "partners": rights.call_queryset_for_user(request.user).filter(
             status__in=[CallStatus.DRAFT, *ACTIVE_STATUSES]).select_related("vessel"),
-        "data": request.POST,
+        "template_docs": template_documents(port),
+        "optional_doc_types": DocumentType.objects.filter(port=port, is_active=True, generated=False).exclude(code="OTHER").order_by("label_fr"),
+        "custom_rows": custom_doc_rows(data), "doc_roles": DOC_ROLES,
+        # the announcement adapts to the operation (v1.6, EXG-R-11): each model's own questions, shown when it is
+        # chosen; the vessel at the berth for a double banking — any agency's call the port's board shows
+        "intake": _intake_with_values(intake_svc.templates_with_intake(port), posted),
+        "db_candidates": _double_banking_candidates(port, actor),
+        "sts_candidates": _sts_candidates(port, actor, user),
+        "data": posted,
     }
     if request.method != "POST":
         return render(request, "registry/call_create.html", context)
-    data = request.POST
-    vessel = Vessel.objects.filter(port=port, pk=pk_of(data.get("vessel"))).first()
-    if vessel is None and data.get("new_imo"):
-        vessel = Vessel(port=port, imo=data.get("new_imo", "").strip(), name=data.get("new_name", "").strip().upper(),
-                        flag=data.get("new_flag", ""), vessel_type=data.get("new_type", ""),
-                        dwt=data.get("new_dwt") or None)
-        vessel.full_clean()
-        vessel.save()
-    if vessel is None:
-        messages.error(request, _("Choose a vessel or register a new one."))
-        return render(request, "registry/call_create.html", context)
     try:
-        parties = resolve_parties(actor, party_rows(data))
-    except RegistryError as exc:
-        messages.error(request, str(exc))
+        # one transaction: a refused announcement registers nothing on the way — neither the new vessel, nor a new
+        # organisation, nor the other vessel's call — and the form comes back as it was typed
+        with transaction.atomic():
+            call, sts_partner, db_partner, berth, codes = _announce(user, actor, port, data)
+    except NotVisible:
+        raise
+    except (RegistryError, ValidationError) as exc:
+        messages.error(request, getattr(exc, "message", "") or " ".join(getattr(exc, "messages", [])) or str(exc))
         return render(request, "registry/call_create.html", context)
-    berth = Berth.objects.filter(port=port, pk=pk_of(data.get("requested_berth"))).first() if data.get("requested_berth") else None
-    partner = PortCall.objects.filter(port=port, pk=pk_of(data.get("linked_call"))).first() if data.get("linked_call") else None
-    call = call_svc.create_call(
-        user, vessel=vessel, eta=parse_local(data.get("eta")), requested_berth_kind=data.get("kind", ""),
-        operations=data.getlist("operations"), modules=data.getlist("modules"), requested_berth=berth,
-        etb=parse_local(data.get("etb")), ets=parse_local(data.get("ets")), etc=parse_local(data.get("etc")),
-        etd=parse_local(data.get("etd")), product=data.get("product", ""), quantity=data.get("quantity") or None,
-        quantity_unit=data.get("quantity_unit", "MT"), voyage_number=data.get("voyage", ""),
-        last_port=data.get("last_port", ""), next_port=data.get("next_port", ""), parties=parties,
-        linked_call=partner, link_kind="STS" if partner else "",
-    )
     messages.success(request, _("Call %(ref)s created as a draft: provide the vessel data, then declare it.") % {"ref": call.reference})
+    if call.linked_call_id and (sts_partner is not None or db_partner is not None and db_partner.get("call") is None):
+        messages.info(request, _("The partner vessel's call %(ref)s was created and linked to this one.") % {"ref": call.linked_call.reference})
+    elif call.linked_call_id and db_partner is None and call.linked_call.agency_id != call.agency_id:
+        messages.info(request, _("%(ref)s belongs to another agency: it has been told, and nothing of its file is read through the link until the harbour master authorises the STS area and window.") % {"ref": call.linked_call.reference})
+    elif call.linked_call_id and db_partner is not None:
+        if call.linked_call.linked_call_id == call.pk:
+            messages.info(request, _("Linked to %(ref)s for the double banking: the inner vessel's express consent is required before the authorization.") % {"ref": call.linked_call.reference})
+        else:
+            messages.info(request, _("%(ref)s belongs to another agency: it has been told, and the two files will show each other once the harbour master authorises the double banking.") % {"ref": call.linked_call.reference})
+    created_partner = call.linked_call if call.linked_call_id and (sts_partner is not None or db_partner is not None and db_partner.get("call") is None) else None
+    if created_partner is not None and created_partner.agency_id != call.agency_id and not call_svc.agency_has_account(created_partner.agency):
+        messages.warning(request, _("%(agency)s has no account on the platform yet: the port's administrator has been told. It alone declares %(ref)s; until its accounts are open you keep an associated-agency access on that call.")
+                         % {"agency": created_partner.agency.name, "ref": created_partner.reference})
+    occupied = call_svc.berth_occupation(port, berth, call.etb or call.eta, call.etd, exclude=call)
+    if occupied and "M9" not in codes:
+        messages.warning(request, _("%(berth)s is held or expected over the same window by %(who)s — ask for another berth, revise the times, or announce a double banking (M9).")
+                         % {"berth": berth.code, "who": ", ".join(f"{o.vessel.name} ({o.reference}, {o.agency})" for o in occupied[:3])})
     return redirect(call_url(call))
+
+
+def _intake_with_values(intake: list[dict], posted: dict) -> list[dict]:
+    """The questions of each model with what the agency already typed (a refused form comes back filled)."""
+    for template in intake:
+        for field in template["fields"]:
+            field["value"] = posted.get(f"op_{template['code']}_{field['key']}", "")
+    return intake
+
+
+def _sts_candidates(port, actor, user):
+    """The vessels an announcing agency may name as the partner of a ship-to-ship transfer besides its own calls:
+    the calls of the other agencies the port's board shows at the anchorage or the STS area — the mother vessel
+    several daughter vessels of different agencies come to."""
+    if not rights.can_read_report(actor, "CALL_BOARD"):
+        return []
+    return (PortCall.objects.filter(port=port, status__in=ACTIVE_STATUSES).exclude(status=CallStatus.DRAFT)
+            .exclude(agency=user.organization)
+            .filter(Q(requested_berth_kind__in=["STS_AREA", "ANCHORAGE"]) | Q(berth__kind__in=["STS_AREA", "ANCHORAGE"]) | ~Q(sts_role=""))
+            .select_related("vessel", "agency", "berth", "requested_berth").order_by("eta"))
+
+
+def _double_banking_candidates(port, actor):
+    """The vessels an announcing agency may name as the other vessel of a double banking: the calls the port's
+    board shows at a berth or expected there — of any agency."""
+    if not rights.can_read_report(actor, "CALL_BOARD"):
+        return []
+    return (PortCall.objects.filter(port=port, status__in=ACTIVE_STATUSES).exclude(status=CallStatus.DRAFT)
+            .filter(Q(requested_berth_kind="JETTY") | Q(berth__kind="JETTY")).select_related("vessel", "agency", "berth", "requested_berth")
+            .order_by("etb", "eta"))
+
+
+@login_required
+def berth_occupation(request):
+    """HTMX fragment of the announcement: who holds or expects the requested berth over the window asked (v1.6)."""
+    actor = port_actor(request.user)
+    if "AGE" not in actor.roles:
+        return HttpResponse("")
+    berth = Berth.objects.filter(port=actor.port, pk=pk_of(request.GET.get("requested_berth"))).first() if request.GET.get("requested_berth") else None
+    try:
+        start = parse_local(request.GET.get("etb")) or parse_local(request.GET.get("eta"))
+        end = parse_local(request.GET.get("etd"))
+    except ValidationError:
+        start = end = None
+    rows = call_svc.berth_occupation(actor.port, berth, start, end) if berth is not None and start is not None else []
+    # the vessel against the berth's acceptance limits, before the berth is asked for (the terminal's vetting grid,
+    # read at the announcement): a registered vessel's particulars, or the DWT typed for a new one
+    vessel = Vessel.objects.filter(port=actor.port, pk=pk_of(request.GET.get("vessel"))).first() if request.GET.get("vessel") else None
+    if vessel is None and (request.GET.get("new_dwt") or "").strip().isdigit():
+        vessel = Vessel(port=actor.port, imo=request.GET.get("new_imo", ""), name=request.GET.get("new_name", ""),
+                        dwt=int(request.GET.get("new_dwt")))
+    fit = cargo_forms.vetting_rows_for(vessel, berth, start) if berth is not None and vessel is not None else []
+    assessed = [r for r in fit if r["status"] != "Z"]
+    verdict = cargo_forms.vetting_verdict(fit) if assessed else None
+    cargo_kind = request.GET.get("cargo_kind", "")
+    kind_mismatch = bool(berth is not None and berth.cargo_kinds and cargo_kind and cargo_kind not in berth.cargo_kinds)
+    return render(request, "registry/_berth_occupation.html", {
+        "berth": berth, "rows": rows, "start": start, "end": end, "vessel": vessel, "fit": assessed,
+        "verdict": (verdict[1] if (get_language() or "fr").startswith("en") else verdict[0]) if verdict else None,
+        "unsuitable": bool(verdict and verdict[1].startswith("UNSUITABLE")), "kind_mismatch": kind_mismatch,
+        "berth_kinds": [CargoKind(k).label for k in (berth.cargo_kinds or [])] if berth is not None else [],
+    })
 
 
 # ============================================================================ call detail
@@ -485,17 +720,22 @@ def call_create(request):
 def call_detail(request, pk):
     call, actor = resolve(request, pk)
     tab = request.GET.get("tab", "apercu")
-    if tab not in dict(TABS):
-        tab = "apercu"
+    full = rights.can_see_full_call(actor)
+    access, scopes = rights.access_of(actor, call)  # the part of the file this party was given (v1.5)
+    tabs = [(k, _(v)) for k, v in TABS if full or k in ("apercu", "taches", "jalons", "demandes", "documents", "echanges")]
+    if scopes is not None:
+        tabs = [(k, v) for k, v in tabs if k in scopes]
+    if tab not in dict(tabs):
+        tab = tabs[0][0] if tabs else "apercu"
     journal.audit(port=call.port, call=call, user=actor.user, master=actor.master, action="view", obj=call,
                   object_kind="call", detail=tab, request=request)
-    full = rights.can_see_full_call(actor)
     tasks = rights.visible_tasks(actor, call).prefetch_related("signatures")
     context = {
         "call": call, "actor": actor, "tab": tab, "full": full, "now": timezone.now(),
-        "tabs": [(k, _(v)) for k, v in TABS if full or k in ("apercu", "taches", "jalons", "demandes", "documents", "echanges")],
+        "tabs": tabs, "access": access, "access_scopes": sorted(scopes) if scopes else None,
+        "can_act_here": rights.can_act_in(actor, call, tab), "is_principal": rights.is_principal_agent(actor, call),
         "strip": build_strip(call) if full else None,
-        "refusal": pop_refusal(request),
+        "refusal": enrich_refusal(pop_refusal(request), call, actor),
         "my_open_tasks": [t for t in tasks if t.status == TaskStatus.PENDING and (t.role in actor.roles or t.role == "ANY"
                           or set(t.co_roles) & set(actor.roles))][:8],
         "counts": {
@@ -503,16 +743,59 @@ def call_detail(request, pk):
             "contestations": call.disputes.filter(status="OPEN").count(),
         },
         "is_age": actor.has("AGE"), "is_cap": actor.has("CAP"), "is_master": actor.is_master,
+        "security_filing": actor.has("AGE", "NAV", "SUR", "CAP") and not call.is_terminal_state,
         "linked": call.linked_call,
+        # a partner of another agency is named, not opened: the header shows it without a link (v1.6)
+        "linked_open": bool(call.linked_call_id and actor.user is not None
+                            and rights.call_queryset_for_user(actor.user).filter(pk=call.linked_call_id).exists()),
+        "link_confirmed": call_svc.link_confirmed(call) if call.linked_call_id else False,
+        "incoming_links": call_svc.incoming_links(call, actor),
     }
     builder = TAB_BUILDERS.get(tab)
     if builder:
         context.update(builder(request, call, actor))
+    if not context["can_act_here"]:
+        _strip_acts(context)
     if request.user.is_authenticated:
         from apps.ai.views import tab_context  # optional EF-17 assistance; empty when switched off
 
         context.update(tab_context(request, call, actor, tab))
     return render(request, "registry/call_detail.html", context)
+
+
+_ACT_FLAGS = ("is_age", "is_cap", "is_principal", "can_act_tasks", "security_filing")
+# the lists whose mere presence opens a form: the roles one may invite, the milestones one may record, the document
+# types one may provide, the access links one may issue
+_ACT_LISTS = ("invitable", "recordable", "doc_types", "doc_tasks", "master_links", "party_links", "linkable")
+
+
+def _strip_acts(context: dict, depth: int = 0) -> None:
+    """A party in reading only, or whose partial access leaves this tab out, is offered no act on it (v1.5, EXG-R-05):
+    the server refuses such a POST anyway (ACTION_SCOPES / rights.require_act), the screen does not pretend otherwise.
+    Every `can_…` flag of the tab's context — on the context itself, in its lists and dicts, on the objects the tabs
+    decorate (tasks, requests, documents, parties, readings…) — is turned off, and so are the role flags that open
+    the role's own forms (ad hoc task, security deposit, documents asked for, estimates)."""
+    if depth > 4:
+        return
+    if isinstance(context, dict):
+        for key in list(context):
+            if key in _ACT_FLAGS or (key.startswith("can_") and key != "can_act_here"):
+                context[key] = False
+            elif key in _ACT_LISTS:
+                context[key] = []
+            else:
+                _strip_acts(context[key], depth + 1)
+    elif isinstance(context, (list, tuple)):
+        for item in context:
+            _strip_acts(item, depth + 1)
+    elif hasattr(context, "__dict__") and not isinstance(context, type):
+        for key, value in list(vars(context).items()):
+            if key.startswith("can_") and isinstance(value, bool):
+                setattr(context, key, False)
+            elif key == "execute":
+                setattr(context, key, None)
+            elif isinstance(value, (list, tuple, dict)) and not key.startswith("_"):
+                _strip_acts(value, depth + 1)
 
 
 def _tab_overview(request, call, actor):
@@ -527,8 +810,24 @@ def _tab_overview(request, call, actor):
                           "reasons": [pick(fr, en) for fr, en in reasons]})
     nor = call.milestones.filter(type__code="NOR_TENDERED", is_conflict=False).first()
     can_plan_stage = actor.has("AGE", "CAP") and not call.is_terminal_state and call.status != CallStatus.DEPARTED
+    checklist = checklist_svc.current(call)
+    lights = task_svc.green_lights(call)
+    for light in lights:  # who may give or withdraw each green light from the panel
+        t = light["task"]
+        light["can_give"] = (t.status == TaskStatus.PENDING and not t.request_type_code and not call.is_terminal_state
+                             and (t.role in actor.roles or set(t.co_roles) & set(actor.roles)))
+        light["can_withdraw"] = light["withdrawable"] and not call.is_terminal_state and (t.role in actor.roles or actor.has("CAP"))
     return {
         "readiness": readiness, "nor": nor, "nor_states": ms_svc.state_by_role(nor) if nor else {},
+        "green_lights": lights,
+        "validity": call.billing_basis(), "can_renew": call.status in ("EXPIRED", "CANCELLED", "REJECTED") and rights.is_principal_agent(actor, call)
+        and not call.renewals.exclude(status__in=["CANCELLED", "EXPIRED", "REJECTED"]).exists(),
+        "renewal": call.renewals.exclude(status__in=["CANCELLED", "EXPIRED", "REJECTED"]).first(),
+        # what the declaration waits for, who answers for it, what the viewer can do about it (EXG-Q-09)
+        "declaration": preparation.readiness(call, actor) if call.status == CallStatus.DRAFT and actor.has("AGE", "CAP") else None,
+        "checklist": checklist, "checklist_progress": checklist_svc.progress(checklist) if checklist else None,
+        "checklist_label": checklists.label(checklist.standard if checklist else checklists.standard_for(call.cargo_kind)),
+        "checklist_visible": checklist_svc.visible(actor, call), "checklist_can_complete": checklist_svc.can_complete(actor, call),
         "stages": list(call.stages.select_related("berth").order_by("order")),
         "can_plan_stage": can_plan_stage,
         "berth_kinds": Berth.Kind.choices,
@@ -539,6 +838,9 @@ def _tab_overview(request, call, actor):
         "parties": call.parties.filter(revoked_at__isnull=True).select_related("organization").order_by("role"),
         "estimate_fields": [("eta", "ETA", call.eta), ("etb", "ETB", call.etb), ("ets", _("Start of operations"), call.ets),
                             ("etc", _("Completion"), call.etc), ("etd", "ETD", call.etd)],
+        # what the agency declared for each operation at the announcement (v1.6, EXG-R-11) — commercial like the
+        # product and the quantity: a provider reads what concerns it in the request addressed to it, not here
+        "declared": intake_svc.declared(call) if rights.can_see_full_call(actor) else [],
     }
 
 
@@ -548,17 +850,53 @@ def _tab_tasks(request, call, actor):
     if only_mine:
         tasks = [t for t in tasks if t.role in actor.roles or set(t.co_roles) & set(actor.roles) or t.role == "ANY"]
     groups: dict[str, list] = {}
+    # a party in reading only, or whose partial access leaves the tasks out, is offered no act at all (v1.5, EXG-R-05):
+    # the server refuses them anyway (ACTION_SCOPES), the screen does not pretend otherwise
+    can_act_here = rights.can_act_in(actor, call, "taches")
     for t in tasks:
-        t.can_act = t.status == TaskStatus.PENDING and (t.role in actor.roles or t.role == "ANY" or set(t.co_roles) & set(actor.roles))
+        t.can_act = can_act_here and t.status == TaskStatus.PENDING and (t.role in actor.roles or t.role == "ANY" or set(t.co_roles) & set(actor.roles))
         t.signed_roles = {s.role for s in t.signatures.all() if s.kind == "SIGNED"}
         t.can_sign = t.can_act and t.joint and any(r in actor.roles and r not in t.signed_roles for r in t.all_roles)
         t.can_complete = (t.can_act and not t.joint and not t.request_type_code and not t.milestone_codes
                           and not t.document_type_code and t.nature in ("C", "R", "D") and not actor.has("COM"))
-        t.can_na = t.status == TaskStatus.PENDING and bool(task_svc.na_roles(t) & set(actor.roles)) \
+        t.can_na = can_act_here and t.status == TaskStatus.PENDING and bool(task_svc.na_roles(t) & set(actor.roles)) \
             and not call.is_terminal_state
+        # how the task is carried out, right here (v1.5, EXG-R-01): the document to upload, the request to file or
+        # to decide, the milestone to record, the confirmation to give
+        t.execute = _execution(call, actor, t) if t.can_act and not call.is_terminal_state else None
         key = t.template_code or _("Ad hoc")
         groups.setdefault(key, []).append(t)
-    return {"task_groups": groups, "only_mine": only_mine}
+    return {"task_groups": groups, "only_mine": only_mine, "can_act_tasks": can_act_here,
+            "cause_list": InterruptionCause.objects.filter(port=call.port, is_active=True).order_by("order")}
+
+
+def _execution(call, actor, t) -> dict | None:
+    """What the tasks tab offers in line to carry a pending task out."""
+    if t.document_type_code:
+        dtype = DocumentType.objects.filter(port=call.port, code=t.document_type_code, is_active=True).first()
+        if dtype is None:
+            return None
+        return {"kind": "document", "type": dtype, "generated": dtype.generated,
+                "forms": [f for f in form_svc.available(call, actor) if f.document_type == dtype.code]}
+    if t.request_type_code:
+        rtype = RequestType.objects.filter(port=call.port, code=t.request_type_code, is_active=True).first()
+        if rtype is None:
+            return None
+        if t.request_side == "decide":
+            pending = [r for r in call.requests.filter(type=rtype, status__in=["SUBMITTED", "UNDER_REVIEW", "INFO_REQUIRED"]).order_by("-pk")
+                       if rights.request_visible(actor, r)]
+            return {"kind": "decide", "type": rtype, "requests": pending}
+        # from the announcement's answers (v1.6) — which a provider does not read, like the product and the quantity
+        prefill = intake_svc.prefill_for_request(call, rtype) if rights.can_see_full_call(actor) else {}
+        fields = [{**intake_svc.field_view(f), "value": prefill.get(f.get("key"), "")}
+                  for f in (rtype.form_schema or []) if isinstance(f, dict) and f.get("key")]
+        return {"kind": "request", "type": rtype, "fields": fields, "prefilled": bool(prefill), "idprefix": f"xr{t.pk}_"}
+    if t.milestone_codes:
+        types = list(MilestoneType.objects.filter(port=call.port, code__in=t.milestone_codes, is_active=True).order_by("order"))
+        recorded = set(call.milestones.filter(is_conflict=False).values_list("type__code", flat=True))
+        return {"kind": "milestone", "types": [m for m in types if m.code not in recorded] or types,
+                "can_record": any(m.emitter_role in actor.roles or m.emitter_role == "ORIGIN" for m in types)}
+    return {"kind": "confirm"}
 
 
 def _tab_milestones(request, call, actor):
@@ -609,13 +947,13 @@ def _tab_requests(request, call, actor):
             r.auth = None
     creatable = [t for t in RequestType.objects.filter(port=call.port, is_active=True) if set(t.requester_roles) & set(actor.roles)]
     selected = next((t for t in creatable if t.code == request.GET.get("type")), None)
-    fields = []
+    fields, prefill = [], {}
     if selected:
+        prefill = intake_svc.prefill_for_request(call, selected) if rights.can_see_full_call(actor) else {}  # (v1.6)
         for f in selected.form_schema or []:
-            fields.append({**f, "label": pick(f.get("label_fr", ""), f.get("label_en", "")),
-                           "choices": [(o["value"], pick(o.get("label_fr", ""), o.get("label_en", ""))) for o in f.get("options", [])]})
+            fields.append({**intake_svc.field_view(f), "value": prefill.get(f.get("key"), "")})
     providers = req_svc.provider_candidates(call, selected) if selected and selected.executor_role else []
-    return {"requests": visible, "creatable": creatable, "selected_type": selected, "form_fields": fields,
+    return {"requests": visible, "creatable": creatable, "selected_type": selected, "form_fields": fields, "prefilled": bool(prefill),
             "providers": providers if len(providers) > 1 else [],
             "berths": Berth.objects.filter(port=call.port, is_active=True, kind=call.requested_berth_kind),
             "strong": mfa.session_is_strong(request)}
@@ -633,19 +971,44 @@ def _tab_documents(request, call, actor):
     my_doc_tasks = [t for t in call.tasks.filter(status=TaskStatus.PENDING).exclude(document_type_code="")
                     if t.role in actor.roles or set(t.co_roles) & set(actor.roles)]
     return {"documents": docs, "doc_types": types, "doc_tasks": my_doc_tasks, "forms": form_svc.available(call, actor),
-            "preselect_task": request.GET.get("task"), "preselect_type": request.GET.get("type")}
+            "preselect_task": request.GET.get("task"), "preselect_type": request.GET.get("type"),
+            # the documents asked for at the announcement or afterwards, beyond the templates (v1.5, EXG-R-06)
+            "expected_tasks": list(call.tasks.filter(requested_at_creation=True).order_by("order")),
+            "optional_doc_types": DocumentType.objects.filter(port=call.port, is_active=True, generated=False).exclude(code="OTHER").order_by("label_fr")
+            if actor.has("AGE", "CAP") else [], "doc_roles": DOC_ROLES}
 
 
 def _tab_measurements(request, call, actor):
-    if not rights.measurements_visible(actor):
+    quantities = rights.measurements_visible(actor) or actor.has("NAV", "TER", "INS")
+    pumping_visible = rights.can_read_report(actor, "PUMPING_LOG") or actor.has("NAV", "TER")
+    if not quantities and not pumping_visible:
         return {"measurements_hidden": True}
     rows = []
-    for m in call.measurements.all():
-        rows.append({"m": m, "values": m.current_values(), "differences": m.differences()})
+    my_side = "SHIP" if actor.has("NAV") else ("SHORE" if actor.has("TER") and rights.speaks_for_shore(actor, "TER", call) else "")
+    if quantities:
+        for m in call.measurements.all():
+            totals = meas_svc.tank_totals(m, actor)
+            for side in ("SHIP", "SHORE"):
+                for r in totals[side]["readings"]:
+                    r.review = r.latest_review()
+                    r.can_review = actor.has("INS") and r.state == "PENDING" and not call.is_terminal_state
+                    r.can_correct = my_side == side and r.state != "VALIDATED" and not call.is_terminal_state
+            rows.append({"m": m, "values": m.current_values(), "differences": m.differences(), "tanks": totals,
+                         "declared": {p: v.value for p, v in m.current_values().items()}})
     my_parties = [p for p, role in (("SHIP", "NAV"), ("SHORE", "TER"), ("SURVEYOR", "INS")) if role in actor.roles]
-    return {"measure_rows": rows, "my_parties": my_parties, "pumping": call.pumping_log.all(),
+    summary = meas_svc.pumping_summary(call) if pumping_visible else None
+    my_sheets = [sh for sh in call.pumping_sheets.filter(side=my_side, closed_at__isnull=True)] if my_side else []
+    return {"measure_rows": rows, "my_parties": my_parties, "my_side": my_side,
+            "tank_sides": [("SHIP", _("Ship tanks"), _("read by the ship")), ("SHORE", _("Shore tanks"), _("read by the terminal"))],
+            "pumping": call.pumping_log.select_related("sheet") if pumping_visible else [],
+            "pumping_rows": meas_svc.compare_sides(call) if pumping_visible else [], "pumping_summary": summary,
+            "pumping_visible": pumping_visible, "quantities_visible": quantities, "my_sheets": my_sheets,
+            "tolerance": call.port.quantity_tolerance_pct,
             "kinds": Measurement.Kind.choices, "parties_labels": dict(MeasurementParty.choices),
-            "can_open": actor.has("INS", "TER", "NAV"), "can_pump": actor.has("TER", "NAV"),
+            "units": QUANTITY_UNITS, "counterpart": pick(*meas_svc.counterpart_label(call)),
+            "can_open": actor.has("INS", "TER", "NAV") and not call.is_terminal_state,
+            "can_pump": bool(my_side) and meas_svc.can_keep_log(actor, call) and not call.is_terminal_state,
+            "can_read_tanks": bool(my_side) and not call.is_terminal_state,
             "can_contest": bool(set(actor.roles) & disputes.OPENING_ROLES) and not call.is_terminal_state,
             "contest_counterparts": [r for r in ("NAV", "TER", "INS", "AGE") if r not in actor.roles]}
 
@@ -687,9 +1050,14 @@ def _tab_parties(request, call, actor):
     shore = {role: rights.shore_org_id(call, role) for role in rights.SHORE_ROLES}
     holders = {role: {p.organization_id for p in parties if p.role == role and p.revoked_at is None}
                for role in rights.SHORE_ROLES}
+    principal = rights.is_principal_agent(actor, call)
     for p in parties:  # same rule as calls.revoke_party: the agency revokes only the parties it invited
         p.can_revoke = p.revoked_at is None and (actor.has("CAP") or (
             actor.has("AGE") and not p.is_default and p.role in call_svc.AGENCY_INVITABLE_ROLES))
+        # the principal agent (or the harbour master) sets the access of the parties it invited (v1.5)
+        p.can_set_access = p.revoked_at is None and not p.is_default and not p.is_principal and (principal or actor.has("CAP")) \
+            and not call.is_terminal_state
+        p.principal = p.is_principal
         several = p.role in holders and len(holders[p.role]) > 1
         p.shore = several and p.revoked_at is None and shore.get(p.role) == p.organization_id
         p.can_designate = several and not p.shore and p.revoked_at is None and can_manage \
@@ -701,6 +1069,7 @@ def _tab_parties(request, call, actor):
             "linkable": [p for p in parties if p.revoked_at is None and p.role in call_svc.LINK_ROLES] if can_manage else [],
             "orgs": orgs, "invitable": sorted(call_svc.AGENCY_INVITABLE_ROLES) if actor.has("AGE") and not actor.has("CAP") else list(ALL_ROLES),
             "party_kinds": {role: kinds_for_role(role) for role in ALL_ROLES},
+            "scope_labels": SCOPE_LABELS, "access_presets": ACCESS_PRESETS, "is_principal": principal,
             "new_link": request.session.pop("fluxaa_new_master_link", None)}
 
 
@@ -712,6 +1081,26 @@ TAB_BUILDERS = {
 
 
 # ============================================================================ actions
+# The part of the file each action belongs to: a partial access acts in its tabs only, a reading access never
+# acts (FLX-CDC-002 v1.5, EXG-R-04). Actions outside this map belong to the overview.
+ACTION_SCOPES = {
+    "party_add": "parties", "party_shore": "parties", "party_revoke": "parties", "party_link": "parties", "party_access": "parties",
+    "master_link": "parties", "master_revoke": "parties", "link_revoke": "parties", "remind": "apercu",
+    "task_complete": "taches", "task_sign": "taches", "task_na": "taches", "task_countersign": "taches", "task_adhoc": "taches",
+    "green_withdraw": "apercu", "documents_request": "documents",
+    "milestone": "jalons", "countersign": "jalons",
+    "request_create": "demandes", "request_provider": "demandes", "request_review": "demandes", "request_decide": "demandes",
+    "request_schedule": "demandes", "request_execute": "demandes", "request_cancel": "demandes", "request_submit": "demandes",
+    "document_upload": "documents", "document_sign": "documents", "document_cancel": "documents", "statement": "documents",
+    "form_issue": "documents",
+    "measurement_open": "mesures", "measurement_value": "mesures", "pumping": "mesures", "sheet_open": "mesures",
+    "sheet_close": "mesures", "tank_reading": "mesures", "tank_review": "mesures",
+    "checklist_open": "apercu", "checklist_answer": "apercu", "checklist_sign": "apercu", "checklist_cancel": "apercu",
+    "dispute_open": "contestations", "dispute_respond": "contestations", "dispute_close": "contestations",
+    "thread_create": "echanges", "thread_post": "echanges",
+}
+
+
 @require_POST
 @account_or_master
 @web_action
@@ -720,6 +1109,7 @@ def call_action(request, pk, action):
     data = request.POST
     back = back_url(request) if data.get("back") else call_url(call)
     done = _("Recorded.")
+    rights.require_act(actor, call, ACTION_SCOPES.get(action, "apercu"))
 
     def task():
         t = Task.objects.filter(call=call, pk=pk_of(data.get("task_id"))).first()
@@ -784,7 +1174,8 @@ def call_action(request, pk, action):
             org = Organization.objects.filter(port=call.port, pk=pk_of(data.get("organization"))).first()
             if org is None:
                 raise NotVisible()
-        call_svc.add_party(call, actor, org, data.get("role", ""))
+        access, scopes = parse_access(data.get("access", "FULL"))
+        call_svc.add_party(call, actor, org, data.get("role", ""), access=access, scopes=scopes)
     elif action == "party_shore":
         party = call.parties.filter(pk=pk_of(data.get("party_id"))).first()
         if party is None:
@@ -796,15 +1187,45 @@ def call_action(request, pk, action):
         if party is None:
             raise NotVisible()
         call_svc.revoke_party(call, actor, party, data.get("reason", ""))
+    elif action == "party_access":
+        party = call.parties.filter(pk=pk_of(data.get("party_id"))).first()
+        if party is None:
+            raise NotVisible()
+        access = data.get("access", "FULL")
+        call_svc.set_party_access(call, actor, party, access, data.getlist("scopes"))
+        done = _("Access of %(org)s set: %(access)s.") % {"org": party.organization, "access": CallParty.Access(access).label}
+        back = call_url(call, "parties")
+    elif action == "renew":
+        new = call_svc.renew_call(call, actor)
+        messages.success(request, _("Announcement made again: new call %(ref)s created as a draft (validity %(days)d days).")
+                         % {"ref": new.reference, "days": new.validity_days})
+        return redirect(call_url(new))
+    elif action == "green_withdraw":
+        task_svc.withdraw_green_light(task(), actor, data.get("reason", ""))
+        done = _("Green light withdrawn: everyone concerned has been told.")
+        back = call_url(call) + "#feux-verts"
+    elif action == "documents_request":
+        custom = [row for row in custom_doc_rows(data) if row["label"]]
+        created = task_svc.request_documents(call, actor, document_types=data.getlist("expected_documents"),
+                                             custom=[{"label": r["label"], "role": r["role"], "hours_before_eta": r["hours"]} for r in custom])
+        done = _("%(n)d document(s) now expected on the call.") % {"n": len(created)}
+        back = call_url(call, "documents")
     elif action == "master_link":
         link, token, code = call_svc.issue_master_link(call, actor, master_name=data.get("master_name", ""),
                                                        channel=data.get("channel", "EMAIL"), note=data.get("note", ""),
-                                                       vessel_position=data.get("vessel_position", "OWN"))
+                                                       vessel_position=data.get("vessel_position", "OWN"),
+                                                       send_to=data.get("send_to", ""))
         url = f"{settings.SITE_URL}{reverse('registry:master_token', args=[token])}"
         request.session["fluxaa_new_master_link"] = {"url": url, "code": code, "name": link.master_name,
                                                      "qr": mfa.svg_data_uri(mfa.qr_svg(url))}
         done = _("Access issued: hand the link or the code to the master now — they will not be shown again.")
+        if link.sent_to:
+            done = _("Access issued and e-mailed to %(email)s with the list of what the port expects from the master; "
+                     "the link and the code are shown once below.") % {"email": link.sent_to}
         back = call_url(call, "parties")
+    elif action == "remind":
+        reached = preparation.remind(call, actor, task())
+        done = _("Reminder sent (%(n)d recipient(s)) and recorded in the journal.") % {"n": reached}
     elif action == "party_link":
         party = call.parties.filter(pk=pk_of(data.get("party_id")), revoked_at__isnull=True).select_related("organization").first()
         if party is None:
@@ -919,9 +1340,73 @@ def call_action(request, pk, action):
         meas_svc.add_value(obj(Measurement, "measurement_id"), actor, data.get("party", ""), data.get("value"),
                            temperature=data.get("temperature_c"), density=data.get("density"), note=data.get("note", ""))
     elif action == "pumping":
-        meas_svc.add_pumping_entry(call, actor, declared_at=parse_local(data.get("declared_at")) or timezone.now(),
+        sheet = PumpingLogSheet.objects.filter(call=call, pk=pk_of(data.get("sheet_id"))).first() if data.get("sheet_id") else None
+        meas_svc.add_pumping_entry(call, actor, declared_at=parse_local(data.get("declared_at")) or timezone.now(), sheet=sheet,
+                                   tank=data.get("tank", ""), level_mm=data.get("level_mm"), hourly_m3=data.get("hourly_m3"),
+                                   cumulative_m3=data.get("cumulative_m3"),
                                    manifold_pressure_bar=data.get("pressure_bar"), flow_rate_m3h=data.get("rate_m3h"),
                                    temperature_c=data.get("temperature_c"), note=data.get("note", ""))
+        back = call_url(call, "mesures") + "#pompage"
+    elif action == "sheet_open":
+        figures = {name: data.get(name) for name in meas_svc.SHEET_FIELDS}
+        meas_svc.open_pumping_sheet(call, actor, tank=data.get("tank", ""), product=data.get("product", ""),
+                                    estimated_start=parse_local(data.get("estimated_start")),
+                                    estimated_completion=parse_local(data.get("estimated_completion")),
+                                    note=data.get("note", ""), **figures)
+        done = _("Pumping log sheet opened: enter your readings as the transfer goes.")
+        back = call_url(call, "mesures") + "#pompage"
+    elif action == "sheet_close":
+        sheet = PumpingLogSheet.objects.filter(call=call, pk=pk_of(data.get("sheet_id"))).first()
+        if sheet is None:
+            raise NotVisible()
+        meas_svc.close_pumping_sheet(sheet, actor, actual_stop_level_mm=data.get("actual_stop_level_mm"),
+                                     final_volume_m3=data.get("final_volume_m3"), note=data.get("note", ""))
+        done = _("Sheet completed.")
+        back = call_url(call, "mesures") + "#pompage"
+    elif action == "tank_reading":
+        m = obj(Measurement, "measurement_id")
+        supersedes = TankReading.objects.filter(measurement=m, pk=pk_of(data.get("supersedes"))).first() if data.get("supersedes") else None
+        figures = {name: data.get(name) for name in meas_svc.TANK_FIELDS}
+        meas_svc.add_tank_reading(m, actor, tank=data.get("tank", ""), declared_at=parse_local(data.get("declared_at")),
+                                  note=data.get("note", ""), supersedes=supersedes, **figures)
+        done = _("Tank reading recorded: it is shown to the other parties once the surveyor has validated it.")
+        back = call_url(call, "mesures") + f"#q{m.pk}"
+    elif action == "tank_review":
+        reading = TankReading.objects.filter(measurement__call=call, pk=pk_of(data.get("reading_id"))).first()
+        if reading is None or not rights.tank_reading_visible(actor, reading):
+            raise NotVisible()
+        validate = data.get("decision") == "validate"
+        meas_svc.review_tank_reading(reading, actor, validate=validate, note=data.get("note", ""))
+        done = _("Reading validated: it is now visible to every reader of the measurements.") if validate else _("Reading rejected: the party is asked for a corrected reading.")
+        back = call_url(call, "mesures") + f"#q{reading.measurement_id}"
+    elif action == "checklist_open":
+        checklist_svc.open_checklist(call, actor, repeat_interval_h=data.get("repeat_interval_h") or None)
+        done = _("Ship/shore safety checklist opened.")
+        back = reverse("registry:checklist", args=[call.pk])
+    elif action == "checklist_answer":
+        record = checklist_svc.current(call)
+        if record is None:
+            raise NotVisible()
+        rows = []
+        for code in data.getlist("item_code"):
+            rows.append({"item_code": code, "state": data.get(f"state_{code}", ""), "value": data.get(f"value_{code}", ""),
+                         "remark": data.get(f"remark_{code}", ""), "repetition": data.get("repetition", 0) or 0})
+        recorded = checklist_svc.answer_many(record, actor, rows)
+        done = _("%(n)d answer(s) recorded.") % {"n": len(recorded)} if recorded else _("Nothing new to record.")
+        back = reverse("registry:checklist", args=[call.pk]) + (f"#{data.get('part')}" if data.get("part") else "")
+    elif action == "checklist_sign":
+        record = checklist_svc.current(call)
+        if record is None:
+            raise NotVisible()
+        checklist_svc.sign(record, actor, comment=data.get("comment", ""))
+        done = _("Checklist signed for your side.")
+        back = reverse("registry:checklist", args=[call.pk])
+    elif action == "checklist_cancel":
+        record = checklist_svc.current(call)
+        if record is None:
+            raise NotVisible()
+        checklist_svc.cancel(record, actor, data.get("reason", ""))
+        back = reverse("registry:checklist", args=[call.pk])
     elif action == "dispute_open":
         disputes.open_dispute(call, actor, target_kind=data.get("target_kind", "OTHER"), target_id=data.get("target_id") or None,
                               subject=data.get("subject", ""), statement=data.get("statement", ""),
@@ -1021,7 +1506,9 @@ def form_list(request, pk):
     journal.audit(port=call.port, call=call, user=actor.user, master=actor.master, action="view", obj=call,
                   object_kind="forms", request=request)
     return render(request, "registry/forms.html", {"call": call, "actor": actor, "groups": groups, "count": len(forms),
-                                                   "others": others, "others_count": sum(len(m) for _c, _l, m in others)})
+                                                   "others": others, "others_count": sum(len(m) for _c, _l, m in others),
+                                                   # a party without the right to act on the documents previews, but does not file (v1.5)
+                                                   "can_issue": rights.can_act_in(actor, call, "documents")})
 
 
 @account_or_master
@@ -1033,6 +1520,81 @@ def form_preview(request, pk, code):
     journal.audit(port=call.port, call=call, user=actor.user, master=actor.master, action="view", obj=call,
                   object_kind=f"form:{code}", request=request)
     return HttpResponse(form_svc.render(call, code, actor))
+
+
+@account_or_master
+def checklist_page(request, pk):
+    """The ship/shore safety checklist of the call, completed on line by the ship and the terminal (EXG-Q-10)."""
+    call, actor = resolve(request, pk)
+    if not checklist_svc.visible(actor, call):
+        raise Http404
+    record = checklist_svc.current(call)
+    journal.audit(port=call.port, call=call, user=actor.user, master=actor.master, action="view", obj=call,
+                  object_kind="checklist", request=request)
+    can_complete = checklist_svc.can_complete(actor, call) and not call.is_terminal_state
+    my_side = "SHIP" if actor.has("NAV") else ("SHORE" if actor.has("TER") else "")
+    standard = record.standard if record else checklists.standard_for(call.cargo_kind)  # ISGOTT, BLU or CARGO (v1.5)
+    context = {"call": call, "actor": actor, "checklist": record, "can_complete": can_complete, "my_side": my_side,
+               "standard": standard, "standard_label": checklists.label(standard), "standard_basis": checklists.basis(standard),
+               "form_code": checklists.document_code(standard),
+               "parts": checklist_svc.rows(record, actor) if record else [],
+               "progress": checklist_svc.progress(record) if record else None,
+               "signed_sides": record.signed_sides() if record else set(),
+               "can_cancel": actor.has("AGE", "CAP") and record is not None and record.status == "OPEN",
+               "versions": list(call.safety_checklists.order_by("version")), "now": timezone.now(),
+               "refusal": enrich_refusal(pop_refusal(request), call, actor), "is_master": actor.is_master,
+               "next_repetition": (checklist_svc._last_repetition(record, my_side) + 1) if record and my_side else 1,
+               "task": call.tasks.filter(template_code="M0", number="28").first()}
+    return render(request, "registry/checklist.html", context)
+
+
+@login_required
+def board(request):
+    """The port call board: every declared call of the port, for consultation by the agencies, the other parties of
+    the port and the interested parties (EXG-Q-04); no operational data of another agency's call (EXG-Q-03)."""
+    user = request.user
+    if user.port is None:
+        raise Http404
+    actor = port_actor(user)
+    if not rights.can_read_report(actor, "CALL_BOARD"):
+        raise Http404
+    journal.audit(port=user.port, user=user, action="view", object_kind="board", request=request)
+    now = timezone.now()
+    if request.GET.get("format") == "csv":
+        response = HttpResponse(board_svc.to_csv(user.port, user, now), content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="conference-placement-{user.port.code}-{now:%Y%m%d}.csv"'
+        return response
+    groups = board_svc.grouped(user.port, user, now)
+    return render(request, "registry/board.html", {"groups": groups, "now": now, "port": user.port, "show_cargo": user.port.board_shows_cargo,
+                                                   "total": sum(len(rows) for _k, _l, rows in groups)})
+
+
+@login_required
+def board_occupation(request):
+    """The berth occupation plan of a period (v1.5, EXG-R-07): the calls per berth, as the terminals' own sheets."""
+    user = request.user
+    if user.port is None:
+        raise Http404
+    actor = port_actor(user)
+    if not rights.can_read_report(actor, "CALL_BOARD"):
+        raise Http404
+    journal.audit(port=user.port, user=user, action="view", object_kind="board", detail="occupation", request=request)
+    now = timezone.now()
+    try:
+        start = datetime.strptime(request.GET.get("start", ""), "%Y-%m-%d").replace(tzinfo=dt_timezone.utc)
+    except ValueError:
+        start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    try:
+        end = datetime.strptime(request.GET.get("end", ""), "%Y-%m-%d").replace(hour=23, minute=59, tzinfo=dt_timezone.utc)
+    except ValueError:
+        end = (start + timedelta(days=45)).replace(day=1) - timedelta(minutes=1)
+    if request.GET.get("format") == "csv":
+        response = HttpResponse(board_svc.occupation_csv(user.port, user, start, end), content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="plan-occupation-{user.port.code}-{start:%Y%m}.csv"'
+        return response
+    plan = board_svc.occupation(user.port, user, start, end)
+    return render(request, "registry/board_occupation.html", {"plan": plan, "start": start, "end": end, "port": user.port,
+                                                              "show_cargo": user.port.board_shows_cargo})
 
 
 @login_required

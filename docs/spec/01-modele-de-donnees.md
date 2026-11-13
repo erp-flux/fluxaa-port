@@ -37,6 +37,9 @@ Garde-fou : ordinaire. Base : `default`.
 | `map_lon_max` | Decimal(9,6) | carte — longitude est / map — eastern longitude | nullable |  |
 | `map_image` | File | fond de carte / map background | peut être vide | Extrait de carte ou d'image satellite facultatif couvrant exactement le cadre ci-dessus (PNG ou JPEG) ; le port doit détenir les droits de le publier. / Optional chart or satellite excerpt covering exactly the box above (PNG or JPEG); the port must hold the rights to publish it. |
 | `ais_retention_days` | PositiveInteger | positions AIS conservées (jours) / AIS positions kept (days) | défaut `30` | Les positions plus anciennes sont purgées ; ce sont des données diffusées publiquement, pas des actes du registre. / Position reports older than this are purged; they are public broadcast data, not registry acts. |
+| `default_validity_days` | PositiveSmallInteger | validité par défaut d'une annonce (jours) / default validity of an announcement (days) | défaut `15` | Proposée à l'agence à la création de l'escale ; l'agence peut la raccourcir ou l'allonger dans la limite du plafond. / Proposed to the agency when it creates a call; the agency may shorten or lengthen it within the ceiling. |
+| `max_validity_days` | PositiveSmallInteger | validité maximale d'une annonce (jours) / maximum validity of an announcement (days) | défaut `90` | Une annonce ne peut pas être valable plus longtemps ; un séjour plus long fait l'objet d'une nouvelle annonce. / An announcement cannot be valid longer than this; a longer stay is announced again. |
+| `board_shows_cargo` | Boolean | le tableau des escales montre la nature de la cargaison et le tonnage / the call board shows the nature of the cargo and the tonnage | défaut `True` | Comme la conférence de placement. Décoché : le tableau ne montre que le navire, l'agence, la zone, les opérations, l'état et les heures. / As the placement conference does. Off: the board shows the vessel, the agency, the area, the operations, the state and the times only. |
 | `is_active` | Boolean | actif / active | défaut `True` |  |
 | `created_at` | DateTime |  | horodatage automatique à la création ; non modifiable |  |
 
@@ -98,7 +101,7 @@ Contraintes et index : tri par défaut : full_name.
 Propriétés et méthodes documentées : `requires_mfa_login` — Deciding roles (ENF-3.1) — and anyone who administers accounts or settings: whoever can reset another person's second factor must hold one.
 
 ### `Berth` — table `core_berth`
-A resource of the port where a tanker operates: quay/jetty, anchorage, offshore buoy, STS area
+A resource of the port where a vessel operates: quay/jetty, anchorage, offshore buoy, STS area
 
 Garde-fou : ordinaire. Base : `default`.
 
@@ -113,6 +116,14 @@ Garde-fou : ordinaire. Base : `default`.
 | `max_loa_m` | Decimal(6,1) | longueur hors tout max. (m) / max LOA (m) | nullable |  |
 | `max_draft_m` | Decimal(5,2) | tirant d'eau max. (m) / max draft (m) | nullable |  |
 | `max_dwt` | PositiveInteger | port en lourd max. / max DWT | nullable |  |
+| `max_beam_m` | Decimal(5,2) | largeur maximale (m) / max beam (m) | nullable |  |
+| `max_displacement_t` | PositiveInteger | déplacement maximal (t) / max displacement (t) | nullable |  |
+| `max_manifold_height_m` | Decimal(5,2) | hauteur maximale du collecteur au-dessus de l'eau (m) / max manifold height above waterline (m) | nullable |  |
+| `min_ukc_m` | Decimal(4,2) | pied de pilote minimal (m) / minimum under-keel clearance (m) | nullable |  |
+| `max_vessel_age_years` | PositiveSmallInteger | âge maximal du navire (ans) / maximum age of the vessel (years) | nullable |  |
+| `min_crane_swl_t` | Decimal(5,1) | SWL minimale des grues (t) / minimum crane SWL (t) | nullable |  |
+| `max_air_draft_m` | Decimal(5,2) | tirant d'air maximal (m) / max air draft (m) | nullable |  |
+| `cargo_kinds` | JSON | natures de cargaison traitées / cargo kinds handled | peut être vide ; défaut `list()` | Vide = toutes. Ex. ["LIQUID"] pour un appontement pétrolier, ["CONTAINER", "RORO"] pour un terminal à conteneurs. / Empty = every kind. E.g. ["LIQUID"] for an oil jetty, ["CONTAINER", "RORO"] for a container terminal. |
 | `weather_limits` | JSON | limites météo / weather limits | peut être vide ; défaut `dict()` | p. ex. {"wind_kn": 25, "swell_m": 2.0, "current_kn": 2.5, "visibility_nm": 1} / e.g. {"wind_kn": 25, "swell_m": 2.0, "current_kn": 2.5, "visibility_nm": 1} |
 | `has_vapour_recovery` | Boolean | récupération des vapeurs / vapour recovery system | défaut `False` |  |
 | `latitude` | Decimal(9,6) |  | nullable | Centre du poste ou de la zone, dessiné sur le tableau AIS. / Centre of the berth or area, drawn on the AIS board. |
@@ -149,7 +160,8 @@ Garde-fou : ordinaire. Base : `default`.
 | `imo` | Char(7) | numéro OMI / IMO number |  |  |
 | `name` | Char(120) | nom / name |  |  |
 | `flag` | Char(60) | pavillon / flag | peut être vide |  |
-| `vessel_type` | Char(60) | type | peut être vide | Brut, produits, chimiquier, GPL… / Crude, product, chemical, LPG… |
+| `vessel_kind` | Char(16) | type de navire / kind of vessel | défaut `VesselKind.TANKER_PRODUCT` ; énumération `VesselKind` (ch. 2) |  |
+| `vessel_type` | Char(60) | type (détail) / type (detail) | peut être vide | Brut, produits, chimiquier, GPL, vraquier gréé, PCTC… / Crude, product, chemical, LPG, geared bulk carrier, PCTC… |
 | `call_sign` | Char(20) | indicatif d'appel / call sign | peut être vide |  |
 | `mmsi` | Char(9) | MMSI | peut être vide |  |
 | `dwt` | PositiveInteger | port en lourd / DWT | nullable |  |
@@ -157,6 +169,10 @@ Garde-fou : ordinaire. Base : `default`.
 | `beam_m` | Decimal(5,2) | largeur (m) / beam (m) | nullable |  |
 | `draft_m` | Decimal(5,2) | tirant d'eau d'été (m) / summer draft (m) | nullable |  |
 | `built_year` | PositiveSmallInteger | année de construction / year built | nullable |  |
+| `displacement_t` | PositiveInteger | déplacement (t) / displacement (t) | nullable |  |
+| `manifold_height_m` | Decimal(5,2) | hauteur du collecteur au-dessus de l'eau (m) / manifold height above waterline (m) | nullable |  |
+| `air_draft_m` | Decimal(5,2) | tirant d'air (m) / air draft (m) | nullable |  |
+| `crane_swl_t` | Decimal(5,1) | SWL des grues (t) / crane SWL (t) | nullable |  |
 | `owner_name` | Char(160) | propriétaire inscrit / registered owner | peut être vide |  |
 | `manager_name` | Char(160) | gestionnaire / exploitant / manager / operator | peut être vide |  |
 | `created_at` | DateTime |  | horodatage automatique à la création ; non modifiable |  |
@@ -195,8 +211,10 @@ Garde-fou : ordinaire. Base : `default`.
 | `description_fr` | Text | description (français) / description (French) | peut être vide |  |
 | `description_en` | Text | description (anglais) / description (English) | peut être vide |  |
 | `berth_kinds` | JSON | types de poste concernés / applicable berth types | peut être vide ; défaut `list()` | Vide = tous les types. / Empty = all types. |
+| `cargo_kinds` | JSON | natures de cargaison concernées / applicable kinds of cargo | peut être vide ; défaut `list()` | Vide = toutes. Les gabarits d'opération du vrac liquide, du vrac sec, des conteneurs… sont proposés selon la nature de cargaison de l'escale. / Empty = every kind. The operation models of liquid bulk, dry bulk, containers… are offered by the kind of cargo of the call. |
 | `requires_linked_call` | Boolean | relie deux escales / links two calls | défaut `False` | Le STS et l'accostage à couple associent deux navires. / STS and double banking connect two vessels. |
 | `never_alone` | Boolean | ne peut pas être utilisé seul / cannot be used alone | défaut `False` | M9 se greffe sur une opération. / M9 grafts onto an operation. |
+| `intake_schema` | JSON | questions posées à l'annonce / questions asked at the announcement | peut être vide ; défaut `list()` | Liste de {"key", "label_fr", "label_en", "type", "required", "options", "help_fr", "help_en"} — la grammaire du formulaire d'un type de demande ; une clé partagée avec le formulaire d'une demande que lèvent les tâches de ce modèle préremplit cette demande. / List of {"key", "label_fr", "label_en", "type", "required", "options", "help_fr", "help_en"} — the same grammar as the form of a request type; a key shared with the form of a request raised by this model's tasks pre-fills that request. |
 | `is_active` | Boolean | actif / active | défaut `True` |  |
 | `order` | PositiveSmallInteger |  | défaut `0` |  |
 
@@ -254,6 +272,8 @@ Garde-fou : ordinaire. Base : `default`.
 | `per_vessel` | Boolean | une par navire (×2) / one per vessel (×2) | défaut `False` |  |
 | `not_applicable_allowed` | Boolean | peut être déclarée sans objet / may be marked not applicable | défaut `True` |  |
 | `berth_kinds` | JSON | uniquement pour ces zones d'opération / only for these operating areas | peut être vide ; défaut `list()` | Opération × type de poste : vide = toutes les zones ; p. ex. ["JETTY", "SPM"] pour les tâches d'interface navire/terre. / Operation × berth type: empty = every area; e.g. ["JETTY", "SPM"] for ship/shore interface tasks. |
+| `green_light` | Boolean | feu vert / green light | défaut `False` | Affiché sur le panneau des feux verts de l'escale ; la partie peut le retirer avec un motif. / Shown on the green-light panel of the call; the party may withdraw it with a reason. |
+| `cargo_kinds` | JSON | seulement pour ces natures de cargaison / only for these kinds of cargo | peut être vide ; défaut `list()` | Vide = toutes ; ex. ["LIQUID"] pour une ligne du socle commun réservée aux pétroliers. / Empty = every kind; e.g. ["LIQUID"] for a tanker-only task of the common base. |
 | `order` | PositiveInteger |  | défaut `0` |  |
 
 Contraintes et index : `uniq_task_number_per_version` (version, number) — unicité ; tri par défaut : version, order, number.
@@ -387,6 +407,7 @@ Garde-fou : ordinaire. Base : `default`.
 | `issuer_roles` | JSON | rôles émetteurs / issuing roles | peut être vide ; défaut `list()` |  |
 | `signer_roles` | JSON | signataires requis / required signatories | peut être vide ; défaut `list()` |  |
 | `audience_roles` | JSON | lecteurs supplémentaires (N2) / additional readers (N2) | peut être vide ; défaut `list()` |  |
+| `readers_exact` | Boolean | lecteurs limités à la liste ci-dessus / readers limited to the list above | défaut `False` | Si coché, seuls l'émetteur et les lecteurs listés ci-dessus voient le document : l'agence, la capitainerie, la direction du port et l'armateur ne sont pas ajoutés automatiquement. / When set, only the issuer and the readers listed above see the document: the agency, the harbour master, the port management and the owner are not added automatically. |
 | `retention_years` | PositiveSmallInteger | conservation (années) / retention (years) | défaut `10` |  |
 | `generated` | Boolean | généré à partir du registre / generated from the registry | défaut `False` |  |
 | `is_bill_of_lading` | Boolean | connaissement (verrouillé) / bill of lading (locked) | défaut `False` |  |
@@ -394,6 +415,21 @@ Garde-fou : ordinaire. Base : `default`.
 | `order` | PositiveSmallInteger |  | défaut `0` |  |
 
 Contraintes et index : `uniq_doc_type_per_port` (port, code) — unicité ; tri par défaut : port, order, code.
+
+### `ReportAccess` — table `registry_reportaccess`
+Who reads each live report and board of the port — decided at parametrage, never in code (FLX-CDC-002 v1.4, EXG-Q-08): the pumping log, the tank measurements once validated, the ship/shore safety checklist and the port call board. The documents (time sheet, statement of facts, certificates) have their readers on their document type
+
+Garde-fou : ordinaire. Base : `default`.
+
+| Champ | Type | Libellé FR / EN | Règles | Aide |
+|---|---|---|---|---|
+| `id` | BigAuto | ID | clé primaire (auto) |  |
+| `port` | FK → Port |  | indexé ; on_delete `PROTECT` |  |
+| `code` | Char(20) | rapport / report | énumération `ReportAccess.Report` (ch. 2) |  |
+| `reader_roles` | JSON | rôles lecteurs / reading roles | peut être vide ; défaut `list()` |  |
+| `note` | Char(300) |  | peut être vide |  |
+
+Contraintes et index : `uniq_report_access_per_port` (port, code) — unicité ; tri par défaut : port, code.
 
 ### `PortDefaultParty` — table `registry_portdefaultparty`
 Organisations automatically invited on every call of the port (authorities, nautical services…)
@@ -410,7 +446,7 @@ Garde-fou : ordinaire. Base : `default`.
 Contraintes et index : `uniq_default_party` (port, organization, role) — unicité.
 
 ### `PortCall` — table `registry_portcall`
-A tanker call ("escale"). Created by the agency only (EF-1.1); reference immutable
+A vessel's call ("escale"), whatever its cargo. Created by the agency only (EF-1.1); reference immutable
 
 Garde-fou : sans suppression (UPDATE autorisé, DELETE refusé en base). Base : `default`.
 
@@ -426,15 +462,18 @@ Garde-fou : sans suppression (UPDATE autorisé, DELETE refusé en base). Base : 
 | `requested_berth_kind` | Char(12) | zone d'opération / operating area | énumération `Berth.Kind` (ch. 2) |  |
 | `requested_berth` | FK → Berth |  | nullable ; indexé ; on_delete `PROTECT` |  |
 | `berth` | FK → Berth |  | nullable ; indexé ; on_delete `PROTECT` |  |
-| `product` | Char(120) | produit / product | peut être vide |  |
+| `cargo_kind` | Char(10) | nature de la cargaison / kind of cargo | défaut `CargoKind.LIQUID` ; énumération `CargoKind` (ch. 2) |  |
+| `product` | Char(120) | produit / nature de la cargaison / product / nature of the cargo | peut être vide |  |
 | `quantity` | Decimal(14,3) | quantité déclarée / declared quantity | nullable |  |
-| `quantity_unit` | Char(8) | unité / unit | défaut `'MT'` ; valeurs : `MT`, `M3`, `BBL` |  |
+| `quantity_unit` | Char(8) | unité / unit | défaut `'MT'` ; valeurs : `MT`, `M3`, `BBL`, `TEU`, `BOX`, `MOVES`, `UNIT`, `M3B`, `PAX` |  |
 | `last_port` | Char(80) | dernier port / last port | peut être vide |  |
 | `next_port` | Char(80) | prochain port / next port | peut être vide |  |
+| `planned_pump_hours` | Decimal(6,2) | temps de pompage prévu (h) / planned pumping time (h) | nullable |  |
+| `batch_reference` | Char(60) | référence du lot / batch reference | peut être vide |  |
 | `eta` | DateTime | ETA |  |  |
 | `etb` | DateTime | ETB | nullable |  |
 | `ets` | DateTime | début des opérations estimé / estimated start of operations | nullable |  |
-| `etc` | DateTime | fin des opérations estimée / estimated completion | nullable |  |
+| `etc` | DateTime | fin estimée / estimated completion | nullable |  |
 | `etd` | DateTime | ETD | nullable |  |
 | `ata` | DateTime | arrivée réelle / actual arrival | nullable ; non modifiable |  |
 | `atb` | DateTime | amarré (all fast) / all fast | nullable ; non modifiable |  |
@@ -444,6 +483,12 @@ Garde-fou : sans suppression (UPDATE autorisé, DELETE refusé en base). Base : 
 | `nor_at` | DateTime | NOR remise / NOR tendered | nullable ; non modifiable |  |
 | `linked_call` | FK → PortCall |  | nullable ; indexé ; on_delete `PROTECT` |  |
 | `link_kind` | Char(12) |  | peut être vide ; valeurs : `STS`, `INNER`, `OUTER` |  |
+| `sts_role` | Char(8) | rôle dans le transfert STS / role in the STS transfer | peut être vide ; énumération `StsRole` (ch. 2) |  |
+| `operation_details` | JSON | informations déclarées pour chaque opération / information declared for each operation | peut être vide ; défaut `dict()` |  |
+| `validity_days` | PositiveSmallInteger | validité de l'annonce (jours) / validity of the announcement (days) | défaut `15` |  |
+| `valid_until` | DateTime | annonce valable jusqu'au / announcement valid until | nullable |  |
+| `expired_at` | DateTime | devenue obsolète le / became obsolete at | nullable |  |
+| `renewed_from` | FK → PortCall | annonce refaite à partir de / announced again from | nullable ; indexé ; on_delete `PROTECT` |  |
 | `created_by` | FK → User |  | indexé ; on_delete `PROTECT` |  |
 | `created_at` | DateTime |  | horodatage automatique à la création ; non modifiable |  |
 | `declared_at` | DateTime |  | nullable |  |
@@ -452,7 +497,7 @@ Garde-fou : sans suppression (UPDATE autorisé, DELETE refusé en base). Base : 
 
 Contraintes et index : index (port, status) ; index (port, eta) ; tri par défaut : -eta.
 
-Propriétés et méthodes documentées : `anchor_time()` — Actual time when known, otherwise the best estimate.
+Propriétés et méthodes documentées : `anchor_time()` — Actual time when known, otherwise the best estimate ; `validity_remaining` — Time left before the announcement runs out (negative once overrun); None when no validity was fixed ; `billing_basis()` — What the port bills on (EXG-R-02): the validity fixed at the announcement, the time actually spent in the port and any overrun of the validity.
 
 ### `CallStage` — table `registry_callstage`
 One operating area of a call, in sequence: a call may go from the roads or an STS area to the quay, from a buoy to the quay, from the quay back to an anchorage… Each stage has its own berth, its own operations (templates added when the stage is planned), its own berthing and leaving times. The first stage is created with the call; the agency or the harbour master plans the next ones; a movement authorization in force is needed to leave a stage (SHIFT_START) and to berth at the next one
@@ -512,9 +557,15 @@ Garde-fou : sans suppression (UPDATE autorisé, DELETE refusé en base). Base : 
 | `granted_by` | FK → User |  | nullable ; indexé ; on_delete `PROTECT` |  |
 | `is_default` | Boolean |  | défaut `False` |  |
 | `shore_side` | Boolean |  | défaut `False` |  |
+| `access` | Char(7) | accès au dossier / access to the file | défaut `CallParty.Access.FULL` ; énumération `CallParty.Access` (ch. 2) |  |
+| `scopes` | JSON | onglets d'un accès partiel / tabs of a partial access | peut être vide ; défaut `list()` | Codes des onglets, ex. ["taches", "documents"]. / Tab codes, e.g. ["taches", "documents"]. |
+| `access_set_by` | FK → User |  | nullable ; indexé ; on_delete `PROTECT` |  |
+| `access_set_at` | DateTime |  | nullable |  |
 | `created_at` | DateTime |  | horodatage automatique à la création ; non modifiable |  |
 
 Contraintes et index : `uniq_active_call_party` (call, organization, role) — unicité ; index (organization, role).
+
+Propriétés et méthodes documentées : `is_principal` — The principal agent: the agency that created the call answers for the file and grants the others their access.
 
 ### `MasterAccessLink` — table `registry_masteraccesslink`
 Account-less access to one call (EF-13): the master's, or a party's (terminal, surveyor, owner, provider, marine service) that has no account. Limited validity, revocable, traced; never a deciding role
@@ -582,6 +633,8 @@ Garde-fou : sans suppression (UPDATE autorisé, DELETE refusé en base). Base : 
 | `continuous` | Boolean |  | défaut `False` |  |
 | `not_applicable_allowed` | Boolean |  | défaut `True` |  |
 | `is_ad_hoc` | Boolean | tâche ad hoc / ad hoc task | défaut `False` |  |
+| `green_light` | Boolean |  | défaut `False` |  |
+| `requested_at_creation` | Boolean |  | défaut `False` |  |
 | `order` | PositiveInteger |  | défaut `0` |  |
 | `due_at` | DateTime |  | nullable |  |
 | `status` | Char(8) |  | défaut `TaskStatus.PENDING` ; énumération `TaskStatus` (ch. 2) |  |
@@ -814,7 +867,7 @@ Garde-fou : sans suppression (UPDATE autorisé, DELETE refusé en base). Base : 
 | `call` | FK → PortCall |  | indexé ; on_delete `PROTECT` |  |
 | `kind` | Char(8) |  | énumération `Measurement.Kind` (ch. 2) |  |
 | `product` | Char(120) |  | peut être vide |  |
-| `unit` | Char(8) |  | défaut `'MT'` ; valeurs : `MT`, `M3`, `BBL` |  |
+| `unit` | Char(8) |  | défaut `'MT'` ; valeurs : `MT`, `M3`, `BBL`, `TEU`, `BOX`, `MOVES`, `UNIT`, `M3B`, `PAX` |  |
 | `tolerance_pct` | Decimal(5,3) |  | défaut `Decimal('0.300')` |  |
 | `created_role` | Char(3) |  |  |  |
 | `created_by` | FK → User |  | nullable ; indexé ; on_delete `PROTECT` |  |
@@ -850,8 +903,102 @@ Garde-fou : ajout seul (ni UPDATE ni DELETE en base). Base : `default`.
 
 Contraintes et index : tri par défaut : entered_at.
 
+### `TankReading` — table `registry_tankreading`
+One tank of one side of a measurement (FLX-CDC-002 v1.4, EXG-Q-05): the ship's cargo tanks are read by the ship, the terminal's shore tanks by the terminal. A reading is written once; a correction is a new reading that supersedes it. It is shown to the other parties only once the surveyor has validated it (TankReadingReview); until then the side that entered it and the surveyor see it
+
+Garde-fou : ajout seul (ni UPDATE ni DELETE en base). Base : `default`.
+
+| Champ | Type | Libellé FR / EN | Règles | Aide |
+|---|---|---|---|---|
+| `id` | BigAuto | ID | clé primaire (auto) |  |
+| `measurement` | FK → Measurement |  | indexé ; on_delete `PROTECT` |  |
+| `side` | Char(5) |  | énumération `PumpingLogSheet.Side` (ch. 2) |  |
+| `tank` | Char(40) | citerne / bac / tank |  |  |
+| `level_mm` | Decimal(8,1) | creux / innage (mm) / ullage / innage (mm) | nullable |  |
+| `temperature_c` | Decimal(6,2) | température (°C) / temperature (°C) | nullable |  |
+| `free_water_mm` | Decimal(8,1) | eau libre (mm) / free water (mm) | nullable |  |
+| `density` | Decimal(7,4) | densité à 15 °C / density @15 °C | nullable |  |
+| `tov_m3` | Decimal(12,3) | TOV (m³) | nullable |  |
+| `gov_m3` | Decimal(12,3) | GOV (m³) | nullable |  |
+| `vcf` | Decimal(7,5) | VCF | nullable |  |
+| `gsv_m3` | Decimal(12,3) | GSV (m³ à 15 °C) / GSV (m³ @15 °C) | nullable |  |
+| `weight_mt` | Decimal(12,3) | masse (t) / weight (t) | nullable |  |
+| `entered_role` | Char(3) |  |  |  |
+| `entered_org` | FK → Organization |  | nullable ; indexé ; on_delete `PROTECT` |  |
+| `user` | FK → User |  | nullable ; indexé ; on_delete `PROTECT` |  |
+| `master` | FK → MasterAccessLink |  | nullable ; indexé ; on_delete `PROTECT` |  |
+| `entered_label` | Char(200) |  |  |  |
+| `declared_at` | DateTime |  | défaut `now()` |  |
+| `entered_at` | DateTime |  | défaut `now()` |  |
+| `supersedes` | FK → TankReading |  | nullable ; indexé ; on_delete `PROTECT` |  |
+| `note` | Char(300) |  | peut être vide |  |
+| `client_uuid` | UUID |  | unique ; nullable |  |
+| `seal` | Char(64) |  |  |  |
+
+Contraintes et index : index (measurement, side) ; tri par défaut : entered_at, id.
+
+Propriétés et méthodes documentées : `quantity` — The figure a tank contributes to its side's total: the weight, else the GSV, else the GOV / TOV.
+
+### `TankReadingReview` — table `registry_tankreadingreview`
+The surveyor's validation (or rejection, with a reason) of a tank reading: written once; the latest review of a reading is its state
+
+Garde-fou : ajout seul (ni UPDATE ni DELETE en base). Base : `default`.
+
+| Champ | Type | Libellé FR / EN | Règles | Aide |
+|---|---|---|---|---|
+| `id` | BigAuto | ID | clé primaire (auto) |  |
+| `reading` | FK → TankReading |  | indexé ; on_delete `PROTECT` |  |
+| `state` | Char(9) |  | énumération `TankReadingReview.State` (ch. 2) |  |
+| `role` | Char(3) |  | défaut `'INS'` |  |
+| `user` | FK → User |  | nullable ; indexé ; on_delete `PROTECT` |  |
+| `master` | FK → MasterAccessLink |  | nullable ; indexé ; on_delete `PROTECT` |  |
+| `reviewer_label` | Char(200) |  |  |  |
+| `reviewed_at` | DateTime |  | défaut `now()` |  |
+| `note` | Char(300) |  | peut être vide |  |
+| `seal` | Char(64) |  |  |  |
+
+Contraintes et index : tri par défaut : reviewed_at, id.
+
+### `PumpingLogSheet` — table `registry_pumpinglogsheet`
+The header of one side's pumping log (FLX-CDC-002 v1.4, EXG-Q-01; structure of the terminal pumping logs of the industry): the tank concerned, the product, the calibration of the tank (m³ per metre), density and VCF, the planned quantity, the expected rate and pressure, the start and expected stop levels, the estimated times. The ship opens its own sheet, the terminal its own: the platform compares the two sides reading by reading and never designates a reference figure
+
+Garde-fou : sans suppression (UPDATE autorisé, DELETE refusé en base). Base : `default`.
+
+| Champ | Type | Libellé FR / EN | Règles | Aide |
+|---|---|---|---|---|
+| `id` | BigAuto | ID | clé primaire (auto) |  |
+| `call` | FK → PortCall |  | indexé ; on_delete `PROTECT` |  |
+| `side` | Char(5) |  | énumération `PumpingLogSheet.Side` (ch. 2) |  |
+| `tank` | Char(40) | citerne / bac / tank | peut être vide | Bac à terre ou citerne(s) du navire concernés. / Shore tank or ship tank(s) concerned. |
+| `product` | Char(120) | produit / product | peut être vide |  |
+| `start_level_mm` | Decimal(8,1) | niveau de départ (mm) / start dip / ullage (mm) | nullable |  |
+| `expected_stop_level_mm` | Decimal(8,1) | niveau d'arrêt prévu (mm) / expected stop dip / ullage (mm) | nullable |  |
+| `m3_per_metre` | Decimal(10,3) | barème du bac (m³ par mètre) / tank calibration (m³ per metre) | nullable |  |
+| `density` | Decimal(7,4) | densité (t/m³) / density (t/m³) | nullable |  |
+| `vcf` | Decimal(7,5) | VCF | nullable |  |
+| `planned_quantity_m3` | Decimal(12,3) | quantité prévue (m³) / planned quantity (m³) | nullable |  |
+| `planned_quantity_mt` | Decimal(12,3) | quantité prévue (t) / planned quantity (t) | nullable |  |
+| `expected_rate_m3h` | Decimal(9,2) | débit attendu (m³/h) / expected rate (m³/h) | nullable |  |
+| `expected_pressure_bar` | Decimal(7,2) | pression attendue (bar) / expected pressure (bar) | nullable |  |
+| `estimated_start` | DateTime | début estimé / estimated start | nullable |  |
+| `estimated_completion` | DateTime | fin estimée / estimated completion | nullable |  |
+| `actual_stop_level_mm` | Decimal(8,1) | niveau d'arrêt réel (mm) / actual stop dip / ullage (mm) | nullable |  |
+| `final_volume_m3` | Decimal(12,3) | volume final (m³) / final volume (m³) | nullable |  |
+| `closed_at` | DateTime |  | nullable |  |
+| `opened_role` | Char(3) |  |  |  |
+| `opened_org` | FK → Organization |  | nullable ; indexé ; on_delete `PROTECT` |  |
+| `opened_by` | FK → User |  | nullable ; indexé ; on_delete `PROTECT` |  |
+| `opened_master` | FK → MasterAccessLink |  | nullable ; indexé ; on_delete `PROTECT` |  |
+| `opened_label` | Char(200) |  |  |  |
+| `opened_at` | DateTime |  | défaut `now()` |  |
+| `note` | Char(300) |  | peut être vide |  |
+
+Contraintes et index : tri par défaut : call, side, opened_at.
+
+Propriétés et méthodes documentées : `tons_per_metre` — Tonnes per metre of level: m³/m × density × VCF (the terminal log's own formula) ; `tons()` — Observed cubic metres converted to tonnes with the sheet's density and VCF, when both are known.
+
 ### `PumpingLogEntry` — table `registry_pumpinglogentry`
-Manual in V1; the same table accepts an automatic feed in V2 without schema change (EF-8.3)
+One reading of the pumping log, by the ship or by the terminal (FLX-CDC-002 v1.4, EXG-Q-01). Manual in V1; the same table accepts an automatic feed without schema change (EF-8.3). Besides the manifold pressure, the rate and the temperature, a reading carries the tank level and the quantities of the terminal pumping logs: the quantity moved since the previous reading, the cumulated quantity, in m³ and in tonnes. What the platform computes from the sheet (calibration, density, VCF) is stored with the reading so that the record is frozen
 
 Garde-fou : ajout seul (ni UPDATE ni DELETE en base). Base : `default`.
 
@@ -859,15 +1006,21 @@ Garde-fou : ajout seul (ni UPDATE ni DELETE en base). Base : `default`.
 |---|---|---|---|---|
 | `id` | BigAuto | ID | clé primaire (auto) |  |
 | `call` | FK → PortCall |  | indexé ; on_delete `PROTECT` |  |
+| `sheet` | FK → PumpingLogSheet |  | nullable ; indexé ; on_delete `PROTECT` |  |
 | `declared_at` | DateTime |  |  |  |
 | `recorded_at` | DateTime |  | défaut `now()` |  |
 | `role` | Char(3) |  |  |  |
 | `user` | FK → User |  | nullable ; indexé ; on_delete `PROTECT` |  |
 | `master` | FK → MasterAccessLink |  | nullable ; indexé ; on_delete `PROTECT` |  |
 | `entered_label` | Char(200) |  |  |  |
+| `tank` | Char(40) | citerne / bac / tank | peut être vide |  |
 | `manifold_pressure_bar` | Decimal(7,2) |  | nullable |  |
 | `flow_rate_m3h` | Decimal(9,2) |  | nullable |  |
 | `temperature_c` | Decimal(6,2) |  | nullable |  |
+| `level_mm` | Decimal(8,1) | niveau de la citerne (mm) / tank dip / ullage (mm) | nullable |  |
+| `hourly_m3` | Decimal(12,3) | transféré depuis le relevé précédent (m³) / moved since the previous reading (m³) | nullable |  |
+| `cumulative_m3` | Decimal(12,3) | cumul (m³) / cumulated (m³) | nullable |  |
+| `cumulative_mt` | Decimal(12,3) | cumul (t) / cumulated (t) | nullable |  |
 | `note` | Char(300) |  | peut être vide |  |
 | `source` | Char(10) |  | défaut `'MANUAL'` ; valeurs : `MANUAL`, `AUTOMATIC` |  |
 | `device_id` | Char(80) |  | peut être vide |  |
@@ -875,6 +1028,78 @@ Garde-fou : ajout seul (ni UPDATE ni DELETE en base). Base : `default`.
 | `client_uuid` | UUID |  | unique ; nullable |  |
 
 Contraintes et index : tri par défaut : declared_at.
+
+Propriétés et méthodes documentées : `side` — The side that keeps the reading: the master's entries are the ship's, the terminal's the shore's.
+
+### `SafetyChecklist` — table `registry_safetychecklist`
+The ship/shore safety checklist of a call (FLX-CDC-002 v1.4, EXG-Q-10): the items, in the platform's own words after the ISGOTT structure, are frozen in the record when it is opened; the ship ticks its items, the terminal its own, the joint items need both; the agreements of the pre-transfer conference are written in; the repetitive checks are re-ticked at the agreed interval. Each tick is an append-only answer; the two signatures close the list, complete task M0:28 and record the SSSCL_SIGNED milestone
+
+Garde-fou : sans suppression (UPDATE autorisé, DELETE refusé en base). Base : `default`.
+
+| Champ | Type | Libellé FR / EN | Règles | Aide |
+|---|---|---|---|---|
+| `id` | BigAuto | ID | clé primaire (auto) |  |
+| `call` | FK → PortCall |  | indexé ; on_delete `PROTECT` |  |
+| `stage` | FK → CallStage |  | nullable ; indexé ; on_delete `PROTECT` |  |
+| `version` | PositiveSmallInteger |  | défaut `1` |  |
+| `standard` | Char(12) | référentiel / standard | défaut `'SSSCL'` ; valeurs : `SSSCL`, `BLU`, `CARGO` |  |
+| `items` | JSON | points / items | peut être vide ; défaut `list()` |  |
+| `repeat_interval_h` | Decimal(4,1) | intervalle des vérifications répétées (h) / interval of the repetitive checks (h) | nullable |  |
+| `status` | Char(9) |  | défaut `SafetyChecklist.Status.OPEN` ; énumération `SafetyChecklist.Status` (ch. 2) |  |
+| `opened_role` | Char(3) |  |  |  |
+| `opened_by` | FK → User |  | nullable ; indexé ; on_delete `PROTECT` |  |
+| `opened_master` | FK → MasterAccessLink |  | nullable ; indexé ; on_delete `PROTECT` |  |
+| `opened_label` | Char(200) |  |  |  |
+| `opened_at` | DateTime |  | défaut `now()` |  |
+| `signed_at` | DateTime |  | nullable |  |
+| `cancel_reason` | Char(300) |  | peut être vide |  |
+| `document` | FK → Document |  | nullable ; indexé ; on_delete `PROTECT` |  |
+
+Contraintes et index : `uniq_safety_checklist_version` (call, version) — unicité ; tri par défaut : call, version.
+
+Propriétés et méthodes documentées : `current_answers()` — The latest answer per (item, side).
+
+### `SafetyCheckAnswer` — table `registry_safetycheckanswer`
+One tick (yes / no / not applicable), an agreed value or a remark on one item, by one side
+
+Garde-fou : ajout seul (ni UPDATE ni DELETE en base). Base : `default`.
+
+| Champ | Type | Libellé FR / EN | Règles | Aide |
+|---|---|---|---|---|
+| `id` | BigAuto | ID | clé primaire (auto) |  |
+| `checklist` | FK → SafetyChecklist |  | indexé ; on_delete `PROTECT` |  |
+| `item_code` | Char(12) |  |  |  |
+| `side` | Char(5) |  | énumération `PumpingLogSheet.Side` (ch. 2) |  |
+| `state` | Char(3) |  | peut être vide ; énumération `SafetyCheckAnswer.State` (ch. 2) |  |
+| `value` | Char(300) | valeur convenue / agreed value | peut être vide |  |
+| `remark` | Char(300) |  | peut être vide |  |
+| `repetition` | PositiveSmallInteger |  | défaut `0` | 0 pour la vérification initiale, puis 1, 2… pour les vérifications répétées / 0 for the initial check, then 1, 2… for the repeated checks |
+| `role` | Char(3) |  |  |  |
+| `user` | FK → User |  | nullable ; indexé ; on_delete `PROTECT` |  |
+| `master` | FK → MasterAccessLink |  | nullable ; indexé ; on_delete `PROTECT` |  |
+| `author_label` | Char(200) |  |  |  |
+| `answered_at` | DateTime |  | défaut `now()` |  |
+| `seal` | Char(64) |  |  |  |
+
+Contraintes et index : index (checklist, item_code) ; tri par défaut : answered_at, id.
+
+### `SafetyChecklistSignature` — table `registry_safetychecklistsignature`
+Garde-fou : ajout seul (ni UPDATE ni DELETE en base). Base : `default`.
+
+| Champ | Type | Libellé FR / EN | Règles | Aide |
+|---|---|---|---|---|
+| `id` | BigAuto | ID | clé primaire (auto) |  |
+| `checklist` | FK → SafetyChecklist |  | indexé ; on_delete `PROTECT` |  |
+| `side` | Char(5) |  | énumération `PumpingLogSheet.Side` (ch. 2) |  |
+| `role` | Char(3) |  |  |  |
+| `user` | FK → User |  | nullable ; indexé ; on_delete `PROTECT` |  |
+| `master` | FK → MasterAccessLink |  | nullable ; indexé ; on_delete `PROTECT` |  |
+| `signer_label` | Char(200) |  |  |  |
+| `signed_at` | DateTime |  | défaut `now()` |  |
+| `comment` | Char(300) |  | peut être vide |  |
+| `seal` | Char(64) |  |  |  |
+
+Contraintes et index : `uniq_checklist_signature_side` (checklist, side) — unicité ; tri par défaut : signed_at.
 
 ### `Dispute` — table `registry_dispute`
 First-class contest (EF-4). Never blocks the operation; the platform never arbitrates

@@ -194,13 +194,13 @@ def build_cargo_declaration(call: PortCall, outward: bool = False) -> list[dict]
 _register(Form("CARGO_DECLARATION", "CARGO_DECLARATION", ("Déclaration de cargaison (FAL 2) — arrivée", "Cargo declaration (FAL 2) — arrival"),
                ("Convention FAL de l'OMI, formulaire 2", "IMO FAL Convention, form 2"),
                frozenset({"AGE"}), [("AGE", ("Agent autorisé", "Authorized agent")), ("ADM", ("Douanes — visa", "Customs — endorsement"))],
-               lambda call: build_cargo_declaration(call, outward=False), family="AGE", templates=frozenset({"M1"}), answers=("M1:1.18",),
+               lambda call: build_cargo_declaration(call, outward=False), family="AGE", templates=frozenset({"M1", "MB1", "MC1", "MG1", "MR1", "MX1"}), answers=("M1:1.18", "MB1:B1.16", "MC1:C1.13", "MG1:G1.13", "MR1:R1.11", "MX1:X1.09"),
                purpose=("La déclaration douanière de la cargaison déchargée (FAL 2), pré-remplie du produit et de la quantité de l'escale.",
                         "The customs declaration of the discharged cargo (FAL 2), pre-filled with the call's product and quantity.")))
 _register(Form("EXPORT_MANIFEST", "EXPORT_MANIFEST", ("Manifeste et déclaration de cargaison (FAL 2) — départ", "Outward manifest and cargo declaration (FAL 2) — departure"),
                ("Convention FAL de l'OMI, formulaire 2 (départ)", "IMO FAL Convention, form 2 (departure)"),
                frozenset({"AGE"}), [("AGE", ("Agent autorisé", "Authorized agent")), ("ADM", ("Douanes — visa", "Customs — endorsement"))],
-               lambda call: build_cargo_declaration(call, outward=True), family="AGE", templates=frozenset({"M2"}), answers=("M2:2.18",),
+               lambda call: build_cargo_declaration(call, outward=True), family="AGE", templates=frozenset({"M2", "MB2"}), answers=("M2:2.18", "MB2:B2.18"),
                purpose=("Le manifeste de sortie et la déclaration d'exportation de la cargaison chargée (FAL 2).", "The outward manifest and export declaration of the loaded cargo (FAL 2).")))
 
 
@@ -290,7 +290,7 @@ def build_bill_of_lading(call: PortCall) -> list[dict]:
 _register(Form("BILL_OF_LADING", "BILL_OF_LADING", ("Connaissement — données d'émission", "Bill of lading — issuing data"),
                ("Pratique du commerce des hydrocarbures (connaissement de charte-partie, type CONGENBILL / BIMCO) ; Règles de La Haye-Visby", "Oil trade practice (charter-party bill of lading, CONGENBILL / BIMCO type); Hague-Visby Rules"),
                frozenset({"AGE"}), [("AGE", ("Agent, pour le capitaine", "Agent, for the master")), ("NAV", ("Capitaine", "Master"))],
-               build_bill_of_lading, family="AGE", templates=frozenset({"M2"}), answers=("M2:2.17",),
+               build_bill_of_lading, family="AGE", templates=frozenset({"M2", "MB2"}), answers=("M2:2.17", "MB2:B2.17"),
                purpose=("Les données d'émission du connaissement, pré-remplies de la quantité convenue ; l'émission reste verrouillée par le point d'arrêt BL_ISSUE.",
                         "The issuing data of the bill of lading, pre-filled with the agreed quantity; the issue stays locked by the BL_ISSUE hold point.")))
 

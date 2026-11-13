@@ -522,6 +522,9 @@
     pumpPressure: byId("f-pump-pressure"),
     pumpRate: byId("f-pump-rate"),
     pumpTemp: byId("f-pump-temp"),
+    pumpLevel: byId("f-pump-level"),
+    pumpMoved: byId("f-pump-moved"),
+    pumpCumul: byId("f-pump-cumul"),
     pumpError: byId("f-pump-error"),
     pumpDone: byId("f-pump-done"),
     pumpSubmit: byId("f-pump-submit"),
@@ -1457,7 +1460,10 @@
     var fields = [
       [el.pumpPressure, "pressure_bar", t("field_pressure"), "bar"],
       [el.pumpRate, "rate_m3h", t("field_rate"), "m³/h"],
-      [el.pumpTemp, "temperature_c", t("field_temperature"), "°C"]
+      [el.pumpTemp, "temperature_c", t("field_temperature"), "°C"],
+      [el.pumpLevel, "level_mm", t("field_level"), "mm"],
+      [el.pumpMoved, "hourly_m3", t("field_moved"), "m³"],
+      [el.pumpCumul, "cumulative_m3", t("field_cumulated"), "m³"]
     ];
     var parts = [];
     for (var i = 0; i < fields.length; i += 1) {
@@ -1477,6 +1483,9 @@
       el.pumpPressure.value = "";
       el.pumpRate.value = "";
       el.pumpTemp.value = "";
+      el.pumpLevel.value = "";
+      el.pumpMoved.value = "";
+      el.pumpCumul.value = "";
       setNow(el.pumpTime);
       setText(el.pumpDone, savedMessage(t("kind_pumping"), savedAt));
       el.pumpPressure.focus();

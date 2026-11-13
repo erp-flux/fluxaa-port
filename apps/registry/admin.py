@@ -16,6 +16,7 @@ from .models import (
     InterruptionCause,
     MilestoneType,
     PortDefaultParty,
+    ReportAccess,
     RequestType,
     TemplateTask,
     TemplateVersion,
@@ -39,7 +40,7 @@ class TemplateVersionInline(admin.TabularInline):
 
 @admin.register(CallTemplate)
 class CallTemplateAdmin(PortScopedAdmin):
-    list_display = ("code", "name_fr", "name_en", "kind", "published", "is_active")
+    list_display = ("code", "name_fr", "name_en", "kind", "cargo_kinds", "published", "is_active")
     list_filter = ("kind", "is_active")
     inlines = [TemplateVersionInline]
     actions = ["create_draft"]
@@ -72,10 +73,10 @@ class TemplateTaskInline(admin.StackedInline):
         (None, {"fields": (("number", "order"), ("section_fr", "section_en"), "title_fr", "title_en")}),
         (_("Who and how"), {"fields": (("role", "nature", "joint"), "co_roles")}),
         (_("Deadline (always relative)"), {"fields": (("anchor", "offset_minutes"), ("timing_fr", "timing_en"))}),
-        (_("Criticality"), {"fields": (("criticality", "confidentiality"), "hold_basis", "not_applicable_allowed")}),
+        (_("Criticality"), {"fields": (("criticality", "confidentiality"), "hold_basis", "not_applicable_allowed", "green_light")}),
         (_("Completed by"), {"classes": ("collapse",), "fields": (("request_type_code", "request_side"), "milestone_codes",
                                                                   "document_type_code", "auto_event", "continuous",
-                                                                  "per_vessel", "berth_kinds")}),
+                                                                  "per_vessel", "berth_kinds", "cargo_kinds")}),
     )
 
     def _editable(self, obj):
@@ -173,7 +174,7 @@ class RequestTypeAdmin(PortScopedAdmin):
 class DocumentTypeForm(forms.ModelForm):
     issuer_roles = RolesField(label=_("issuing roles"))
     signer_roles = RolesField(label=_("required signatories"))
-    audience_roles = RolesField(label=_("additional readers (N2)"))
+    audience_roles = RolesField(label=_("readers (N2)"))
 
     class Meta:
         model = DocumentType
@@ -183,11 +184,53 @@ class DocumentTypeForm(forms.ModelForm):
 @admin.register(DocumentType)
 class DocumentTypeAdmin(PortScopedAdmin):
     form = DocumentTypeForm
-    list_display = ("code", "label_fr", "label_en", "default_confidentiality", "generated", "is_bill_of_lading", "is_active")
-    list_filter = ("is_active", "default_confidentiality")
+    list_display = ("code", "label_fr", "label_en", "default_confidentiality", "readers", "generated", "is_bill_of_lading", "is_active")
+    list_filter = ("is_active", "default_confidentiality", "readers_exact")
+    fieldsets = (
+        (None, {"fields": ("port", "code", "label_fr", "label_en", "order", "is_active")}),
+        (_("Who issues, who signs, who reads"), {
+            "description": _("N1: every party of the call. N2: the issuer, the readers below and — unless the readers are "
+                             "limited to that list — the agency, the harbour master, the port management and the owner. "
+                             "N3: the issuer and one counterpart. A laboratory's quality certificate limits its readers."),
+            "fields": ("issuer_roles", "signer_roles", "default_confidentiality", "audience_roles", "readers_exact")}),
+        (_("Retention and nature"), {"fields": ("retention_years", "generated", "is_bill_of_lading")}),
+    )
+
+    @admin.display(description=_("readers"))
+    def readers(self, obj):
+        if obj.default_confidentiality == "N1":
+            return _("every party")
+        base = ", ".join(obj.audience_roles or []) or "—"
+        return base if obj.readers_exact else f"{base} + AGE, CAP, DIR, COM"
 
     def get_readonly_fields(self, request, obj=None):
         return ("is_bill_of_lading", "generated")  # the bill-of-lading lock cannot be configured away
+
+
+class ReportAccessForm(forms.ModelForm):
+    reader_roles = RolesField(label=_("reading roles"))
+
+    class Meta:
+        model = ReportAccess
+        fields = "__all__"
+
+
+@admin.register(ReportAccess)
+class ReportAccessAdmin(PortScopedAdmin):
+    """Who reads the live reports of the port (EXG-Q-08): the pumping log, the validated tank measurements, the
+    ship/shore safety checklist, the port call board. The documents (time sheet, statement of facts,
+    certificates) have their readers on their document type."""
+
+    form = ReportAccessForm
+    list_display = ("code", "readers", "note")
+    list_filter = ("code",)
+
+    @admin.display(description=_("reading roles"))
+    def readers(self, obj):
+        return ", ".join(obj.reader_roles or []) or "—"
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(InterruptionCause)

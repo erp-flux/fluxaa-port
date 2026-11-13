@@ -76,7 +76,12 @@ def process_batch(call, actor, entries: list[dict]) -> list[dict]:
                                   client_uuid=uid)
                 result.update({"status": "ok", "id": value.pk, "deferred": value.deferred})
             elif kind == "pumping":
-                row = add_pumping_entry(call, actor, declared_at=_when(entry["declared_at"], "declared_at"),
+                from ..models import PumpingLogSheet
+
+                sheet = PumpingLogSheet.objects.filter(call=call, pk=entry.get("sheet_id")).first() if entry.get("sheet_id") else None
+                row = add_pumping_entry(call, actor, declared_at=_when(entry["declared_at"], "declared_at"), sheet=sheet,
+                                        tank=entry.get("tank", ""), level_mm=entry.get("level_mm"), hourly_m3=entry.get("hourly_m3"),
+                                        cumulative_m3=entry.get("cumulative_m3"),
                                         manifold_pressure_bar=entry.get("pressure_bar"), flow_rate_m3h=entry.get("rate_m3h"),
                                         temperature_c=entry.get("temperature_c"), note=entry.get("note", ""),
                                         source=EntrySource.OFFLINE, device_recorded_at=device_time, client_uuid=uid,

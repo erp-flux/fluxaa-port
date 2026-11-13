@@ -109,7 +109,7 @@ def test_offshore_then_quay_in_one_call(world, client):
     assert call.status == CallStatus.AT_BERTH and call.atb == call.stages.get(order=1).atb  # first berthing stays
     assert call.stages.get(order=2).atb == all_fast.declared_at
     ter = act(world, call, "TER")
-    force_done(call, ["M0:27", "M0:28", "M0:29", "M0:31", "M1:1.04", "M1:1.05", "M1:1.06", "M1:1.07"])
+    force_done(call, ["M0:09c", "M0:27", "M0:28", "M0:29", "M0:31", "M1:1.04", "M1:1.05", "M1:1.06", "M1:1.07"])
     ms_svc.record_milestone(call, ter, "HOSES_CONNECTED", now(-12))
     start = ms_svc.record_milestone(call, ter, "TRANSFER_START", now(-10))
     end = ms_svc.record_milestone(call, ter, "TRANSFER_END", now(-2))

@@ -82,7 +82,7 @@
 {% elif s.kind == "checklist" %}
 <table class="check">
   <tr><th>Point de contrôle <span class="en">/ Check</span></th>{% for c in s.columns %}<th>{{ c.0 }}<br><span class="en">{{ c.1 }}</span></th>{% endfor %}<th>Remarques <span class="en">/ Remarks</span></th></tr>
-  {% for item in s.items %}<tr><td class="item">{{ item.0 }}<br><span class="en">{{ item.1 }}</span></td>{% for c in s.columns %}<td class="box">☐</td>{% endfor %}<td class="blank"></td></tr>{% endfor %}
+  {% for item in s.items %}<tr>{% if item.marks %}<td class="item">{{ item.fr }}<br><span class="en">{{ item.en }}</span></td>{% for m in item.marks %}<td class="box">{{ m }}</td>{% endfor %}<td{% if not item.remark %} class="blank"{% endif %}>{{ item.remark|default:"" }}</td>{% else %}<td class="item">{{ item.0 }}<br><span class="en">{{ item.1 }}</span></td>{% for c in s.columns %}<td class="box">☐</td>{% endfor %}<td class="blank"></td>{% endif %}</tr>{% endfor %}
 </table>
 {% elif s.kind == "text" %}
 <div class="text">{% for p in s.paragraphs %}<p>{{ p.0 }}</p><p class="en">{{ p.1 }}</p>{% endfor %}</div>

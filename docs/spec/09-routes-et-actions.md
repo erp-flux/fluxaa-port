@@ -29,7 +29,14 @@ Toutes les URL servies par la plateforme, la vue qui les traite et le chapitre d
 | `/api/v1/calls/<str:reference>/documents/<int:document_id>/sign/` | `document-sign` | `api.views.DocumentSignView` | ch. 7 (API) |
 | `/api/v1/calls/<str:reference>/measurements/` | `measurements` | `api.views.MeasurementListView` | ch. 7 (API) |
 | `/api/v1/calls/<str:reference>/measurements/<int:measurement_id>/values/` | `measurement-values` | `api.views.MeasurementValueView` | ch. 7 (API) |
+| `/api/v1/calls/<str:reference>/measurements/<int:measurement_id>/tanks/` | `tank-readings` | `api.views.TankReadingView` | ch. 7 (API) |
+| `/api/v1/calls/<str:reference>/measurements/<int:measurement_id>/tanks/<int:reading_id>/review/` | `tank-review` | `api.views.TankReadingReviewView` | ch. 7 (API) |
 | `/api/v1/calls/<str:reference>/pumping-log/` | `pumping-log` | `api.views.PumpingLogView` | ch. 7 (API) |
+| `/api/v1/calls/<str:reference>/pumping-sheets/` | `pumping-sheets` | `api.views.PumpingSheetView` | ch. 7 (API) |
+| `/api/v1/calls/<str:reference>/pumping-sheets/<int:sheet_id>/close/` | `pumping-sheet-close` | `api.views.PumpingSheetCloseView` | ch. 7 (API) |
+| `/api/v1/calls/<str:reference>/safety-checklist/` | `checklist` | `api.views.ChecklistView` | ch. 7 (API) |
+| `/api/v1/calls/<str:reference>/green-lights/` | `green_lights` | `api.views.GreenLightView` | ch. 7 (API) |
+| `/api/v1/calls/<str:reference>/safety-checklist/<str:action>/` | `checklist-action` | `api.views.ChecklistActionView` | ch. 7 (API) |
 | `/api/v1/calls/<str:reference>/disputes/` | `disputes` | `api.views.DisputeListView` | ch. 7 (API) |
 | `/api/v1/calls/<str:reference>/disputes/<int:dispute_id>/<str:action>/` | `dispute-action` | `api.views.DisputeActionView` | ch. 7 (API) |
 | `/api/v1/calls/<str:reference>/threads/` | `threads` | `api.views.ThreadListView` | ch. 7 (API) |
@@ -40,6 +47,8 @@ Toutes les URL servies par la plateforme, la vue qui les traite et le chapitre d
 | `/api/v1/calls/<str:reference>/field-bundle/` | `field-bundle` | `api.views.FieldBundleView` | ch. 7 (API) |
 | `/api/v1/calls/<str:reference>/secure-deposit/` | `secure-deposit` | `api.views.SecureDepositView` | ch. 7 (API) |
 | `/api/v1/dashboard/` | `dashboard` | `api.views.DashboardView` | ch. 7 (API) |
+| `/api/v1/board/` | `board` | `api.views.BoardView` | ch. 7 (API) |
+| `/api/v1/board/occupation/` | `board_occupation` | `api.views.BoardOccupationView` | ch. 7 (API) |
 | `/api/v1/ais/` | `ais` | `api.views.AisView` | ch. 7 (API) |
 | `/api/v1/ais/positions/` | `ais_positions` | `api.views.AisPositionsView` | ch. 7 (API) |
 | `/api/v1/verify/<str:code>/` | `verify` | `api.views.VerifyView` | ch. 7 (API) |
@@ -69,6 +78,9 @@ Toutes les URL servies par la plateforme, la vue qui les traite et le chapitre d
 | `/` | `dashboard` | `registry.views.dashboard` | oui |
 | `/escales/` | `call_list` | `registry.views.call_list` | oui |
 | `/escales/nouvelle/` | `call_create` | `registry.views.call_create` | oui |
+| `/escales/port/` | `board` | `registry.views.board` | oui |
+| `/escales/port/occupation/` | `board_occupation` | `registry.views.board_occupation` | oui |
+| `/escales/nouvelle/occupation/` | `berth_occupation` | `registry.views.berth_occupation` | oui |
 | `/escales/<int:pk>/` | `call_detail` | `registry.views.call_detail` | oui |
 | `/escales/<int:pk>/action/<str:action>/` | `call_action` | `registry.views.call_action` | oui |
 | `/escales/<int:pk>/documents/<int:doc_id>/` | `document_download` | `registry.views.document_download` | oui |
@@ -77,6 +89,7 @@ Toutes les URL servies par la plateforme, la vue qui les traite et le chapitre d
 | `/escales/<int:pk>/formulaires/` | `form_list` | `registry.views.form_list` | oui |
 | `/escales/<int:pk>/formulaires/<str:code>/` | `form_preview` | `registry.views.form_preview` | oui |
 | `/escales/<int:pk>/terrain/` | `field_app` | `registry.views.field_app` | oui |
+| `/escales/<int:pk>/liste-de-controle/` | `checklist` | `registry.views.checklist_page` | oui |
 | `/notifications/` | `notifications` | `registry.views.notifications` | oui |
 | `/pilotage/` | `calibration` | `registry.views.calibration` | oui |
 | `/statistiques/` | `statistics` | `registry.views.statistics` | oui |
@@ -106,10 +119,15 @@ Chaque action lit `request.POST` (`back` facultatif : page de retour), passe par
 | `close` | — | `call_svc.close_call` |
 | `archive` | — | `call_svc.archive_call` |
 | `link` | `link_kind`, `partner` | `call_svc.link_partner` |
-| `party_add` | `role`, `organization`, `party_name`, `party_kind`, `party_email`, `party_phone` | `call_svc.add_party`, `call_svc.register_organization` |
+| `party_add` | `access`, `role`, `organization`, `party_name`, `party_kind`, `party_email`, `party_phone` | `call_svc.add_party`, `call_svc.register_organization` |
 | `party_shore` | `party_id` | `call_svc.designate_shore_side` |
 | `party_revoke` | `reason`, `party_id` | `call_svc.revoke_party` |
-| `master_link` | `master_name`, `channel`, `note`, `vessel_position` | `call_svc.issue_master_link`, `mfa.svg_data_uri`, `mfa.qr_svg` |
+| `party_access` | `access`, `scopes[]`, `party_id` | `call_svc.set_party_access` |
+| `renew` | — | `call_svc.renew_call` |
+| `green_withdraw` | `reason` | `task_svc.withdraw_green_light` |
+| `documents_request` | `expected_documents[]` | `task_svc.request_documents` |
+| `master_link` | `master_name`, `channel`, `note`, `vessel_position`, `send_to` | `call_svc.issue_master_link`, `mfa.svg_data_uri`, `mfa.qr_svg` |
+| `remind` | — | — |
 | `party_link` | `holder_name`, `channel`, `note`, `party_id` | `call_svc.issue_party_link`, `mfa.svg_data_uri`, `mfa.qr_svg` |
 | `master_revoke`, `link_revoke` | `reason`, `link_id` | `call_svc.revoke_master_link` |
 | `task_complete` | `note` | `task_svc.complete_task` |
@@ -129,7 +147,15 @@ Chaque action lit `request.POST` (`back` facultatif : page de retour), passe par
 | `form_issue` | `code` | `form_svc.issue` |
 | `measurement_open` | `kind`, `unit` | `meas_svc.create_measurement` |
 | `measurement_value` | `party`, `value`, `temperature_c`, `density`, `note` | `meas_svc.add_value` |
-| `pumping` | `pressure_bar`, `rate_m3h`, `temperature_c`, `note`, `declared_at` | `meas_svc.add_pumping_entry` |
+| `pumping` | `sheet_id`, `tank`, `level_mm`, `hourly_m3`, `cumulative_m3`, `pressure_bar`, `rate_m3h`, `temperature_c`, `note`, `declared_at` | `meas_svc.add_pumping_entry` |
+| `sheet_open` | `tank`, `product`, `note`, `estimated_start`, `estimated_completion` | `meas_svc.open_pumping_sheet` |
+| `sheet_close` | `actual_stop_level_mm`, `final_volume_m3`, `note`, `sheet_id` | `meas_svc.close_pumping_sheet` |
+| `tank_reading` | `supersedes`, `tank`, `note`, `declared_at` | `meas_svc.add_tank_reading` |
+| `tank_review` | `decision`, `note`, `reading_id` | `meas_svc.review_tank_reading` |
+| `checklist_open` | `repeat_interval_h` | `checklist_svc.open_checklist` |
+| `checklist_answer` | `item_code[]`, `part`, `repetition` | `checklist_svc.current`, `checklist_svc.answer_many` |
+| `checklist_sign` | `comment` | `checklist_svc.current`, `checklist_svc.sign` |
+| `checklist_cancel` | `reason` | `checklist_svc.current`, `checklist_svc.cancel` |
 | `dispute_open` | `target_kind`, `subject`, `statement`, `counterpart_role`, `target_id` | `disputes.open_dispute` |
 | `dispute_respond` | `text`, `dispute_id` | `disputes.respond` |
 | `dispute_close` | `text`, `agreed`, `dispute_id` | `disputes.close` |

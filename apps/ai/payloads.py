@@ -119,10 +119,12 @@ def call_digest(call, actor) -> tuple[dict, list[str]]:
                                              for d in m.differences()]})
             inventory.append(f"measurement:{m.pk}")
         digest["measurements"] = measures
+    if rights.can_read_report(actor, "PUMPING_LOG"):
         digest["pumping_log"] = [
-            {"at": _iso(p.declared_at), "manifold_pressure_bar": str(p.manifold_pressure_bar or ""),
-             "rate_m3h": str(p.flow_rate_m3h or ""), "temperature_c": str(p.temperature_c or "")}
-            for p in call.pumping_log.all()
+            {"at": _iso(p.declared_at), "side": p.side, "manifold_pressure_bar": str(p.manifold_pressure_bar or ""),
+             "rate_m3h": str(p.flow_rate_m3h or ""), "temperature_c": str(p.temperature_c or ""),
+             "level_mm": str(p.level_mm or ""), "hourly_m3": str(p.hourly_m3 or ""), "cumulative_m3": str(p.cumulative_m3 or "")}
+            for p in call.pumping_log.select_related("sheet")
         ]
 
     disputes = []

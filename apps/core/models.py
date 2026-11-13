@@ -92,6 +92,24 @@ class Port(models.Model):
         _("AIS positions kept (days)"), default=30,
         help_text=_("Position reports older than this are purged; they are public broadcast data, not registry acts."),
     )
+    # Validity of a call announcement (FLX-CDC-002 v1.5, EXG-R-02): every call is announced for a period, fixed at
+    # its creation and kept for billing; a call still open at the end of it becomes obsolete and must be announced
+    # again. The port fixes the default and the ceiling offered to the agencies.
+    default_validity_days = models.PositiveSmallIntegerField(
+        _("default validity of an announcement (days)"), default=15,
+        help_text=_("Proposed to the agency when it creates a call; the agency may shorten or lengthen it within the ceiling."),
+    )
+    max_validity_days = models.PositiveSmallIntegerField(
+        _("maximum validity of an announcement (days)"), default=90,
+        help_text=_("An announcement cannot be valid longer than this; a longer stay is announced again."),
+    )
+    # The port call board as the port's own placement conference shows it (EXG-R-07): with or without the nature
+    # of the cargo and the tonnage of every call
+    board_shows_cargo = models.BooleanField(
+        _("the call board shows the nature of the cargo and the tonnage"), default=True,
+        help_text=_("As the placement conference does. Off: the board shows the vessel, the agency, the area, the "
+                    "operations, the state and the times only."),
+    )
     is_active = models.BooleanField(_("active"), default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -264,7 +282,7 @@ class User(AbstractUser):
 
 
 class Berth(models.Model):
-    """A resource of the port where a tanker operates: quay/jetty, anchorage, offshore buoy, STS area."""
+    """A resource of the port where a vessel operates: quay/jetty, anchorage, offshore buoy, STS area."""
 
     class Kind(models.TextChoices):
         JETTY = "JETTY", _("Quay / jetty")
@@ -280,6 +298,21 @@ class Berth(models.Model):
     max_loa_m = models.DecimalField(_("max LOA (m)"), max_digits=6, decimal_places=1, null=True, blank=True)
     max_draft_m = models.DecimalField(_("max draft (m)"), max_digits=5, decimal_places=2, null=True, blank=True)
     max_dwt = models.PositiveIntegerField(_("max DWT"), null=True, blank=True)
+    # Acceptance limits of the berth (FLX-CDC-002 v1.5, EXG-R-10): compared with the vessel's particulars by the
+    # vetting checklist — the terminal's own grid, as practised at the oil jetties
+    max_beam_m = models.DecimalField(_("max beam (m)"), max_digits=5, decimal_places=2, null=True, blank=True)
+    max_displacement_t = models.PositiveIntegerField(_("max displacement (t)"), null=True, blank=True)
+    max_manifold_height_m = models.DecimalField(_("max manifold height above waterline (m)"), max_digits=5,
+                                                decimal_places=2, null=True, blank=True)
+    min_ukc_m = models.DecimalField(_("minimum under-keel clearance (m)"), max_digits=4, decimal_places=2,
+                                    null=True, blank=True)
+    max_vessel_age_years = models.PositiveSmallIntegerField(_("maximum age of the vessel (years)"), null=True, blank=True)
+    min_crane_swl_t = models.DecimalField(_("minimum crane SWL (t)"), max_digits=5, decimal_places=1, null=True, blank=True)
+    max_air_draft_m = models.DecimalField(_("max air draft (m)"), max_digits=5, decimal_places=2, null=True, blank=True)
+    cargo_kinds = models.JSONField(
+        _("cargo kinds handled"), default=list, blank=True,
+        help_text=_("Empty = every kind. E.g. [\"LIQUID\"] for an oil jetty, [\"CONTAINER\", \"RORO\"] for a container terminal."),
+    )
     weather_limits = models.JSONField(
         _("weather limits"), default=dict, blank=True,
         help_text=_('e.g. {"wind_kn": 25, "swell_m": 2.0, "current_kn": 2.5, "visibility_nm": 1}'),

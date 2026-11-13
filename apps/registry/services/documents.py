@@ -28,7 +28,7 @@ from . import holdpoints, journal
 from .calls import call_url, with_refusal_log
 from .errors import PermissionRefused, RuleViolation, ensure_open
 from .notifications import notify
-from .rights import N2_SUPERVISORS, is_document_issuer, roles_with
+from .rights import document_readers, is_document_issuer, roles_with
 from .tasks import system_complete
 
 ALLOWED_EXTENSIONS = {
@@ -42,8 +42,7 @@ def visibility_roles(doc: Document) -> list[str]:
         return ["*"] + ([doc.issuer_role] if doc.issuer_role == "PRE" else [])
     if doc.confidentiality == Confidentiality.N3:
         return sorted({doc.issuer_role, doc.counterpart_role} - {""})
-    return sorted(set(N2_SUPERVISORS) | {"COM", doc.issuer_role, *(doc.required_signers or []),
-                                         *(doc.type.audience_roles or []), *(doc.audience_roles or [])})
+    return sorted(document_readers(doc) | {doc.issuer_role})
 
 
 # Types a browser may display inline; recognised from the content itself, never from what the sender declares.
@@ -165,7 +164,23 @@ def upload_document(call, actor, type_code: str, uploaded, *, title: str = "", c
     if doc.required_signers:
         notify(call, doc.required_signers, key=f"document:{doc.pk}:sign", title_fr=f"{call.reference} : {doc.title_in('fr')} à signer",
                title_en=f"{call.reference}: {doc.title_in('en')} to sign", url=call_url(call) + "#documents")
+    # every reader of the document is told that it is there (FLX-CDC-002 v1.4, EXG-Q-07) — a laboratory's quality
+    # certificate reaches the terminal, the trader, the vessel, the surveyor and the port; nobody else
+    readers = [r for r in visibility_roles(doc) if r not in doc.required_signers]
+    notify(call, readers, key=f"document:{doc.pk}:issued", exclude_user=actor.user if not actor.is_system else None,
+           title_fr=f"{call.reference} : document déposé — {doc.title_in('fr')} (v{doc.version}, {_label(doc.issuer_role, 'fr')})",
+           title_en=f"{call.reference}: document filed — {doc.title_in('en')} (v{doc.version}, {_label(doc.issuer_role, 'en')})",
+           url=call_url(call) + "#documents")
     return doc
+
+
+def _label(role: str, language: str) -> str:
+    from django.utils import translation
+
+    if role == "SYS":
+        return "FLUXAA"
+    with translation.override(language):
+        return role_label(role)
 
 
 def _check_task(call, task, dtype) -> None:

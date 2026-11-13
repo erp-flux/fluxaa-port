@@ -1,7 +1,7 @@
 # 6. Formulaires standards — structure et champs
 > Chapitre **généré** par `python manage.py generate_spec` à partir du code livré — ne pas modifier à la main : modifier le code (modèles, catalogue, formulaires, vues, API) puis régénérer.
 
-Les 76 formulaires sont générés par le paquet `services/forms/` (un module par partie émettrice : `standard`, `authority`, `agency`, `ship`, `terminal`, `surveyor`, `services`, `provider`, `owner`) dans **une structure unique** (`templates/registry/reports/form.html`) : bandeau d'en-tête, corps en sections, bloc de signatures, pied scellé. Chaque partie émet depuis la plateforme les documents que l'escale lui demande (tâches « fournir un document » et décisions sur les demandes), et la plateforme les archive. Pour chaque champ : libellé FR / EN et **source** de préremplissage (champ du modèle, jalon ou calcul) ; un champ sans source est complété à la main sur le papier. Les listes de contrôle ont une case par colonne (partie) et une colonne « remarques » ; la section `qr` dessine le code de vérification publique d'une autorisation.
+Les 94 formulaires sont générés par le paquet `services/forms/` (un module par partie émettrice : `standard`, `authority`, `agency`, `ship`, `terminal`, `surveyor`, `services`, `provider`, `owner`) dans **une structure unique** (`templates/registry/reports/form.html`) : bandeau d'en-tête, corps en sections, bloc de signatures, pied scellé. Chaque partie émet depuis la plateforme les documents que l'escale lui demande (tâches « fournir un document » et décisions sur les demandes), et la plateforme les archive. Pour chaque champ : libellé FR / EN et **source** de préremplissage (champ du modèle, jalon ou calcul) ; un champ sans source est complété à la main sur le papier. Les listes de contrôle ont une case par colonne (partie) et une colonne « remarques » ; la section `qr` dessine le code de vérification publique d'une autorisation.
 
 ## 6.1 Structure commune (toutes les feuilles)
 
@@ -18,21 +18,25 @@ Les 76 formulaires sont générés par le paquet `services/forms/` (un module pa
 
 | Code | Type de document | Titre FR / EN — objet | Standard | Émis par | Signé par | Répond à | Offert si |
 |---|---|---|---|---|---|---|---|
-| **AGE** | **Agence maritime** (13) |  |  |  |  |  |  |
-| `TIME_SHEET` | `TIME_SHEET` | Time sheet / Time sheet — La chronologie contradictoire de l'escale et ses interruptions, base du décompte du temps de planche. | Chronologie du registre — BIMCO Laytime Definitions for Charter Parties 2013 | AGE | AGE (Agence), NAV (Capitaine), TER (Terminal) | `M0:37` | toujours |
-| `PROTEST` | `PROTEST` | Lettre de protestation / Letter of protest — La lettre de protestation d'une partie, avec réserve de droits et accusé de réception. | Usage maritime — réserve de droits, sans reconnaissance de responsabilité | AGE, INS, NAV, PRE, TER | AGE (Expéditeur), TER (Destinataire — reçu) | `M1:1.19`, `M4:4.09` | toujours |
+| **AGE** | **Agence maritime** (17) |  |  |  |  |  |  |
+| `TIME_SHEET` | `TIME_SHEET` | Time sheet / Time sheet — Le time sheet de l'escale lu par toutes les parties : activités standard, arrêts et retards comptés, quantités et performance, récapitulatif des temps. | Structure des time sheets des terminaux (analyse des surestaries) — BIMCO Laytime Definitions for Charter Parties 2013 | AGE, NAV, TER | NAV (Pour le navire), INS (Pour l'inspecteur), AGE (Pour l'agent), TER (Pour le terminal) | `M0:37` | toujours |
+| `PROTEST` | `PROTEST` | Lettre de protestation / Letter of protest — La lettre de protestation d'une partie, avec réserve de droits et accusé de réception. | Usage maritime — réserve de droits, sans reconnaissance de responsabilité | AGE, INS, NAV, PRE, TER | AGE (Expéditeur), TER (Destinataire — reçu) | `M1:1.19`, `M4:4.09`, `MB1:B1.17`, `MB2:B2.19`, `MG1:G1.14`, `MR1:R1.12` | toujours |
 | `FAL` | `FAL_FORMS` | Formulaires FAL — déclaration générale et liste d'équipage / FAL forms — general declaration and crew list — La déclaration générale et la liste d'équipage des formulaires FAL de l'OMI. | Convention FAL de l'OMI, formulaires 1 et 5 (modèles 2024) | AGE, NAV | NAV (Capitaine ou agent autorisé) | `M0:13` | toujours |
 | `ARRIVAL_NOTICE` | `ARRIVAL_NOTICE` | Avis d'arrivée (préavis 72 / 48 / 24 h) / Arrival notice (72 / 48 / 24 h pre-arrival notification) — Le préavis d'arrivée de l'agence : navire, heures prévues, opérations, services et formalités sollicités. | Pratique portuaire — règlement d'exploitation du port ; Convention FAL (notification préalable) | AGE | AGE (Agence maritime), CAP (Capitainerie — reçu) | `M0:01`, `M0:08` | toujours |
 | `SANCTIONS_CHECK` | `SANCTIONS_CHECK` | Attestation de contrôle des listes de sanctions / Sanctions screening attestation — L'attestation par laquelle l'agence confirme le contrôle des listes de sanctions du navire, de ses intérêts et de la cargaison. | OFAC Sanctions Advisory for the Maritime Industry (2020) ; guides BIMCO / ICS de conformité aux sanctions | AGE | AGE (Agence — responsable conformité) | `M0:05` | toujours |
 | `STS_NOTIFICATION` | `STS_NOTIFICATION` | Notification d'opération STS à l'État côtier / STS operation notification to the coastal State — La notification préalable (48 h) de l'opération STS à l'État côtier : navires, lieu, date, produit, quantité, POAC. | MARPOL annexe I, chapitre 8, règle 42 (notification 48 h) ; OCIMF Ship to Ship Transfer Guide | AGE | AGE (Agence, pour le capitaine), CAP (Autorité — reçu) | `M3:3.01` | gabarit M3 ou escale reliée |
 | `POAC_DESIGNATION` | `STS_DOC` | Désignation du POAC — mandat écrit / POAC designation — written mandate — Le mandat écrit désignant le POAC de l'opération STS, avec ses qualifications. | OCIMF Ship to Ship Transfer Guide (2013) ; MARPOL annexe I, règle 41 | AGE | AGE (Agence), PRE (POAC — accepte le mandat), NAV (Capitaine) | `M3:3.04` | gabarit M3 ou escale reliée |
-| `CARGO_DECLARATION` | `CARGO_DECLARATION` | Déclaration de cargaison (FAL 2) — arrivée / Cargo declaration (FAL 2) — arrival — La déclaration douanière de la cargaison déchargée (FAL 2), pré-remplie du produit et de la quantité de l'escale. | Convention FAL de l'OMI, formulaire 2 | AGE | AGE (Agent autorisé), ADM (Douanes — visa) | `M1:1.18` | gabarit M1 |
-| `EXPORT_MANIFEST` | `EXPORT_MANIFEST` | Manifeste et déclaration de cargaison (FAL 2) — départ / Outward manifest and cargo declaration (FAL 2) — departure — Le manifeste de sortie et la déclaration d'exportation de la cargaison chargée (FAL 2). | Convention FAL de l'OMI, formulaire 2 (départ) | AGE | AGE (Agent autorisé), ADM (Douanes — visa) | `M2:2.18` | gabarit M2 |
+| `CARGO_DECLARATION` | `CARGO_DECLARATION` | Déclaration de cargaison (FAL 2) — arrivée / Cargo declaration (FAL 2) — arrival — La déclaration douanière de la cargaison déchargée (FAL 2), pré-remplie du produit et de la quantité de l'escale. | Convention FAL de l'OMI, formulaire 2 | AGE | AGE (Agent autorisé), ADM (Douanes — visa) | `M1:1.18`, `MB1:B1.16`, `MC1:C1.13`, `MG1:G1.13`, `MR1:R1.11`, `MX1:X1.09` | gabarit M1 ou MB1 ou MC1 ou MG1 ou MR1 ou MX1 |
+| `EXPORT_MANIFEST` | `EXPORT_MANIFEST` | Manifeste et déclaration de cargaison (FAL 2) — départ / Outward manifest and cargo declaration (FAL 2) — departure — Le manifeste de sortie et la déclaration d'exportation de la cargaison chargée (FAL 2). | Convention FAL de l'OMI, formulaire 2 (départ) | AGE | AGE (Agent autorisé), ADM (Douanes — visa) | `M2:2.18`, `MB2:B2.18` | gabarit M2 ou MB2 |
 | `FAL_STORES` | `FAL_FORMS` | Provisions de bord et effets de l'équipage (FAL 3 et 4) / Ship's stores and crew's effects (FAL 3 and 4) — Les déclarations des provisions de bord et des effets de l'équipage (FAL 3 et 4) remises aux douanes. | Convention FAL de l'OMI, formulaires 3 et 4 | AGE, NAV | NAV (Capitaine), ADM (Douanes — visa) | `M0:13`, `M8:8.05` | toujours |
 | `CREW_CHANGE_LIST` | `CREW_DOC` | Liste de relève d'équipage / Crew change list — La liste des embarquants et débarquants avec leurs documents, déposée pour la relève d'équipage. | Convention FAL de l'OMI (relèves d'équipage) ; Convention STCW ; pratique de l'immigration | AGE | AGE (Agence), NAV (Capitaine), ADM (Immigration — visa) | `M8:8.01` | gabarit M8 |
-| `BILL_OF_LADING` | `BILL_OF_LADING` | Connaissement — données d'émission / Bill of lading — issuing data — Les données d'émission du connaissement, pré-remplies de la quantité convenue ; l'émission reste verrouillée par le point d'arrêt BL_ISSUE. | Pratique du commerce des hydrocarbures (connaissement de charte-partie, type CONGENBILL / BIMCO) ; Règles de La Haye-Visby | AGE | AGE (Agent, pour le capitaine), NAV (Capitaine) | `M2:2.17` | gabarit M2 |
+| `BILL_OF_LADING` | `BILL_OF_LADING` | Connaissement — données d'émission / Bill of lading — issuing data — Les données d'émission du connaissement, pré-remplies de la quantité convenue ; l'émission reste verrouillée par le point d'arrêt BL_ISSUE. | Pratique du commerce des hydrocarbures (connaissement de charte-partie, type CONGENBILL / BIMCO) ; Règles de La Haye-Visby | AGE | AGE (Agent, pour le capitaine), NAV (Capitaine) | `M2:2.17`, `MB2:B2.17` | gabarit M2 ou MB2 |
 | `PORT_ACCOUNT` | `PORT_ACCOUNT` | Compte d'escale final (FDA) / Final disbursement account (FDA) — Le compte d'escale final transmis au mandant avec ses justificatifs. | Pratique de l'agence maritime (FONASBA — Standard Disbursement Account) | AGE | AGE (Agence), COM (Mandant — reçu) | `M0:38` | toujours |
-| **NAV** | **Navire / capitaine** (12) |  |  |  |  |  |  |
+| `CARGO_MANIFEST` | `CARGO_MANIFEST` | Manifeste de cargaison / Cargo manifest — Le manifeste de cargaison et ses listes : connaissements, marques, colis ou unités, poids, chargeur et destinataire. | Convention FAL de l'OMI, formulaire 2 (déclaration de cargaison) | AGE, NAV | NAV (Capitaine ou agent autorisé) | `MB1:B1.01`, `MC1:C1.03`, `MG1:G1.01`, `MR1:R1.01`, `MX1:X1.01` | toujours |
+| `DG_DECLARATION` | `DG_DECLARATION` | Déclaration de marchandises dangereuses / Dangerous goods declaration — La déclaration des marchandises dangereuses à bord : positions, n° ONU, classes, emballages, polluants marins. | Code IMDG, chapitre 5.4 ; Convention FAL, formulaire 7 | AGE, NAV | AGE (Chargeur / agent), NAV (Capitaine) | `MC1:C1.02`, `MG1:G1.02`, `MX1:X1.02` | toujours |
+| `BAY_PLAN` | `BAY_PLAN` | Plan de chargement conteneurs (bay plan) / Container bay plan — Les listes et plans échangés pour les opérations conteneurs et le plan final tel qu'arrimé. | Pratique des terminaux à conteneurs — messages BAPLIE / COPRAR ; SOLAS VI (VGM) | AGE, NAV | NAV (Capitaine / chef officier), TER (Planificateur du terminal) | `MC1:C1.01`, `MC1:C1.10` | gabarit MC1 |
+| `CARGO_INFO_IMSBC` | `CARGO_INFO_IMSBC` | Déclaration de cargaison du chargeur (Code IMSBC) / Shipper's cargo declaration (IMSBC Code) — L'information du chargeur sur la cargaison en vrac : groupe, humidité, TML, risques, certificats. | Code IMSBC, section 4 — information sur la cargaison | AGE, COM | COM (Chargeur), NAV (Capitaine) | `MB2:B2.01` | gabarit MB2 |
+| **NAV** | **Navire / capitaine** (15) |  |  |  |  |  |  |
 | `NOR` | `NOR` | Notice de disponibilité / Notice of readiness — La notice de disponibilité remise par le capitaine aux destinataires de la charte-partie ; l'accusé de réception du terminal et de l'affréteur. | Pratique des chartes-parties — BIMCO Laytime Definitions for Charter Parties 2013 | AGE, NAV | NAV (Capitaine), TER (Terminal — réception), COM (Affréteur / réceptionnaire) | `M0:23` | toujours |
 | `MDH` | `MDH` | Déclaration maritime de santé / Maritime declaration of health — La déclaration maritime de santé du capitaine à l'autorité sanitaire. | Règlement sanitaire international (2005) de l'OMS, annexe 8 | NAV | NAV (Capitaine), NAV (Médecin de bord (le cas échéant)) | `M0:14` | toujours |
 | `WASTE` | `WASTE_NOTIFICATION` | Notification préalable de dépôt des déchets / Advance notification form for waste delivery — La notification préalable des déchets à déposer (MARPOL, installations de réception). | Circulaire OMI MEPC.1/Circ.834/Rev.1, appendice 1 (MARPOL, installations de réception portuaires) | AGE, NAV | NAV (Capitaine), PRE (Prestataire — reçu) | `M0:16`, `M6:6.01` | toujours |
@@ -45,8 +49,14 @@ Les 76 formulaires sont générés par le paquet `services/forms/` (un module pa
 | `HOT_WORK_PERMIT` | `HOT_WORK_PERMIT` | Permis de travail par point chaud / Hot work permit — Le permis nominatif et limité dans le temps délivré par le capitaine pour les travaux par point chaud. | ISGOTT 6e édition, chapitre 9 (modèle de permis de travail par point chaud) | NAV | NAV (Capitaine — délivre), NAV (Responsable des travaux), TER (Terminal — informé) | `M7:7.06` | gabarit M7 |
 | `ENCLOSED_SPACE_PERMIT` | `ENCLOSED_SPACE_PERMIT` | Permis d'entrée en espace clos / Enclosed space entry permit — Le permis nominatif et limité dans le temps délivré par le capitaine pour l'entrée dans un espace clos. | Résolution OMI A.1050(27) ; ISGOTT 6e édition, chapitre 10 | NAV | NAV (Capitaine — délivre), NAV (Responsable de l'entrée) | `M6:6.06` | gabarit M6 ou M7 |
 | `INCIDENT_REPORT` | `INCIDENT_REPORT` | Déclaration d'événement à bord ou au poste / Declaration of an event on board or at the berth — La déclaration à la capitainerie de tout événement particulier : blessé, décès, passager clandestin, pollution, avarie. | Pratique portuaire (déclaration d'événement de mer) ; code IGS ; Convention FAL (passagers clandestins) | AGE, INS, NAV, PRE, SVC, TER | NAV (Capitaine ou déclarant), CAP (Capitainerie — reçu) | `M8:8.07` | toujours |
-| **TER** | **Terminal / dépôt** (9) |  |  |  |  |  |  |
+| `PAEC` | `PAEC` | Échange d'informations avant l'arrivée (PAEC) / Pre-arrival exchange of information (PAEC) — Les informations que le navire et le terminal échangent 72 h avant l'arrivée, point par point, avec les confirmations d'ETA et les documents attendus. | ISGOTT, 6e édition, 22.2 — échange d'informations navire / terminal avant l'arrivée | AGE, NAV, TER | NAV (Capitaine), TER (Terminal) | `M0:02` | toujours |
+| `STOWAGE_PLAN` | `STOWAGE_PLAN` | Plan d'arrimage / de chargement ou de déchargement / Stowage / loading or discharge plan — Le plan par cale, baie ou pont : cargaison, quantités, séquence, cadence, ballastage, contraintes et accords. | Code BLU §3 (vrac) ; Code CSS et manuel d'assujettissement (divers, roulier) | AGE, NAV | NAV (Capitaine / chef officier), TER (Terminal) | `MB1:B1.02`, `MB2:B2.03`, `MG1:G1.03`, `MR1:R1.02` | gabarit MB1 ou MB2 ou MG1 ou MR1 |
+| `MATES_RECEIPT` | `MATES_RECEIPT` | Reçu de bord (mate's receipt) / Mate's receipt — Le reçu de bord de la cargaison chargée, avec les réserves du bord, avant l'émission du connaissement. | Pratique maritime — reçu de bord, préalable au connaissement | NAV | NAV (Chef officier / capitaine), AGE (Agent / chargeur) | `MB2:B2.15`, `MG1:G1.11` | gabarit MB2 ou MG1 |
+| **TER** | **Terminal / dépôt** (16) |  |  |  |  |  |  |
+| `PUMPING_LOG` | `PUMPING_LOG` | Journal de pompage / Pumping log — Le journal de pompage tenu par le navire et par le terminal, relevé par relevé, avec l'écart terre − bord et le seuil d'arrêt pour investigation. | Structure des journaux de pompage des terminaux ; ISGOTT, 6e édition (surveillance du transfert) | NAV, TER | TER (Pour le terminal), NAV (Pour le navire), INS (Pour l'inspecteur) | `M1:1.11`, `M2:2.11` | toujours |
 | `SSSCL` | `SSSCL` | Liste de contrôle navire / terre / Ship/shore safety checklist — La liste de contrôle navire/terre signée conjointement avant le transfert et répétée pendant. | Structure de l'ISGOTT, 6e édition (OCIMF / ICS / IAPH), chapitre 25 | NAV, TER | NAV (Pour le navire), TER (Pour le terminal) | `M0:28` | toujours |
+| `BLU_CHECKLIST` | `BLU_CHECKLIST` | Liste de contrôle navire / terre — vrac sec / Ship/shore safety checklist — dry bulk — La liste de contrôle navire/terre du Code BLU, signée avant le chargement ou le déchargement d'un vraquier et répétée pendant. | Code BLU de l'OMI (résolution A.862(20)), appendice 3 ; Code IMSBC | NAV, TER | NAV (Pour le navire), TER (Pour le terminal) | `M0:28` | toujours |
+| `CARGO_SAFETY_CHECKLIST` | `CARGO_SAFETY_CHECKLIST` | Liste de contrôle sécurité des opérations de manutention / Cargo operations safety checklist — La liste de contrôle de sécurité des opérations de manutention, signée par le navire et le terminal avant les opérations et répétée pendant. | Recueil de directives pratiques du BIT « Sécurité et santé dans les ports » ; pratique des terminaux à conteneurs, divers et rouliers | NAV, TER | NAV (Pour le navire), TER (Pour le terminal) | `M0:28` | toujours |
 | `PRE_TRANSFER` | `PRE_TRANSFER_MINUTES` | Accord de transfert — réunion pré-transfert / Transfer agreement — pre-transfer meeting — Le compte rendu de la réunion pré-transfert : paramètres, communication, urgence, accord écrit. | ISGOTT, 6e édition, réunion pré-transfert et accords écrits | NAV, TER | TER (Terminal), NAV (Navire), INS (Inspecteur) | `M0:27` | toujours |
 | `HOSES` | `HOSE_RECORD` | Relevé de connexion et de déconnexion / Hose / arm connection and disconnection record — Le relevé des connexions et déconnexions des flexibles ou bras, avec les essais. | ISGOTT, 6e édition (flexibles et bras de chargement) ; OCIMF Guide to Manufacturing and Purchasing Hoses for Offshore Moorings | NAV, TER | TER (Terminal), NAV (Navire) | `M1:1.09`, `M1:1.13`, `MA2:A2.04` | toujours |
 | `VETTING_REQUEST` | `VETTING_REPORT` | Demande d'acceptation du navire — synthèse du vetting / Vessel acceptance request — vetting summary — La synthèse du vetting interne du terminal jointe à la demande d'acceptation du navire. | OCIMF SIRE 2.0 / CDI ; TMSA ; politique de vetting du terminal | TER | TER (Terminal — responsable vetting), CAP (Autorité — reçu) | `M0:06` | toujours |
@@ -55,6 +65,10 @@ Les 76 formulaires sont générés par le paquet `services/forms/` (un module pa
 | `TERMINAL_RECEIPT` | `TERMINAL_RECEIPT` | Bon de réception du terminal / Terminal receipt — Le bon par lequel le terminal reconnaît la quantité reçue dans ses bacs. | Pratique des terminaux (outturn / discharge certificate) ; API MPMS chapitre 17 | TER | TER (Terminal), NAV (Capitaine), INS (Inspecteur) | `M1:1.17` | gabarit M1 |
 | `SPM_INSPECTION` | `SPM_DOC` | Rapport d'inspection de la bouée (SPM) / SPM buoy inspection report — Le rapport d'inspection de la bouée, des flexibles et du système d'amarrage avant l'escale. | OCIMF SMOG ; OCIMF GMPHOM (flexibles) | TER | TER (Exploitant de la bouée), CAP (Capitainerie — reçu) | `MA2:A2.01` | gabarit MA2 |
 | `DOUBLE_BANKING_STUDY` | `DOUBLE_BANKING_DOC` | Dossier d'accostage à couple — compatibilité, amarrage, déhalage d'urgence / Double banking file — compatibility, mooring, emergency unberthing — L'étude de compatibilité, l'analyse d'amarrage, la matrice des opérations simultanées et le plan de déhalage d'urgence de l'accostage à couple. | OCIMF MEG4 ; OCIMF Ship to Ship Transfer Guide ; ISGOTT 6e édition, chapitre 23 | TER | TER (Terminal), NAV (Capitaine — ce navire), NAV (Capitaine — navire partenaire), CAP (Capitainerie) | `M9:9.03`, `M9:9.04`, `M9:9.06`, `M9:9.08` | gabarit M9 ou escale reliée |
+| `VETTING_CHECKLIST` | `VETTING_CHECKLIST` | Grille de vetting du navire / Vessel vetting checklist — La grille de vetting : chaque limite du poste au regard des données du navire, le statut Y / N / K / Z et l'avis, les éléments documentaires. | Grilles de vetting des terminaux ; questionnaire OCIMF Q88 / VPQ ; limites du poste paramétrées | CAP, TER | TER (Terminal), CAP (Capitainerie) | `M0:06`, `REQ:VESSEL_ACCEPTANCE` | toujours |
+| `CARGO_HANDLING_PLAN` | `CARGO_HANDLING_PLAN` | Plan de manutention de la cargaison / Cargo handling plan — Le plan de manutention du terminal : lots et citernes du bord, bacs à terre, déplacement de ligne, alignement et scellés, comparaison des instruments, permanences, données des bacs. | Plans de manutention des terminaux pétroliers ; ISGOTT, 6e édition (plan de transfert, alignement, scellés) | TER | TER (Préparé par — terminal), NAV (Pris connaissance — navire) | `M1:1.03`, `M2:2.03` | toujours |
+| `OUTTURN_REPORT` | `OUTTURN_REPORT` | Rapport d'opération du terminal (out-turn) / Terminal operation report (out-turn) — Le rapport d'opération du terminal : relevé par équipe, arrêts, quantités pesées ou pointées, unités endommagées. | Rapports d'opération des terminaux ; pesées et pointages | TER | TER (Terminal), NAV (Navire) | `MB1:B1.14`, `MC1:C1.11`, `MX1:X1.08` | gabarit MB1 ou MB2 ou MC1 ou MG1 ou MR1 ou MX1 |
+| `BLU_AGREEMENT` | `BLU_AGREEMENT` | Accord de chargement / déchargement navire-terminal (Code BLU) / Ship/terminal loading / unloading agreement (BLU Code) — Le plan de chargement ou de déchargement convenu entre le vraquier et le terminal : passes, cadences, déballastage, arrêts. | Code BLU de l'OMI, §3 et appendice 2 — plan de chargement ou de déchargement | NAV, TER | NAV (Capitaine), TER (Représentant du terminal) | `MB1:B1.07`, `MB2:B2.07` | gabarit MB1 ou MB2 |
 | **CAP** | **Capitainerie** (13) |  |  |  |  |  |  |
 | `AUTH_VESSEL_ACCEPTANCE` | `AUTHORIZATION` | Autorisation — Acceptation de navire (vetting) / Authorization — Vessel acceptance (vetting) — L'acte écrit de la décision « Acceptation de navire (vetting) » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification. | Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique | APO, CAP | CAP (Autorité — décision), APO (Autorité — décision), AGE (Agence — réception) | `REQ:VESSEL_ACCEPTANCE`, `M0:07` | toujours |
 | `AUTH_GREEN_LIGHT` | `AUTHORIZATION` | Autorisation — Feu vert / Authorization — Green light — L'acte écrit de la décision « Feu vert » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification. | Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique | CAP | CAP (Autorité — décision), AGE (Agence — réception) | `REQ:GREEN_LIGHT`, `M0:09` | toujours |
@@ -83,7 +97,7 @@ Les 76 formulaires sont générés par le paquet `services/forms/` (un module pa
 | **SVC** | **Services nautiques** (2) |  |  |  |  |  |  |
 | `MOVEMENT_ORDER` | `MOVEMENT_ORDER` | Ordre de mouvement — confirmation des services nautiques / Movement order — marine services confirmation — La confirmation des services nautiques réservés (pilote, remorqueurs, lamaneurs) et l'ordre de mouvement. | Résolution OMI A.960(23) ; règlement des services nautiques du port | SVC | SVC (Services nautiques), NAV (Capitaine — reçu), CAP (Capitainerie — informée) | `REQ:MARINE_SERVICES`, `M0:18` | toujours |
 | `SERVICE_NOTE` | `SERVICE_NOTE` | Bon de prestation de service / Service delivery note — Le bon de prestation signé par le capitaine pour chaque service rendu (pilotage, remorquage, lamanage, eau, provisions, vedette). | Pratique portuaire (bon de pilotage, de remorquage, de lamanage, de livraison) ; FONASBA (compte d'escale) | PRE, SVC | SVC (Prestataire), NAV (Capitaine — reçu), AGE (Agence — visa) | `REQ:MARINE_SERVICES`, `REQ:WASTE_COLLECTION`, `M8:8.06`, `MA2:A2.03` | toujours |
-| **INS** | **Inspecteur et laboratoire** (7) |  |  |  |  |  |  |
+| **INS** | **Inspecteur et laboratoire** (11) |  |  |  |  |  |  |
 | `ULLAGE` | `ULLAGE_REPORT` | Rapport de jaugeage / Ullage / sounding report — Le relevé de jaugeage des citernes, avec les quantités bord, terre et inspecteur du registre. | API MPMS chapitre 17.1 et 17.2 (inspection des cargaisons maritimes) ; EI HM 28 ; tables ASTM D1250 | INS, NAV, TER | INS (Inspecteur), NAV (Officier de quart / chef de cargaison), TER (Terminal) | `M1:1.05`, `M1:1.15`, `M2:2.05`, `M2:2.14`, `M3:3.14` | toujours |
 | `SAMPLING_RECORD` | `SAMPLING_RECORD` | Procès-verbal d'échantillonnage / Sampling record — Le procès-verbal des échantillons prélevés, scellés et distribués. | API MPMS chapitre 8 ; ISO 3170 / 3171 ; EI HM 23 | INS | INS (Inspecteur), NAV (Navire — témoin), TER (Terminal — témoin) | `M1:1.07` | gabarit M1 ou M2 ou M3 ou escale reliée |
 | `QUANTITY_CERT` | `QQ_CERT` | Certificat de quantité / Certificate of quantity — Le certificat de quantité de l'inspecteur, établi sur les jaugeages bord et terre du registre. | API MPMS chapitres 11, 12 et 17 ; EI HM 28 / 50 ; ASTM D1250 | INS | INS (Inspecteur) | `M1:1.08`, `M1:1.16`, `M2:2.15`, `M3:3.14` | gabarit M1 ou M2 ou M3 ou escale reliée |
@@ -91,9 +105,13 @@ Les 76 formulaires sont générés par le paquet `services/forms/` (un module pa
 | `CLEANLINESS_CERT` | `CLEANLINESS_CERT` | Certificat de propreté des citernes / Tank cleanliness certificate — Le certificat de propreté des citernes délivré après l'inspection contradictoire, avant chargement. | Pratique de l'inspection des cargaisons ; ISGOTT 6e édition, chapitre 22.4 | INS | INS (Inspecteur), NAV (Chef de la cargaison), TER (Terminal) | `M2:2.04` | gabarit M2 |
 | `EMPTY_TANKS_CERT` | `EMPTY_TANKS_CERT` | Certificat de citernes vides — constat de ROB / Empty tanks certificate — ROB statement — Le constat contradictoire des quantités restant à bord après déchargement. | API MPMS chapitre 17.1 et 17.4 ; pratique de l'inspection des cargaisons | INS | INS (Inspecteur), NAV (Chef de la cargaison), TER (Terminal) | `M1:1.14` | gabarit M1 ou M3 ou escale reliée |
 | `GAS_FREE_CERT` | `GAS_FREE_CERT` | Certificat de dégazage / Gas-free certificate — Le certificat de dégazage des espaces contrôlés, avec sa durée de validité explicite. | ISGOTT 6e édition, chapitres 9–10 ; NFPA 306 ; résolution OMI A.1050(27) | INS | INS (Inspecteur / chimiste maritime), NAV (Capitaine — reçu) | `M6:6.05`, `M7:7.05` | gabarit M6 ou M7 |
+| `DRAFT_SURVEY` | `DRAFT_SURVEY_REPORT` | Rapport de draft survey / Draft survey report — Le rapport de draft survey : tirants d'eau, déplacements, déductions, quantité par différence, avec les valeurs bord, terre et inspecteur. | Code de procédures uniformes pour les draft surveys (CEE-ONU) ; pratique des inspecteurs | INS | INS (Inspecteur), NAV (Capitaine / chef officier), TER (Terminal) | `MB1:B1.13`, `MB2:B2.14` | gabarit MB1 ou MB2 |
+| `HOLD_INSPECTION` | `HOLD_INSPECTION` | Rapport d'inspection des cales / de la cargaison / Hold / cargo inspection report — L'inspection des cales ou de la cargaison avant les opérations : propreté, étanchéité, réserves, acceptation. | Pratique des inspecteurs de cargaisons sèches ; Code BLU ; Code IMSBC | INS, TER | INS (Inspecteur), NAV (Capitaine), TER (Terminal) | `MB1:B1.06`, `MB2:B2.05`, `MG1:G1.05`, `MR1:R1.04` | gabarit MB1 ou MB2 ou MG1 ou MR1 |
+| `TALLY_SHEET` | `TALLY_SHEET` | Feuille de pointage et constat de réception / Tally sheet and out-turn statement — Le pointage des colis ou unités par le navire et par la terre, les écarts, les dommages, le constat de réception contre le manifeste. | Pratique du pointage contradictoire ; constat de réception (out-turn) | INS, TER | TER (Terminal), NAV (Navire), INS (Inspecteur) | `MG1:G1.07`, `MG1:G1.10`, `MR1:R1.06`, `MR1:R1.09` | gabarit MC1 ou MG1 ou MR1 |
+| `CARGO_DAMAGE` | `CARGO_DAMAGE_REPORT` | Constat de dommages ou de manquants / Damage or shortage report — Le constat contradictoire de dommages ou de manquants, avec réserve de droits. | Usage maritime — constat contradictoire, réserve de droits | AGE, INS, NAV, TER | INS (Inspecteur), NAV (Navire), TER (Terminal) | `MB1:B1.15`, `MC1:C1.12`, `MG1:G1.12`, `MR1:R1.10` | toujours |
 | **COM** | **Armateur / affréteur** (4) |  |  |  |  |  |  |
 | `CP_RECAP` | `CP_RECAP` | Nomination et extrait de charte-partie / Nomination and charter-party recap — L'extrait de recap ou de charte-partie et les clauses d'escale que le mandant communique à l'agence. | Pratique de l'affrètement pétrolier (ASBATANKVOY, SHELLVOY, BPVOY) ; BIMCO | COM | COM (Mandant), AGE (Agence — reçu) | `M0:04` | toujours |
-| `DOC_INSTRUCTIONS` | `DOC_INSTRUCTIONS` | Instruction documentaire du mandant (connaissement) / Principal's documentary instructions (bill of lading) — L'instruction écrite du mandant pour l'émission du connaissement et des documents de cargaison. | Pratique du commerce des hydrocarbures ; Règles de La Haye-Visby | COM | COM (Mandant), AGE (Agence — reçu) | `M2:2.16` | gabarit M2 |
+| `DOC_INSTRUCTIONS` | `DOC_INSTRUCTIONS` | Instruction documentaire du mandant (connaissement) / Principal's documentary instructions (bill of lading) — L'instruction écrite du mandant pour l'émission du connaissement et des documents de cargaison. | Pratique du commerce des hydrocarbures ; Règles de La Haye-Visby | COM | COM (Mandant), AGE (Agence — reçu) | `M2:2.16`, `MB2:B2.16` | gabarit M2 ou MB2 |
 | `INSURANCE` | `INSURANCE` | Confirmation des couvertures d'assurance / Insurance cover confirmation — La confirmation des couvertures d'assurance des navires et du prestataire pour l'opération STS ou à couple. | Pratique du P&I et de l'assurance maritime ; OCIMF Ship to Ship Transfer Guide (assurances) | COM | COM (Mandant), AGE (Agence — reçu) | `M3:3.09`, `M9:9.10` | gabarit M3 ou M9 ou escale reliée |
 | `LOI` | `LOI` | Lettre de garantie — livraison sans connaissement original / Letter of indemnity — delivery without original bill of lading — La lettre de garantie remise à l'armateur pour une livraison sans présentation du connaissement original. | Formules types du Groupe international des clubs P&I (LOI A / B) | COM | COM (Mandant (réceptionnaire / affréteur)), COM (Banque — contresignature (le cas échéant)), AGE (Agence — reçu pour l'armateur) | — | gabarit M1 ou M3 ou escale reliée |
 | **PRE** | **Prestataires** (8) |  |  |  |  |  |  |
@@ -158,47 +176,138 @@ Partie émettrice : NAV — Navire / capitaine. Standard : Pratique des chartes-
 
 ## 6.4 `TIME_SHEET` — Time sheet / Time sheet
 
-Partie émettrice : AGE — Agence maritime. Standard : Chronologie du registre — BIMCO Laytime Definitions for Charter Parties 2013 / Registry chronology — BIMCO Laytime Definitions for Charter Parties 2013. Rôles émetteurs : AGE. Type de document : `TIME_SHEET`. Répond à : `M0:37`. Offert : toujours. Orientation : paysage. Objet : La chronologie contradictoire de l'escale et ses interruptions, base du décompte du temps de planche.
+Partie émettrice : AGE — Agence maritime. Standard : Structure des time sheets des terminaux (analyse des surestaries) — BIMCO Laytime Definitions for Charter Parties 2013 / Structure of the terminal vessel time sheets (demurrage analysis) — BIMCO Laytime Definitions for Charter Parties 2013. Rôles émetteurs : AGE, NAV, TER. Type de document : `TIME_SHEET`. Répond à : `M0:37`. Offert : toujours. Orientation : paysage. Objet : Le time sheet de l'escale lu par toutes les parties : activités standard, arrêts et retards comptés, quantités et performance, récapitulatif des temps.
 
-**Section (champs) — Escale / Call**
+**Section (champs) — A · Informations générales / A · General information**
 
 | Champ FR / EN | Source de préremplissage | Largeur |
 |---|---|---|
-| Navire / Vessel | Vessel.name, Vessel.imo | demi |
-| Voyage / Voyage | PortCall.voyage_number | demi |
-| Port / poste / Port / berth | Port.name, poste ou zone de l'étape en cours | demi |
-| Produit / Product | PortCall.product | demi |
-| Quantité déclarée / Declared quantity | PortCall.quantity, PortCall.quantity_unit | demi |
-| Agence / Agency | PortCall.agency (Organization.name) | demi |
+| Navire / Vessel | Vessel.name | demi |
+| Pavillon / Flag | Vessel.flag | demi |
+| Numéro OMI / IMO number | Vessel.imo | demi |
+| Poste / Berth | PortCall.berth ou CallStage.berth_kind | demi |
+| Fin de traversée (E.O.S.P.) / E.O. sea passage | jalon ARRIVAL.declared_at, sinon PortCall.ata | demi |
+| NOR remise / N.O.R. tendered | jalon NOR_TENDERED.declared_at | demi |
+| NOR reçue / N.O.R. received | contresignature TER du jalon NOR_TENDERED (MilestoneSignature.at) | demi |
+| Négociant (trader) / Trader | CallParty COM (kind TRADER / CHARTERER / SHIPPER / RECEIVER) | demi |
+| Agent / Agent | PortCall.agency | demi |
+| Inspecteur / Surveyor | CallParty INS active | demi |
+| Subrécargue / Supercargo | CallParty COM (kind SUPERCARGO / SUPERINTENDENT) | demi |
+| Déplacement (t) / Displacement (t) | — (à compléter sur le papier) | demi |
+| Tirant d'eau à l'arrivée (m) / Draft — arrival (m) | — (à compléter sur le papier) | demi |
+| Tirant d'eau au départ (m) / Draft — departure (m) | — (à compléter sur le papier) | demi |
+| Produit 1 / Product 1 | Measurement.product, sinon PortCall.product | demi |
+| Produit 2 / Product 2 | Measurement.product | demi |
+| Produit 3 / Product 3 | Measurement.product | demi |
+| Opération / Operation | PortCall.template_codes | demi |
+| Port en lourd (t) / Deadweight (t) | Vessel.dwt | demi |
+| Temps de pompage prévu (h) / Planned pump time (h) | PortCall.planned_pump_hours | demi |
+| Référence du lot / Batch reference | PortCall.batch_reference | demi |
 
-**Section (tableau) — Chronologie / Chronology**
+**Section (tableau) — B · Activités standard / B · Standard activities**
 
-Colonnes : Événement / Event · Heure (UTC) / Time (UTC) · Émetteur / Recorded by · Contresignatures / Countersignatures.
+Colonnes : N° / No. · Du / From · Au / To · Durée / Elapsed · Opération / Operation · Observations / Comments / remarks.
 
-Lignes préremplies : Milestone (types de la chronologie, declared_at, emitter_label) et MilestoneSignature (role, state) ; lignes vierges ajoutées : 2.
+Lignes préremplies : jalons du registre (declared_at, emitter_label) et contresignatures ; durée = au − du ; lignes vierges ajoutées : 0.
 
-**Section (tableau) — Interruptions / Stoppages**
+**Section (tableau) — C · Activités non standard et arrêts / C · Non-standard activities and stoppages**
 
-Colonnes : Cause / Cause · Début / From · Fin / To · Durée (h) / Duration (h) · Imputation / Attribution · État / State.
+Colonnes : N° / No. · Du / From · Au / To · Durée / Elapsed · Retard compté / Delay counted · Imputable à / Attributable to · Description / Description.
 
-Lignes préremplies : reports.interruptions : jalons INTERRUPTION_START/END, InterruptionCause, contresignatures ; lignes vierges ajoutées : 1.
+Lignes préremplies : reports.interruptions : jalons INTERRUPTION_START/END, InterruptionCause.attributable_to ; retard compté = durée des interruptions à cause établie contradictoirement ; lignes vierges ajoutées : 2.
+
+Note de section : Le retard compté est pré-rempli pour les interruptions dont la cause est établie contradictoirement ; une interruption contestée ou tacite est laissée à l'appréciation des signataires. / The delay counted is pre-filled for the stoppages whose cause is established contradictorily; a contested or tacit stoppage is left to the signatories.
+
+**Section (tableau) — D · Quantités et performance / D · Quantities and performance**
+
+Colonnes : Produit / Product · Quantité B/L / B/L quantity · Quantité bord / Ship quantity · Quantité terre / Shore quantity · Débit moyen / Average rate · Débit requis / Required rate · Pression moyenne / Average pressure.
+
+Lignes préremplies : Measurement BL / FINAL (valeurs bord et terre), débit moyen = quantité terre ÷ temps net, débit requis = quantité ÷ temps de pompage prévu, pression = journal de pompage ; lignes vierges ajoutées : 0.
+
+**Section (champs) — E · Récapitulatif des temps / E · Time summary**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Début de l'opération / Operation started | PortCall.t0 | demi |
+| Fin de l'opération / Operation completed | PortCall.t1 | demi |
+| Temps total à quai / Total time alongside | ALL_FAST → LAST_LINE | demi |
+| Total des retards comptés / Total delays counted | section C | demi |
+| Temps net d'opération / Total net operating time | (T1 − T0) − retards comptés | demi |
+| Temps de pompage prévu (h) / Planned pump time (h) | PortCall.planned_pump_hours | demi |
+| Attente en rade / Waiting at anchorage | reports.time_sheet : ATB − ATA | demi |
+| Validité de l'annonce (facturation) / Validity of the announcement (billing) | PortCall.validity_days, created_at, valid_until | demi |
+| Dépassement de la validité (h) / Overrun of the validity (h) | PortCall.billing_basis() | demi |
+| Temps de planche utilisé — selon charte-partie / Laytime used — per charter-party | — (à compléter sur le papier) | demi |
+
+Note de section : Le décompte du temps de planche et des surestaries suit la charte-partie et les BIMCO Laytime Definitions for Charter Parties 2013 ; la plateforme fournit les heures contradictoires, jamais le décompte. / Laytime and demurrage follow the charter-party and the BIMCO Laytime Definitions for Charter Parties 2013; the platform supplies the contradictory times, never the count.
+
+**Section (champs) — F · Exclusions, commentaires et remarques / F · Exclusions, comments and remarks**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Ce time sheet n'inclut pas / This time sheet does not include | — (à compléter sur le papier) | pleine |
+| Commentaires et remarques / Comments and remarks | — (à compléter sur le papier) | pleine |
+
+**Signatures** : NAV — Pour le navire / For ship · INS — Pour l'inspecteur / For surveyor · AGE — Pour l'agent / For agent · TER — Pour le terminal / For shore
+
+## 6.5 `PUMPING_LOG` — Journal de pompage / Pumping log
+
+Partie émettrice : TER — Terminal / dépôt. Standard : Structure des journaux de pompage des terminaux ; ISGOTT, 6e édition (surveillance du transfert) / Structure of the terminal pumping logs; ISGOTT, 6th edition (monitoring of the transfer). Rôles émetteurs : NAV, TER. Type de document : `PUMPING_LOG`. Répond à : `M1:1.11`, `M2:2.11`. Offert : toujours. Orientation : paysage. Objet : Le journal de pompage tenu par le navire et par le terminal, relevé par relevé, avec l'écart terre − bord et le seuil d'arrêt pour investigation.
+
+**Section (champs) — Feuille Terre — bac récepteur / livreur / Sheet Shore — receiving / delivering tank**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Citerne / bac / Tank | PumpingLogSheet.tank | demi |
+| Produit / Product | PumpingLogSheet.product | demi |
+| Niveau de départ (mm) / Start dip (mm) | PumpingLogSheet.start_level_mm | demi |
+| Niveau d'arrêt prévu (mm) / Expected stop dip (mm) | PumpingLogSheet.expected_stop_level_mm | demi |
+| Quantité par mètre (m³/m) / Quantity per metre (m³/m) | PumpingLogSheet.m3_per_metre | demi |
+| Densité (t/m³) / VCF / Density (t/m³) / VCF | PumpingLogSheet.density, vcf | demi |
+| Tonnes par mètre / Tons per metre | m³/m × densité × VCF | demi |
+| Quantité prévue (m³ / t) / Planned quantity (m³ / t) | PumpingLogSheet.planned_quantity_m3, planned_quantity_mt | demi |
+| Débit / pression attendus / Expected rate / pressure | PumpingLogSheet.expected_rate_m3h, expected_pressure_bar | demi |
+| Début / fin estimés / Estimated start / completion | PumpingLogSheet.estimated_start, estimated_completion | demi |
+| Niveau d'arrêt réel (mm) / volume final (m³) / Actual stop dip (mm) / final volume (m³) | PumpingLogSheet.actual_stop_level_mm, final_volume_m3 | demi |
+| Ouverte par / Opened by | PumpingLogSheet.opened_label | demi |
+
+**Section (champs) — Feuille Bord — citernes / Sheet Ship — cargo tanks**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Citerne / bac / Tank | PumpingLogSheet.tank | demi |
+| Produit / Product | PumpingLogSheet.product | demi |
+| Niveau de départ (mm) / Start dip (mm) | PumpingLogSheet.start_level_mm | demi |
+| Niveau d'arrêt prévu (mm) / Expected stop dip (mm) | PumpingLogSheet.expected_stop_level_mm | demi |
+| Quantité par mètre (m³/m) / Quantity per metre (m³/m) | PumpingLogSheet.m3_per_metre | demi |
+| Densité (t/m³) / VCF / Density (t/m³) / VCF | PumpingLogSheet.density, vcf | demi |
+| Tonnes par mètre / Tons per metre | m³/m × densité × VCF | demi |
+| Quantité prévue (m³ / t) / Planned quantity (m³ / t) | PumpingLogSheet.planned_quantity_m3, planned_quantity_mt | demi |
+| Débit / pression attendus / Expected rate / pressure | PumpingLogSheet.expected_rate_m3h, expected_pressure_bar | demi |
+| Début / fin estimés / Estimated start / completion | PumpingLogSheet.estimated_start, estimated_completion | demi |
+| Niveau d'arrêt réel (mm) / volume final (m³) / Actual stop dip (mm) / final volume (m³) | PumpingLogSheet.actual_stop_level_mm, final_volume_m3 | demi |
+| Ouverte par / Opened by | PumpingLogSheet.opened_label | demi |
+
+**Section (tableau) — Relevés horaires — bord et terre / Hourly readings — ship and shore**
+
+Colonnes : Heure / Time · Pression terre (bar) / Shore pressure (bar) · Niveau terre (mm) / Shore dip (mm) · Reçu / livré terre (m³) / Shore moved (m³) · Cumul terre (m³) / Shore cumulated (m³) · Cumul terre (t) / Shore cumulated (t) · Débit terre (m³/h) / Shore rate (m³/h) · Livré / reçu bord (m³) / Ship moved (m³) · Cumul bord (m³) / Ship cumulated (m³) · Écart (m³) / Deviation (m³) · Écart horaire (%) / Hourly deviation (%) · Écart cumulé (%) / Cumulated deviation (%) · Observations / Remarks.
+
+Lignes préremplies : PumpingLogEntry des deux côtés appariés par heure (measurements.compare_sides) ; écart = terre − bord ; lignes vierges ajoutées : 0.
+
+Note de section : Arrêter le transfert pour investigation si l'écart dépasse 0.300 % (pratique des terminaux, tolérance du port) ; la plateforme signale, ne tranche pas. / Stop the transfer for investigation if the deviation exceeds 0.300% (terminal practice, the port's tolerance); the platform flags, never decides.
 
 **Section (champs) — Totaux / Totals**
 
 | Champ FR / EN | Source de préremplissage | Largeur |
 |---|---|---|
-| Attente en rade (h) / Waiting at anchorage (h) | reports.time_sheet : ATB − ATA | demi |
-| Durée brute de transfert (h) / Gross transfer time (h) | reports.time_sheet : T1 − T0 | demi |
-| Temps morts (h) / Stoppages (h) | reports.time_sheet : somme des interruptions | demi |
-| Durée nette de transfert (h) / Net transfer time (h) | reports.time_sheet : brut − temps morts | demi |
-| Temps de planche utilisé (h) — selon charte-partie / Laytime used (h) — per charter-party | — (à compléter sur le papier) | demi |
-| Surestaries / dispatch / Demurrage / despatch | — (à compléter sur le papier) | demi |
+| Cumul terre (m³ / t) / Shore cumulated (m³ / t) | dernier relevé terre | demi |
+| Cumul bord (m³ / t) / Ship cumulated (m³ / t) | dernier relevé bord | demi |
+| Pression moyenne terre / bord (bar) / Average pressure shore / ship (bar) | moyenne des relevés | demi |
+| Débit moyen terre / bord (m³/h) / Average rate shore / ship (m³/h) | moyenne des relevés | demi |
 
-Note de section : Les heures viennent du registre contradictoire ; le décompte du temps de planche suit la charte-partie et les BIMCO Laytime Definitions for Charter Parties 2013. / Times come from the contradictory registry; laytime is computed under the charter-party and the BIMCO Laytime Definitions for Charter Parties 2013.
+**Signatures** : TER — Pour le terminal / For shore · NAV — Pour le navire / For ship · INS — Pour l'inspecteur / For surveyor
 
-**Signatures** : AGE — Agence / Agency · NAV — Capitaine / Master · TER — Terminal / Terminal
-
-## 6.5 `SSSCL` — Liste de contrôle navire / terre / Ship/shore safety checklist
+## 6.6 `SSSCL` — Liste de contrôle navire / terre / Ship/shore safety checklist
 
 Partie émettrice : TER — Terminal / dépôt. Standard : Structure de l'ISGOTT, 6e édition (OCIMF / ICS / IAPH), chapitre 25 / Structure of ISGOTT, 6th edition (OCIMF / ICS / IAPH), chapter 25. Rôles émetteurs : NAV, TER. Type de document : `SSSCL`. Répond à : `M0:28`. Offert : toujours. Orientation : portrait. Objet : La liste de contrôle navire/terre signée conjointement avant le transfert et répétée pendant.
 
@@ -212,6 +321,8 @@ Partie émettrice : TER — Terminal / dépôt. Standard : Structure de l'ISGOTT
 | Opération / Operation | PortCall.template_codes | demi |
 | Date et heure d'arrivée au poste (ATB) / Date and time of berthing (ATB) | PortCall.atb | demi |
 | Terminal / Terminal | CallParty TER active (Organization.name) | demi |
+| Liste de contrôle en ligne / On-line checklist | SafetyChecklist.version, status, signed_at | demi |
+| Intervalle des vérifications répétées (h) / Interval of the repetitive checks (h) | SafetyChecklist.repeat_interval_h | demi |
 
 **Section (liste de contrôle) — Partie 1A — Navire : vérifications avant l'arrivée / Part 1A — Tanker: checks pre-arrival**
 
@@ -219,10 +330,11 @@ Colonnes à cocher : Navire / Ship ; colonne remarques.
 
 | Point de contrôle FR / EN |
 |---|
-| Système de gaz inerte en service, teneur en O₂ des citernes dans les limites / Inert gas system operational, tank O₂ within limits |
-| Dispositifs de pression/dépression et dégagement des citernes vérifiés / Pressure/vacuum devices and tank venting checked |
-| Plan de chargement ou de déchargement et de ballastage établi et à bord / Loading/discharge and ballast plan prepared and on board |
-| Équipage informé des limites du poste (vent, houle, courant, tirant d'eau) / Crew briefed on the berth limits (wind, swell, current, draft) |
+| 1A.1 — Système de gaz inerte en service ; teneur en oxygène des citernes à cargaison inférieure à 8 % en volume / Inert gas system in service; cargo tank oxygen content below 8% by volume |
+| 1A.2 — Pression positive des citernes maintenue ; dispositifs de pression / dépression et de dégagement vérifiés / Positive tank pressure maintained; pressure/vacuum and venting devices checked |
+| 1A.3 — Plan de chargement ou de déchargement et de ballastage établi, à bord, et transmis au terminal / Loading or discharge and ballast plan prepared, on board and sent to the terminal |
+| 1A.4 — Équipage informé des limites du poste (vent, houle, courant, tirant d'eau) et des conditions d'arrêt / Crew briefed on the berth limits (wind, swell, current, draft) and on the stop conditions |
+| 1A.5 — Dispositifs d'amarrage, treuils et remorques de secours vérifiés et prêts / Mooring equipment, winches and emergency towing-off pennants checked and ready |
 
 **Section (liste de contrôle) — Partie 1B — Terminal : vérifications avant l'arrivée / Part 1B — Terminal: checks pre-arrival**
 
@@ -230,10 +342,10 @@ Colonnes à cocher : Terre / Shore ; colonne remarques.
 
 | Point de contrôle FR / EN |
 |---|
-| Poste, défenses, bras ou flexibles et moyens d'accès prêts et contrôlés / Berth, fenders, arms or hoses and means of access ready and checked |
-| Bacs, lignes et vannes alignés conformément au plan ; capacité disponible / Shore tanks, lines and valves lined up per plan; capacity available |
-| Prévisions météo et marée compatibles avec les limites du poste / Weather and tide forecasts within the berth limits |
-| Personnel de permanence désigné et informé / Duty personnel assigned and briefed |
+| 1B.1 — Poste, défenses, bras ou flexibles, dispositifs d'accès et éclairage prêts et contrôlés / Berth, fenders, arms or hoses, means of access and lighting ready and checked |
+| 1B.2 — Bacs, lignes et vannes alignés conformément au plan ; creux ou disponibilité du produit vérifiés / Shore tanks, lines and valves lined up per plan; ullage or product availability checked |
+| 1B.3 — Prévisions météo et marée compatibles avec les limites du poste pendant la durée prévue de l'opération / Weather and tide forecasts within the berth limits for the planned duration of the operation |
+| 1B.4 — Personnel de permanence désigné, informé, joignable ; moyens de communication essayés / Duty personnel assigned, briefed and reachable; communication means tested |
 
 **Section (liste de contrôle) — Partie 2 — Navire : vérifications après l'amarrage / Part 2 — Tanker: checks after mooring**
 
@@ -241,10 +353,18 @@ Colonnes à cocher : Navire / Ship ; colonne remarques.
 
 | Point de contrôle FR / EN |
 |---|
-| Amarres tenues et surveillées ; remorque de secours prête / Moorings tended; emergency towing-off pennants ready |
-| Moyens d'accès sûrs ; dalots fermés ; plateaux de rétention vidés / Safe means of access; scuppers plugged; drip trays empty |
-| Ouvertures de citernes fermées ; dégagement conforme au plan / Tank openings closed; venting per plan |
-| Matériel incendie et antipollution prêt ; sources d'ignition contrôlées / Fire-fighting and spill response equipment ready; ignition sources controlled |
+| 2.1 — Amarres tenues et surveillées ; treuils en frein ; remorques de secours en place aux deux extrémités (R) / Moorings tended and monitored; winches on brakes; emergency towing-off pennants rigged fore and aft |
+| 2.2 — Moyen d'accès sûr, éclairé et surveillé ; filet de sécurité en place (R) / Safe, lit and watched means of access; safety net rigged |
+| 2.3 — Dalots et évacuations obturés ; plateaux de rétention du collecteur vides et en place (R) / Scuppers and drains plugged; manifold drip trays empty and in place |
+| 2.4 — Ouvertures de citernes fermées ; dégagement des citernes conforme au plan convenu (R) / Tank openings closed; tank venting as agreed in the plan |
+| 2.5 — Portes et hublots des emménagements fermés ; ventilation en surpression ou conforme (R) / Accommodation doors and ports closed; ventilation on positive pressure or as required |
+| 2.6 — Matériel incendie prêt et paré ; manches pressurisées et lances disposées au collecteur (R) / Fire-fighting equipment ready for immediate use; pressurised hoses and nozzles laid at the manifold |
+| 2.7 — Moyens antipollution et plan d'urgence prêts ; sources d'ignition contrôlées, interdiction de fumer affichée (R) / Spill response equipment and emergency plan ready; ignition sources controlled, no-smoking notices posted |
+| 2.8 — Pompes à cargaison, vannes du collecteur et système de mesure des citernes vérifiés ; collecteurs non utilisés obturés / Cargo pumps, manifold valves and tank gauging system checked; unused manifolds blanked |
+| 2.9 — Veille suffisante et effectif à bord pendant toute la durée de l'opération (R) / Adequate watch and crew on board throughout the operation |
+| 2.10 — Moyens de propulsion, barre et machine disponibles pour un appareillage d'urgence selon l'accord / Propulsion, steering and engines available for emergency departure as agreed |
+
+Note de section : (R) : point répété pendant les opérations à l'intervalle convenu / (R): repeated during the operations at the agreed interval
 
 **Section (liste de contrôle) — Partie 3 — Terminal : vérifications après l'amarrage / Part 3 — Terminal: checks after mooring**
 
@@ -252,10 +372,15 @@ Colonnes à cocher : Terre / Shore ; colonne remarques.
 
 | Point de contrôle FR / EN |
 |---|
-| Défenses en place ; accès et éclairage conformes / Fenders in place; access and lighting compliant |
-| Bras ou flexibles adaptés au collecteur, supportés, dans leur enveloppe de mouvement / Arms or hoses suited to the manifold, supported, within their operating envelope |
-| Matériel incendie et antipollution du terminal prêt / Terminal fire-fighting and spill response equipment ready |
-| Dispositif d'arrêt d'urgence (ESD) du terminal armé / Terminal emergency shutdown (ESD) armed |
+| 3.1 — Défenses en place et en bon état ; crochets à échappement et moyens d'amarrage du quai opérationnels / Fenders in place and in good order; quick-release hooks and berth mooring means operational |
+| 3.2 — Bras ou flexibles adaptés au collecteur, supportés, dans leur enveloppe de mouvement ; joints et boulonnage vérifiés / Arms or hoses suited to the manifold, supported, within their operating envelope; gaskets and bolting checked |
+| 3.3 — Joint isolant ou câble de mise à la masse conforme à la procédure convenue / Insulating flange or bonding cable per the agreed procedure |
+| 3.4 — Matériel incendie et antipollution du terminal prêt ; accès des secours dégagé (R) / Terminal fire-fighting and spill response equipment ready; emergency access clear |
+| 3.5 — Dispositif d'arrêt d'urgence (ESD) du terminal armé ; temps de fermeture des vannes connu / Terminal emergency shutdown (ESD) armed; valve closure time known |
+| 3.6 — Accès au quai contrôlé ; sources d'ignition et véhicules non autorisés exclus de la zone (R) / Berth access controlled; ignition sources and unauthorised vehicles kept out of the area |
+| 3.7 — Éclairage du poste et des cheminements suffisant pour l'opération de nuit (R) / Berth and walkway lighting sufficient for night operations |
+
+Note de section : (R) : point répété pendant les opérations à l'intervalle convenu / (R): repeated during the operations at the agreed interval
 
 **Section (liste de contrôle) — Partie 4 — Navire et terminal : vérifications avant le transfert / Part 4 — Tanker and terminal: pre-transfer checks**
 
@@ -263,49 +388,232 @@ Colonnes à cocher : Navire / Ship · Terre / Shore ; colonne remarques.
 
 | Point de contrôle FR / EN |
 |---|
-| Système de communication convenu et testé ; signaux d'arrêt d'urgence convenus / Agreed communication system tested; emergency stop signals agreed |
-| Procédure d'arrêt d'urgence convenue, essai consigné / Emergency shutdown procedure agreed and tested |
-| Collecteurs, flexibles ou bras raccordés et étanches ; joints isolants / mise à la masse conformes / Manifolds, hoses or arms connected and tight; insulating flange / bonding compliant |
-| Alignement des vannes bord et terre vérifié ; gaz inerte et pression des citernes surveillés / Ship and shore valve line-up checked; inert gas and tank pressure monitored |
-| Effectif suffisant et veille assurée des deux côtés pendant tout le transfert / Sufficient personnel and watch on both sides throughout the transfer |
-| Interdiction de fumer, portes et hublots fermés, appareils électriques portatifs contrôlés / Smoking prohibited, doors and ports closed, portable electrical equipment controlled |
+| 4.1 — Système de communication principal et de secours convenu et essayé ; langue de travail convenue (R) / Primary and backup communication system agreed and tested; working language agreed |
+| 4.2 — Signaux et procédure d'arrêt d'urgence convenus ; essai d'arrêt d'urgence consigné / Emergency stop signals and procedure agreed; emergency shutdown test recorded |
+| 4.3 — Collecteurs, flexibles ou bras raccordés, étanches, et vérifiés sous pression avant le démarrage / Manifolds, hoses or arms connected, tight and pressure-checked before starting |
+| 4.4 — Alignement des vannes bord et terre vérifié de part et d'autre ; lignes non utilisées isolées / Ship and shore valve line-up checked on both sides; unused lines isolated |
+| 4.5 — Débits de démarrage, de régime et de fin, pression maximale et séquence de citernes convenus (partie 5A) / Start, full and topping-off rates, maximum pressure and tank sequence agreed (part 5A) |
+| 4.6 — Surveillance convenue des citernes et des bacs ; jaugeage et échantillonnage convenus avec l'inspecteur / Agreed monitoring of tanks and shore tanks; gauging and sampling agreed with the surveyor |
+| 4.7 — Conditions météo et limites d'interruption convenues ; procédure de déconnexion d'urgence connue des deux côtés (R) / Weather conditions and stop limits agreed; emergency disconnection procedure known on both sides |
+| 4.8 — Personnes responsables de permanence désignées des deux côtés, noms et moyens de contact échangés (R) / Responsible persons on duty named on both sides, names and contact means exchanged |
 
-**Section (champs) — Partie 5A — Accords avant le transfert / Part 5A — Pre-transfer agreements**
+Note de section : (R) : point répété pendant les opérations à l'intervalle convenu / (R): repeated during the operations at the agreed interval
+
+**Section (champs) — Partie 5A — Accords écrits de la réunion pré-transfert / Part 5A — Written agreements of the pre-transfer conference**
 
 | Champ FR / EN | Source de préremplissage | Largeur |
 |---|---|---|
-| Débit initial / maximal / de fin (m³/h) / Initial / maximum / topping-off rate (m³/h) | — (à compléter sur le papier) | demi |
-| Pression maximale au collecteur (bar) / Maximum manifold pressure (bar) | — (à compléter sur le papier) | demi |
-| Température maximale (°C) / Maximum temperature (°C) | — (à compléter sur le papier) | demi |
-| Temps de fermeture des vannes (s) / Valve closure time (s) | — (à compléter sur le papier) | demi |
-| Séquence des citernes et des bacs ; échantillonnage et jaugeage / Tank and shore tank sequence; sampling and gauging | — (à compléter sur le papier) | pleine |
-| Limites d'interruption (vent, houle, foudre, visibilité) / Stop limits (wind, swell, lightning, visibility) | — (à compléter sur le papier) | pleine |
-| Canal VHF principal / de secours ; langue / Primary / backup VHF channel; language | — (à compléter sur le papier) | demi |
-| Intervalle des vérifications répétées (h) / Interval of repetitive checks (h) | — (à compléter sur le papier) | demi |
+| Débit initial / maximal / de fin (m³/h) / Initial / maximum / topping-off rate (m³/h) | SafetyCheckAnswer.value (point 5A.1) | demi |
+| Pression maximale au collecteur (bar) / Maximum manifold pressure (bar) | SafetyCheckAnswer.value (point 5A.2) | demi |
+| Température maximale du produit (°C) / Maximum product temperature (°C) | SafetyCheckAnswer.value (point 5A.3) | demi |
+| Temps de fermeture des vannes bord / terre (s) / Ship / shore valve closure time (s) | SafetyCheckAnswer.value (point 5A.4) | pleine |
+| Séquence des citernes et des bacs ; échantillonnage et jaugeage / Tank and shore tank sequence; sampling and gauging | SafetyCheckAnswer.value (point 5A.5) | pleine |
+| Limites d'interruption : vent (nd), houle (m), foudre, visibilité / Stop limits: wind (kn), swell (m), lightning, visibility | SafetyCheckAnswer.value (point 5A.6) | pleine |
+| Canal VHF principal / de secours ; langue / Primary / backup VHF channel; language | SafetyCheckAnswer.value (point 5A.7) | pleine |
+| Intervalle des vérifications répétées (h) / Interval of the repetitive checks (h) | SafetyCheckAnswer.value (point 5A.8) | pleine |
 
-**Section (liste de contrôle) — Partie 6 — Vérifications répétées pendant et après le transfert / Part 6 — Repetitive checks during and after transfer**
+**Section (liste de contrôle) — Partie 6 — Vérifications répétées pendant et après le transfert / Part 6 — Repetitive checks during and after the transfer**
 
-Colonnes à cocher : Heure / Time · Navire / Ship · Terre / Shore ; colonne remarques.
+Colonnes à cocher : Navire / Ship · Terre / Shore ; colonne remarques.
 
 | Point de contrôle FR / EN |
 |---|
-| Amarres, flexibles ou bras, pression et débit vérifiés / Moorings, hoses/arms, pressure and rate checked |
-| Communication et veille maintenues ; conditions météo dans les limites / Communication and watch maintained; weather within limits |
-| Ballastage conforme au plan ; tirant d'eau, assiette et francs-bords surveillés / Ballast per plan; draft, trim and freeboard monitored |
-| Après transfert : lignes vidangées, collecteurs obturés, quantités constatées / After transfer: lines drained, manifolds blanked, quantities agreed |
+| 6.1 — Amarres, flexibles ou bras, pression au collecteur et débit vérifiés dans les limites convenues (R) / Moorings, hoses or arms, manifold pressure and rate checked within the agreed limits |
+| 6.2 — Communication et veille maintenues des deux côtés ; conditions météo dans les limites (R) / Communication and watch maintained on both sides; weather within limits |
+| 6.3 — Ballastage conforme au plan ; tirant d'eau, assiette, gîte et francs-bords surveillés (R) / Ballast per plan; draft, trim, list and freeboard monitored |
+| 6.4 — Bacs et lignes à terre surveillés ; changement de bac annoncé au navire avant exécution (R) / Shore tanks and lines monitored; shore tank switch announced to the ship before it is made |
+| 6.5 — Après transfert : lignes vidangées, collecteurs obturés, quantités constatées contradictoirement / After transfer: lines drained, manifolds blanked, quantities agreed jointly |
+
+Note de section : (R) : point répété pendant les opérations à l'intervalle convenu / (R): repeated during the operations at the agreed interval
+
+**Section (tableau) — Signatures électroniques / Electronic signatures**
+
+Colonnes : Côté / Side · Signataire / Signed by · Heure (UTC) / Time (UTC) · Sceau / Seal.
+
+Lignes préremplies : SafetyChecklistSignature ; lignes vierges ajoutées : 0.
 
 **Section (texte) — Déclaration / Declaration**
 
-> Nous, soussignés, avons vérifié ensemble, point par point, les éléments de cette liste, et nous nous sommes assurés que les réponses sont, à notre connaissance, exactes. Nous avons convenu de répéter les vérifications de la partie 6 à l'intervalle indiqué.
+> Nous, soussignés, avons vérifié ensemble, point par point, les éléments de cette liste, et nous nous sommes assurés que les réponses sont, à notre connaissance, exactes. Nous avons convenu de répéter les vérifications marquées (R) à l'intervalle indiqué.
 >
-> *We, the undersigned, have checked the items of this list together, item by item, and have satisfied ourselves that the answers are, to the best of our knowledge, correct. We have agreed to repeat the part 6 checks at the stated interval.*
+> *We, the undersigned, have checked the items of this list together, item by item, and have satisfied ourselves that the answers are, to the best of our knowledge, correct. We have agreed to repeat the checks marked (R) at the stated interval.*
 
 
-Note de section : Les parties suivent la structure de la liste de contrôle navire/terre de l'ISGOTT, 6e édition ; les points sont formulés par la plateforme, le terminal applique l'édition sous licence dont il dispose. / The parts follow the structure of the ISGOTT 6th edition ship/shore safety checklist; the items are worded by the platform, the terminal applies its licensed edition.
+Note de section : Les parties suivent la structure de : Structure de l'ISGOTT, 6e édition, chapitre 25 ; les points sont formulés par la plateforme, le terminal applique l'édition dont il dispose. / The parts follow the structure of: Structure of ISGOTT, 6th edition, chapter 25; the items are worded by the platform, the terminal applies its own edition.
 
 **Signatures** : NAV — Pour le navire / For the ship · TER — Pour le terminal / For the terminal
 
-## 6.6 `PRE_TRANSFER` — Accord de transfert — réunion pré-transfert / Transfer agreement — pre-transfer meeting
+## 6.7 `BLU_CHECKLIST` — Liste de contrôle navire / terre — vrac sec / Ship/shore safety checklist — dry bulk
+
+Partie émettrice : TER — Terminal / dépôt. Standard : Code BLU de l'OMI (résolution A.862(20)), appendice 3 ; Code IMSBC / IMO BLU Code (resolution A.862(20)), appendix 3; IMSBC Code. Rôles émetteurs : NAV, TER. Type de document : `BLU_CHECKLIST`. Répond à : `M0:28`. Offert : toujours. Orientation : portrait. Objet : La liste de contrôle navire/terre du Code BLU, signée avant le chargement ou le déchargement d'un vraquier et répétée pendant.
+
+**Section (champs) — Identification / Identification**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Navire / Vessel | Vessel.name, Vessel.imo | demi |
+| Poste / Berth | PortCall.berth ou CallStage.berth_kind de l'étape en cours | demi |
+| Produit / Product | PortCall.product | demi |
+| Opération / Operation | PortCall.template_codes | demi |
+| Date et heure d'arrivée au poste (ATB) / Date and time of berthing (ATB) | PortCall.atb | demi |
+| Terminal / Terminal | CallParty TER active (Organization.name) | demi |
+| Liste de contrôle en ligne / On-line checklist | SafetyChecklist.version, status, signed_at | demi |
+| Intervalle des vérifications répétées (h) / Interval of the repetitive checks (h) | SafetyChecklist.repeat_interval_h | demi |
+
+**Section (liste de contrôle) — Partie 1 — Navire : vérifications avant les opérations / Part 1 — Ship: checks before the operations**
+
+Colonnes à cocher : Navire / Ship ; colonne remarques.
+
+| Point de contrôle FR / EN |
+|---|
+| 1.1 — Tirant d'eau et tirant d'air du navire compatibles avec le poste et la profondeur disponible / Draft and air draft of the ship within the berth's depth and clearance |
+| 1.2 — Amarres tenues et adaptées aux conditions locales ; surveillance prévue pendant l'opération (R) / Moorings holding and suited to the local conditions; watch planned during the operations |
+| 1.3 — Plan de chargement ou de déchargement établi, calculé pour la stabilité et les contraintes, remis au terminal / Loading or unloading plan prepared, checked for stability and stresses, handed to the terminal |
+| 1.4 — Cales inspectées, prêtes et acceptées ; panneaux manœuvrables ; cales interdites identifiées / Holds inspected, ready and accepted; hatch covers operable; holds not to be worked identified |
+| 1.5 — Déballastage ou ballastage planifié au rythme de la cadence convenue ; pompes et vannes essayées / Deballasting or ballasting planned at the agreed rate; pumps and valves tested |
+| 1.6 — Déclaration de cargaison du chargeur reçue (Code IMSBC) : groupe, humidité, TML, dangers / Shipper's cargo declaration received (IMSBC Code): group, moisture, TML, hazards |
+
+Note de section : (R) : point répété pendant les opérations à l'intervalle convenu / (R): repeated during the operations at the agreed interval
+
+**Section (liste de contrôle) — Partie 2 — Terminal : vérifications avant les opérations / Part 2 — Terminal: checks before the operations**
+
+Colonnes à cocher : Terre / Shore ; colonne remarques.
+
+| Point de contrôle FR / EN |
+|---|
+| 2.1 — Profondeur au poste et dégagements des moyens de manutention vérifiés pour le navire annoncé / Depth at the berth and clearances of the handling equipment checked for the vessel announced |
+| 2.2 — Moyens de manutention (grues, bennes, trémies, bande, chargeur) contrôlés ; cadence annoncée réalisable / Handling equipment (cranes, grabs, hoppers, belt, shiploader) checked; the announced rate is achievable |
+| 2.3 — Aires ou magasins de réception, ou stock à charger, disponibles pour la quantité prévue / Receiving areas or warehouses, or the stock to load, available for the planned quantity |
+| 2.4 — Prévisions météo compatibles avec l'opération (vent, pluie pour les cargaisons sensibles, houle) (R) / Weather forecast compatible with the operations (wind, rain for sensitive cargoes, swell) |
+| 2.5 — Personnel de permanence désigné et joignable ; moyens de communication navire-terminal essayés / Duty personnel assigned and reachable; ship/terminal communication means tested |
+
+Note de section : (R) : point répété pendant les opérations à l'intervalle convenu / (R): repeated during the operations at the agreed interval
+
+**Section (liste de contrôle) — Partie 3 — Navire et terminal : plan convenu et accords écrits / Part 3 — Ship and terminal: agreed plan and written agreements**
+
+Colonnes à cocher : Navire / Ship · Terre / Shore ; colonne remarques.
+
+| Point de contrôle FR / EN |
+|---|
+| 3.1 — Séquence de chargement ou de déchargement convenue (cales, quantités par passe, cadence par étape) / Agreed loading or unloading sequence (holds, quantities per pour, rate per step) |
+| 3.2 — Cadence maximale et quantité par passe convenues ; signal et délai d'arrêt convenus / Agreed maximum rate and quantity per pour; stop signal and stop time agreed |
+| 3.3 — Moyens de communication convenus (canal VHF, téléphone) et langue de travail / Agreed communication means (VHF channel, telephone) and working language |
+| 3.4 — Procédure d'urgence convenue : arrêt des opérations, incendie, chute de personne, pollution, mauvais temps / Agreed emergency procedure: stop of the operations, fire, man overboard, pollution, bad weather |
+| 3.5 — Accès au navire sûr (passerelle, filet, éclairage) ; zones interdites pendant la manutention signalées (R) / Safe access to the ship (gangway, net, lighting); areas closed during handling marked |
+| 3.6 — Nivellement (trimming) convenu ; moyens prévus ; limites de hauteur de chute de la cargaison / Trimming agreed; means provided; limits to the drop height of the cargo |
+| 3.7 — Pesée ou comptage convenus : bascule, bande, draft survey ; rapprochement des quantités par cale / Weighing or counting agreed: weighbridge, belt scale, draft survey; reconciliation of the quantities per hold |
+
+Note de section : (R) : point répété pendant les opérations à l'intervalle convenu / (R): repeated during the operations at the agreed interval
+
+**Section (liste de contrôle) — Partie 4 — Vérifications répétées pendant les opérations / Part 4 — Repetitive checks during the operations**
+
+Colonnes à cocher : Navire / Ship ; colonne remarques.
+
+| Point de contrôle FR / EN |
+|---|
+| 4.1 — Contraintes de coque et stabilité suivies à chaque étape ; déballastage conforme au plan (R) / Hull stresses and stability followed at every step; deballasting as planned |
+| 4.2 — Cadence et séquence respectées ; changement de cale annoncé au navire avant exécution (R) / Rate and sequence respected; change of hold announced to the ship before it is made |
+| 4.3 — Dommages au navire ou aux installations (chocs de benne, panneaux, hiloires) signalés aussitôt (R) / Damage to the ship or to the facilities (grab strikes, hatch covers, coamings) reported at once |
+| 4.4 — Poussières, déversements et résidus maîtrisés ; cales et pont nettoyés avant fermeture (R) / Dust, spillages and residues under control; holds and deck cleaned before closing |
+
+Note de section : (R) : point répété pendant les opérations à l'intervalle convenu / (R): repeated during the operations at the agreed interval
+
+**Section (texte) — Déclaration / Declaration**
+
+> Nous, soussignés, avons vérifié ensemble, point par point, les éléments de cette liste, et nous nous sommes assurés que les réponses sont, à notre connaissance, exactes. Nous avons convenu de répéter les vérifications marquées (R) à l'intervalle indiqué.
+>
+> *We, the undersigned, have checked the items of this list together, item by item, and have satisfied ourselves that the answers are, to the best of our knowledge, correct. We have agreed to repeat the checks marked (R) at the stated interval.*
+
+
+Note de section : Les parties suivent la structure de : Code BLU de l'OMI (résolution A.862(20)), appendice 3 ; les points sont formulés par la plateforme, le terminal applique l'édition dont il dispose. / The parts follow the structure of: IMO BLU Code (resolution A.862(20)), appendix 3; the items are worded by the platform, the terminal applies its own edition.
+
+**Signatures** : NAV — Pour le navire / For the ship · TER — Pour le terminal / For the terminal
+
+## 6.8 `CARGO_SAFETY_CHECKLIST` — Liste de contrôle sécurité des opérations de manutention / Cargo operations safety checklist
+
+Partie émettrice : TER — Terminal / dépôt. Standard : Recueil de directives pratiques du BIT « Sécurité et santé dans les ports » ; pratique des terminaux à conteneurs, divers et rouliers / ILO code of practice “Safety and health in ports”; container, general cargo and ro-ro terminal practice. Rôles émetteurs : NAV, TER. Type de document : `CARGO_SAFETY_CHECKLIST`. Répond à : `M0:28`. Offert : toujours. Orientation : portrait. Objet : La liste de contrôle de sécurité des opérations de manutention, signée par le navire et le terminal avant les opérations et répétée pendant.
+
+**Section (champs) — Identification / Identification**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Navire / Vessel | Vessel.name, Vessel.imo | demi |
+| Poste / Berth | PortCall.berth ou CallStage.berth_kind de l'étape en cours | demi |
+| Produit / Product | PortCall.product | demi |
+| Opération / Operation | PortCall.template_codes | demi |
+| Date et heure d'arrivée au poste (ATB) / Date and time of berthing (ATB) | PortCall.atb | demi |
+| Terminal / Terminal | CallParty TER active (Organization.name) | demi |
+| Liste de contrôle en ligne / On-line checklist | SafetyChecklist.version, status, signed_at | demi |
+| Intervalle des vérifications répétées (h) / Interval of the repetitive checks (h) | SafetyChecklist.repeat_interval_h | demi |
+
+**Section (liste de contrôle) — Partie A — Navire : vérifications avant les opérations / Part A — Ship: checks before the operations**
+
+Colonnes à cocher : Navire / Ship ; colonne remarques.
+
+| Point de contrôle FR / EN |
+|---|
+| A.1 — Amarres tenues et surveillées ; passerelle ou coupée sûre, filet de sécurité, éclairage de nuit (R) / Moorings holding and watched; gangway or accommodation ladder safe, safety net, lighting at night |
+| A.2 — Plan de chargement ou de déchargement, stabilité et saisissage établis et remis au terminal / Loading or discharge plan, stability and lashing prepared and handed to the terminal |
+| A.3 — Engins de levage du bord (grues, mâts de charge) certifiés, SWL affichée, essais récents / Ship's lifting gear (cranes, derricks) certified, SWL marked, recent tests |
+| A.4 — Panneaux, rampes et portes manœuvrables ; cales, ponts et garages éclairés et ventilés / Hatch covers, ramps and doors operable; holds, decks and garages lit and ventilated |
+| A.5 — Marchandises dangereuses déclarées, ségrégées et signalées ; fiches de données disponibles / Dangerous goods declared, segregated and marked; safety data sheets available |
+
+Note de section : (R) : point répété pendant les opérations à l'intervalle convenu / (R): repeated during the operations at the agreed interval
+
+**Section (liste de contrôle) — Partie B — Terminal : vérifications avant les opérations / Part B — Terminal: checks before the operations**
+
+Colonnes à cocher : Terre / Shore ; colonne remarques.
+
+| Point de contrôle FR / EN |
+|---|
+| B.1 — Moyens de manutention (portiques, grues mobiles, chariots, tracteurs) contrôlés ; SWL compatible avec les colis / Handling equipment (gantries, mobile cranes, forklifts, tractors) checked; SWL compatible with the cargo |
+| B.2 — Aires de dépôt, de parc ou de transit disponibles et balisées ; circulation organisée / Storage, parking or transit areas available and marked out; traffic organised |
+| B.3 — Équipes désignées, briefées, équipées (EPI) ; personnel d'encadrement joignable / Gangs assigned, briefed and equipped (PPE); supervisors reachable |
+| B.4 — Prévisions météo compatibles (vent pour les portiques et les colis volumineux, pluie pour les cargaisons sensibles) (R) / Weather forecast compatible (wind for the gantries and bulky cargo, rain for sensitive cargoes) |
+| B.5 — Moyens incendie, premiers secours et accès des secours vérifiés ; alarme et point de rassemblement connus / Firefighting means, first aid and emergency access checked; alarm and muster point known |
+
+Note de section : (R) : point répété pendant les opérations à l'intervalle convenu / (R): repeated during the operations at the agreed interval
+
+**Section (liste de contrôle) — Partie C — Navire et terminal : accords de la réunion préopérationnelle / Part C — Ship and terminal: agreements of the pre-operational meeting**
+
+Colonnes à cocher : Navire / Ship · Terre / Shore ; colonne remarques.
+
+| Point de contrôle FR / EN |
+|---|
+| C.1 — Séquence des opérations convenue (cales ou baies, ponts, lots) et cadence prévue / Agreed sequence of the operations (holds or bays, decks, lots) and planned rate |
+| C.2 — Moyens de communication convenus (VHF, téléphone), langue de travail, signaleurs désignés / Agreed communication means (VHF, telephone), working language, signalmen designated |
+| C.3 — Procédure d'urgence convenue : arrêt des opérations, incendie, blessé, chute de colis, pollution / Agreed emergency procedure: stop of the operations, fire, injury, dropped load, pollution |
+| C.4 — Zones de manutention interdites au personnel non concerné ; cheminements piétons séparés des engins (R) / Handling areas closed to unconcerned staff; pedestrian routes separated from the vehicles |
+| C.5 — Travaux à chaud, fumeurs, espaces clos : interdits ou sous permis pendant les opérations / Hot work, smoking, enclosed spaces: forbidden or under permit during the operations |
+| C.6 — Pointage contradictoire convenu : qui compte, où, comment les réserves et dommages sont consignés / Joint tally agreed: who counts, where, how remarks and damage are recorded |
+
+Note de section : (R) : point répété pendant les opérations à l'intervalle convenu / (R): repeated during the operations at the agreed interval
+
+**Section (liste de contrôle) — Partie D — Vérifications répétées pendant les opérations / Part D — Repetitive checks during the operations**
+
+Colonnes à cocher : Navire / Ship ; colonne remarques.
+
+| Point de contrôle FR / EN |
+|---|
+| D.1 — Stabilité et saisissage suivis ; ballast ajusté ; gîte et assiette maîtrisées (R) / Stability and lashing followed; ballast adjusted; list and trim under control |
+| D.2 — Cadence et séquence respectées ; incidents, dommages et conteneurs ou colis endommagés consignés (R) / Rate and sequence respected; incidents, damage and damaged containers or packages recorded |
+| D.3 — Accès, éclairage et amarres vérifiés à chaque relève d'équipe (R) / Access, lighting and moorings checked at every change of shift |
+| D.4 — Marchandises dangereuses et reefers surveillés (branchement, température, fuites) (R) / Dangerous goods and reefers monitored (connection, temperature, leaks) |
+
+Note de section : (R) : point répété pendant les opérations à l'intervalle convenu / (R): repeated during the operations at the agreed interval
+
+**Section (texte) — Déclaration / Declaration**
+
+> Nous, soussignés, avons vérifié ensemble, point par point, les éléments de cette liste, et nous nous sommes assurés que les réponses sont, à notre connaissance, exactes. Nous avons convenu de répéter les vérifications marquées (R) à l'intervalle indiqué.
+>
+> *We, the undersigned, have checked the items of this list together, item by item, and have satisfied ourselves that the answers are, to the best of our knowledge, correct. We have agreed to repeat the checks marked (R) at the stated interval.*
+
+
+Note de section : Les parties suivent la structure de : Recueil de directives pratiques du BIT « Sécurité et santé dans les ports » ; pratique des terminaux ; les points sont formulés par la plateforme, le terminal applique l'édition dont il dispose. / The parts follow the structure of: ILO code of practice “Safety and health in ports”; terminal practice; the items are worded by the platform, the terminal applies its own edition.
+
+**Signatures** : NAV — Pour le navire / For the ship · TER — Pour le terminal / For the terminal
+
+## 6.9 `PRE_TRANSFER` — Accord de transfert — réunion pré-transfert / Transfer agreement — pre-transfer meeting
 
 Partie émettrice : TER — Terminal / dépôt. Standard : ISGOTT, 6e édition, réunion pré-transfert et accords écrits / ISGOTT, 6th edition, pre-transfer meeting and written agreements. Rôles émetteurs : NAV, TER. Type de document : `PRE_TRANSFER_MINUTES`. Répond à : `M0:27`. Offert : toujours. Orientation : portrait. Objet : Le compte rendu de la réunion pré-transfert : paramètres, communication, urgence, accord écrit.
 
@@ -356,7 +664,7 @@ Partie émettrice : TER — Terminal / dépôt. Standard : ISGOTT, 6e édition, 
 
 **Signatures** : TER — Terminal / Terminal · NAV — Navire / Ship · INS — Inspecteur / Surveyor
 
-## 6.7 `ULLAGE` — Rapport de jaugeage / Ullage / sounding report
+## 6.10 `ULLAGE` — Rapport de jaugeage / Ullage / sounding report
 
 Partie émettrice : INS — Inspecteur et laboratoire. Standard : API MPMS chapitre 17.1 et 17.2 (inspection des cargaisons maritimes) ; EI HM 28 ; tables ASTM D1250 / API MPMS chapters 17.1 and 17.2 (marine cargo inspection); EI HM 28; ASTM D1250 tables. Rôles émetteurs : INS, NAV, TER. Type de document : `ULLAGE_REPORT`. Répond à : `M1:1.05`, `M1:1.15`, `M2:2.05`, `M2:2.14`, `M3:3.14`. Offert : toujours. Orientation : paysage. Objet : Le relevé de jaugeage des citernes, avec les quantités bord, terre et inspecteur du registre.
 
@@ -402,7 +710,7 @@ Lignes préremplies : Measurement (kind, product, unit) et MeasurementValue cour
 
 **Signatures** : INS — Inspecteur / Surveyor · NAV — Officier de quart / chef de cargaison / Chief officer · TER — Terminal / Terminal
 
-## 6.8 `HOSES` — Relevé de connexion et de déconnexion / Hose / arm connection and disconnection record
+## 6.11 `HOSES` — Relevé de connexion et de déconnexion / Hose / arm connection and disconnection record
 
 Partie émettrice : TER — Terminal / dépôt. Standard : ISGOTT, 6e édition (flexibles et bras de chargement) ; OCIMF Guide to Manufacturing and Purchasing Hoses for Offshore Moorings / ISGOTT, 6th edition (hoses and loading arms); OCIMF hose guidelines. Rôles émetteurs : NAV, TER. Type de document : `HOSE_RECORD`. Répond à : `M1:1.09`, `M1:1.13`, `MA2:A2.04`. Offert : toujours. Orientation : portrait. Objet : Le relevé des connexions et déconnexions des flexibles ou bras, avec les essais.
 
@@ -435,9 +743,9 @@ Lignes préremplies : jalons HOSES_CONNECTED et HOSES_DISCONNECTED (declared_at)
 
 **Signatures** : TER — Terminal / Terminal · NAV — Navire / Ship
 
-## 6.9 `PROTEST` — Lettre de protestation / Letter of protest
+## 6.12 `PROTEST` — Lettre de protestation / Letter of protest
 
-Partie émettrice : AGE — Agence maritime. Standard : Usage maritime — réserve de droits, sans reconnaissance de responsabilité / Maritime practice — reservation of rights without admission of liability. Rôles émetteurs : AGE, INS, NAV, PRE, TER. Type de document : `PROTEST`. Répond à : `M1:1.19`, `M4:4.09`. Offert : toujours. Orientation : portrait. Objet : La lettre de protestation d'une partie, avec réserve de droits et accusé de réception.
+Partie émettrice : AGE — Agence maritime. Standard : Usage maritime — réserve de droits, sans reconnaissance de responsabilité / Maritime practice — reservation of rights without admission of liability. Rôles émetteurs : AGE, INS, NAV, PRE, TER. Type de document : `PROTEST`. Répond à : `M1:1.19`, `M4:4.09`, `MB1:B1.17`, `MB2:B2.19`, `MG1:G1.14`, `MR1:R1.12`. Offert : toujours. Orientation : portrait. Objet : La lettre de protestation d'une partie, avec réserve de droits et accusé de réception.
 
 **Section (champs) — Expéditeur et destinataire / From and to**
 
@@ -479,7 +787,7 @@ Partie émettrice : AGE — Agence maritime. Standard : Usage maritime — rése
 
 **Signatures** : AGE — Expéditeur / Issuer · TER — Destinataire — reçu / Recipient — received
 
-## 6.10 `FAL` — Formulaires FAL — déclaration générale et liste d'équipage / FAL forms — general declaration and crew list
+## 6.13 `FAL` — Formulaires FAL — déclaration générale et liste d'équipage / FAL forms — general declaration and crew list
 
 Partie émettrice : AGE — Agence maritime. Standard : Convention FAL de l'OMI, formulaires 1 et 5 (modèles 2024) / IMO FAL Convention, forms 1 and 5 (2024 models). Rôles émetteurs : AGE, NAV. Type de document : `FAL_FORMS`. Répond à : `M0:13`. Offert : toujours. Orientation : portrait. Objet : La déclaration générale et la liste d'équipage des formulaires FAL de l'OMI.
 
@@ -517,7 +825,7 @@ Note de section : Les formulaires FAL sont déposés au guichet unique de l'Éta
 
 **Signatures** : NAV — Capitaine ou agent autorisé / Master or authorized agent
 
-## 6.11 `DOS` — Déclaration de sûreté / Declaration of security
+## 6.14 `DOS` — Déclaration de sûreté / Declaration of security
 
 Partie émettrice : SUR — Sûreté. Standard : Code ISPS, partie B, appendice 1 (modèle de déclaration de sûreté) / ISPS Code, part B, appendix 1 (model declaration of security). Rôles émetteurs : NAV, SUR. Type de document : `SECURITY_DECLARATION`. Répond à : `M0:30`, `M9:9.09`. Offert : toujours. Orientation : portrait. Objet : La déclaration de sûreté entre le navire et l'installation portuaire (code ISPS). Note : Niveaux de sûreté et arrangements à remplir à la main : ils ne sont pas enregistrés dans le registre de l'escale.
 
@@ -563,7 +871,7 @@ Note de section : Les signataires certifient que les mesures et dispositions de 
 
 **Signatures** : SUR — Agent de sûreté de l'installation portuaire (PFSO) / Port facility security officer (PFSO) · NAV — Agent de sûreté du navire (SSO) / capitaine / Ship security officer (SSO) / master
 
-## 6.12 `MDH` — Déclaration maritime de santé / Maritime declaration of health
+## 6.15 `MDH` — Déclaration maritime de santé / Maritime declaration of health
 
 Partie émettrice : NAV — Navire / capitaine. Standard : Règlement sanitaire international (2005) de l'OMS, annexe 8 / WHO International Health Regulations (2005), annex 8. Rôles émetteurs : NAV. Type de document : `MDH`. Répond à : `M0:14`. Offert : toujours. Orientation : portrait. Objet : La déclaration maritime de santé du capitaine à l'autorité sanitaire.
 
@@ -610,7 +918,7 @@ Note de section : Modèle de l'annexe 8 du Règlement sanitaire international (2
 
 **Signatures** : NAV — Capitaine / Master · NAV — Médecin de bord (le cas échéant) / Ship's surgeon (if any)
 
-## 6.13 `WASTE` — Notification préalable de dépôt des déchets / Advance notification form for waste delivery
+## 6.16 `WASTE` — Notification préalable de dépôt des déchets / Advance notification form for waste delivery
 
 Partie émettrice : NAV — Navire / capitaine. Standard : Circulaire OMI MEPC.1/Circ.834/Rev.1, appendice 1 (MARPOL, installations de réception portuaires) / IMO circular MEPC.1/Circ.834/Rev.1, appendix 1 (MARPOL port reception facilities). Rôles émetteurs : AGE, NAV. Type de document : `WASTE_NOTIFICATION`. Répond à : `M0:16`, `M6:6.01`. Offert : toujours. Orientation : portrait. Objet : La notification préalable des déchets à déposer (MARPOL, installations de réception).
 
@@ -645,7 +953,7 @@ Note de section : Modèle de l'appendice 1 de la circulaire OMI MEPC.1/Circ.834/
 
 **Signatures** : NAV — Capitaine / Master · PRE — Prestataire — reçu / Provider — received
 
-## 6.14 `STS` — Listes de contrôle STS / STS checklists
+## 6.17 `STS` — Listes de contrôle STS / STS checklists
 
 Partie émettrice : PRE — Prestataires. Standard : Structure du Ship to Ship Transfer Guide for Petroleum, Chemicals and Liquefied Gases (OCIMF / ICS / CDI / SIGTTO, 2013) / Structure of the Ship to Ship Transfer Guide for Petroleum, Chemicals and Liquefied Gases (OCIMF / ICS / CDI / SIGTTO, 2013). Rôles émetteurs : NAV, PRE. Type de document : `STS_CHECKLISTS`. Répond à : `M3:3.10`. Offert : gabarit M3 ou escale reliée. Orientation : portrait. Objet : Les listes de contrôle de l'opération STS, avant l'opération, la mise à couple, le transfert et après.
 
@@ -709,7 +1017,7 @@ Note de section : Structure des listes de contrôle du Ship to Ship Transfer Gui
 
 **Signatures** : PRE — POAC / POAC · NAV — Capitaine / Master
 
-## 6.15 `PILOT_CARD` — Fiche pilote / Pilot card
+## 6.18 `PILOT_CARD` — Fiche pilote / Pilot card
 
 Partie émettrice : NAV — Navire / capitaine. Standard : Résolution OMI A.960(23), annexe 2 / IMO resolution A.960(23), annex 2. Rôles émetteurs : NAV, SVC. Type de document : `PILOT_CARD`. Répond à : `M0:18`, `M0:26`. Offert : toujours. Orientation : portrait. Objet : La fiche pilote remise au pilote à l'embarquement (échange capitaine-pilote).
 
@@ -751,7 +1059,7 @@ Note de section : Modèle de la fiche pilote de l'annexe 2 de la résolution OMI
 
 **Signatures** : NAV — Capitaine / Master · SVC — Pilote / Pilot
 
-## 6.16 `BDN` — Note de livraison de soutes / Bunker delivery note
+## 6.19 `BDN` — Note de livraison de soutes / Bunker delivery note
 
 Partie émettrice : PRE — Prestataires. Standard : MARPOL, annexe VI, appendice V / MARPOL Annex VI, appendix V. Rôles émetteurs : PRE. Type de document : `BUNKER_DELIVERY_NOTE`. Répond à : `M4:4.08`. Offert : gabarit M4. Orientation : portrait. Objet : La note de livraison de soutes du fournisseur (MARPOL annexe VI).
 
@@ -780,7 +1088,7 @@ Note de section : Modèle de l'appendice V de l'annexe VI de MARPOL ; conservé 
 
 **Signatures** : PRE — Représentant du fournisseur / Supplier's representative · NAV — Chef mécanicien / Chief engineer
 
-## 6.17 `AUTH_VESSEL_ACCEPTANCE` — Autorisation — Acceptation de navire (vetting) / Authorization — Vessel acceptance (vetting)
+## 6.20 `AUTH_VESSEL_ACCEPTANCE` — Autorisation — Acceptation de navire (vetting) / Authorization — Vessel acceptance (vetting)
 
 Partie émettrice : CAP — Capitainerie. Standard : Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique / Written act of the port's decision on the request (FLX-SPEC-002, EF-2.5); public verification code. Rôles émetteurs : APO, CAP. Type de document : `AUTHORIZATION`. Répond à : `REQ:VESSEL_ACCEPTANCE`, `M0:07`. Offert : toujours. Orientation : portrait. Objet : L'acte écrit de la décision « Acceptation de navire (vetting) » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification.
 
@@ -834,7 +1142,7 @@ Note de section : Les valeurs ci-dessus sont celles saisies par le demandeur dan
 
 **Section (code de vérification) — Vérification publique / Public verification**
 
-QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Code M9VXZWQJ3T — existence et validité vérifiables sans accès au dossier de l'escale.
+QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Code X7QCKCDC3U — existence et validité vérifiables sans accès au dossier de l'escale.
 
 **Section (texte) — Mentions / Notes**
 
@@ -849,7 +1157,7 @@ QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Cod
 
 **Signatures** : CAP — Autorité — décision / Authority — decision · APO — Autorité — décision / Authority — decision · AGE — Agence — réception / Agency — receipt
 
-## 6.18 `AUTH_GREEN_LIGHT` — Autorisation — Feu vert / Authorization — Green light
+## 6.21 `AUTH_GREEN_LIGHT` — Autorisation — Feu vert / Authorization — Green light
 
 Partie émettrice : CAP — Capitainerie. Standard : Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique / Written act of the port's decision on the request (FLX-SPEC-002, EF-2.5); public verification code. Rôles émetteurs : CAP. Type de document : `AUTHORIZATION`. Répond à : `REQ:GREEN_LIGHT`, `M0:09`. Offert : toujours. Orientation : portrait. Objet : L'acte écrit de la décision « Feu vert » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification.
 
@@ -898,7 +1206,7 @@ Note de section : Les valeurs ci-dessus sont celles saisies par le demandeur dan
 
 **Section (code de vérification) — Vérification publique / Public verification**
 
-QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Code 758K34GTFG — existence et validité vérifiables sans accès au dossier de l'escale.
+QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Code C4YE3SND25 — existence et validité vérifiables sans accès au dossier de l'escale.
 
 **Section (texte) — Mentions / Notes**
 
@@ -913,7 +1221,7 @@ QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Cod
 
 **Signatures** : CAP — Autorité — décision / Authority — decision · AGE — Agence — réception / Agency — receipt
 
-## 6.19 `AUTH_BERTH` — Autorisation — Attribution de poste et de créneau (autorisation d'accostage) / Authorization — Berth and slot assignment (berthing authorization)
+## 6.22 `AUTH_BERTH` — Autorisation — Attribution de poste et de créneau (autorisation d'accostage) / Authorization — Berth and slot assignment (berthing authorization)
 
 Partie émettrice : APO — Autorité portuaire. Standard : Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique / Written act of the port's decision on the request (FLX-SPEC-002, EF-2.5); public verification code. Rôles émetteurs : APO. Type de document : `AUTHORIZATION`. Répond à : `REQ:BERTH`, `M0:10`, `M0:11`. Offert : toujours. Orientation : portrait. Objet : L'acte écrit de la décision « Attribution de poste et de créneau (autorisation d'accostage) » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification.
 
@@ -967,7 +1275,7 @@ Note de section : Les valeurs ci-dessus sont celles saisies par le demandeur dan
 
 **Section (code de vérification) — Vérification publique / Public verification**
 
-QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Code PRZM6444CJ — existence et validité vérifiables sans accès au dossier de l'escale.
+QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Code EB8QVA5YH7 — existence et validité vérifiables sans accès au dossier de l'escale.
 
 **Section (texte) — Mentions / Notes**
 
@@ -982,7 +1290,7 @@ QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Cod
 
 **Signatures** : APO — Autorité — décision / Authority — decision · AGE — Agence — réception / Agency — receipt
 
-## 6.20 `AUTH_MOVEMENT` — Autorisation — Autorisation de mouvement / Authorization — Movement authorization
+## 6.23 `AUTH_MOVEMENT` — Autorisation — Autorisation de mouvement / Authorization — Movement authorization
 
 Partie émettrice : CAP — Capitainerie. Standard : Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique / Written act of the port's decision on the request (FLX-SPEC-002, EF-2.5); public verification code. Rôles émetteurs : CAP. Type de document : `AUTHORIZATION`. Répond à : `REQ:MOVEMENT`, `M0:25`. Offert : toujours. Orientation : portrait. Objet : L'acte écrit de la décision « Autorisation de mouvement » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification.
 
@@ -1037,7 +1345,7 @@ Note de section : Les valeurs ci-dessus sont celles saisies par le demandeur dan
 
 **Section (code de vérification) — Vérification publique / Public verification**
 
-QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Code X8TP2USSDR — existence et validité vérifiables sans accès au dossier de l'escale.
+QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Code FWT8SSUCQB — existence et validité vérifiables sans accès au dossier de l'escale.
 
 **Section (texte) — Mentions / Notes**
 
@@ -1052,7 +1360,7 @@ QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Cod
 
 **Signatures** : CAP — Autorité — décision / Authority — decision · AGE — Agence — réception / Agency — receipt · NAV — Capitaine — pris connaissance / Master — acknowledged
 
-## 6.21 `AUTH_FREE_PRATIQUE` — Autorisation — Libre pratique / Authorization — Free pratique
+## 6.24 `AUTH_FREE_PRATIQUE` — Autorisation — Libre pratique / Authorization — Free pratique
 
 Partie émettrice : ADM — Douanes, immigration, santé. Standard : Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique / Written act of the port's decision on the request (FLX-SPEC-002, EF-2.5); public verification code. Rôles émetteurs : ADM. Type de document : `AUTHORIZATION`. Répond à : `REQ:FREE_PRATIQUE`, `M0:21`. Offert : toujours. Orientation : portrait. Objet : L'acte écrit de la décision « Libre pratique » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification.
 
@@ -1106,7 +1414,7 @@ Note de section : Règlement sanitaire international (2005), articles 27 et 28 :
 
 **Section (code de vérification) — Vérification publique / Public verification**
 
-QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Code DK39ZK3B6P — existence et validité vérifiables sans accès au dossier de l'escale.
+QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Code MEG93M53GB — existence et validité vérifiables sans accès au dossier de l'escale.
 
 **Section (texte) — Mentions / Notes**
 
@@ -1121,7 +1429,7 @@ QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Cod
 
 **Signatures** : ADM — Autorité — décision / Authority — decision · AGE — Agence — réception / Agency — receipt
 
-## 6.22 `AUTH_CUSTOMS_IMMIGRATION` — Autorisation — Formalités douanières et d'immigration (arrivée) / Authorization — Customs and immigration formalities (arrival)
+## 6.25 `AUTH_CUSTOMS_IMMIGRATION` — Autorisation — Formalités douanières et d'immigration (arrivée) / Authorization — Customs and immigration formalities (arrival)
 
 Partie émettrice : ADM — Douanes, immigration, santé. Standard : Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique / Written act of the port's decision on the request (FLX-SPEC-002, EF-2.5); public verification code. Rôles émetteurs : ADM. Type de document : `AUTHORIZATION`. Répond à : `REQ:CUSTOMS_IMMIGRATION`, `M0:22`. Offert : toujours. Orientation : portrait. Objet : L'acte écrit de la décision « Formalités douanières et d'immigration (arrivée) » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification.
 
@@ -1179,7 +1487,7 @@ Lignes préremplies : aucune ; lignes vierges ajoutées : 5.
 
 **Section (code de vérification) — Vérification publique / Public verification**
 
-QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Code U6RVGTYH4Y — existence et validité vérifiables sans accès au dossier de l'escale.
+QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Code JYKR383QHH — existence et validité vérifiables sans accès au dossier de l'escale.
 
 **Section (texte) — Mentions / Notes**
 
@@ -1194,7 +1502,7 @@ QR de l'adresse publique de vérification (`/verifier/<code>/`) ; légende : Cod
 
 **Signatures** : ADM — Autorité — décision / Authority — decision · AGE — Agence — réception / Agency — receipt
 
-## 6.23 `AUTH_OUTWARD_FORMALITIES` — Autorisation — Formalités de sortie / Authorization — Outward formalities
+## 6.26 `AUTH_OUTWARD_FORMALITIES` — Autorisation — Formalités de sortie / Authorization — Outward formalities
 
 Partie émettrice : ADM — Douanes, immigration, santé. Standard : Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique / Written act of the port's decision on the request (FLX-SPEC-002, EF-2.5); public verification code. Rôles émetteurs : ADM. Type de document : `AUTHORIZATION`. Répond à : `REQ:OUTWARD_FORMALITIES`, `M0:33`. Offert : toujours. Orientation : portrait. Objet : L'acte écrit de la décision « Formalités de sortie » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification.
 
@@ -1257,7 +1565,7 @@ Note de section : Les valeurs ci-dessus sont celles saisies par le demandeur dan
 
 **Signatures** : ADM — Autorité — décision / Authority — decision · AGE — Agence — réception / Agency — receipt
 
-## 6.24 `AUTH_DEPARTURE_CLEARANCE` — Autorisation — Congé de départ / Authorization — Departure clearance
+## 6.27 `AUTH_DEPARTURE_CLEARANCE` — Autorisation — Congé de départ / Authorization — Departure clearance
 
 Partie émettrice : CAP — Capitainerie. Standard : Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique / Written act of the port's decision on the request (FLX-SPEC-002, EF-2.5); public verification code. Rôles émetteurs : CAP. Type de document : `AUTHORIZATION`. Répond à : `REQ:DEPARTURE_CLEARANCE`, `M0:34`. Offert : toujours. Orientation : portrait. Objet : L'acte écrit de la décision « Congé de départ » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification.
 
@@ -1321,7 +1629,7 @@ Note de section : Les valeurs ci-dessus sont celles saisies par le demandeur dan
 
 **Signatures** : CAP — Autorité — décision / Authority — decision · AGE — Agence — réception / Agency — receipt · NAV — Capitaine — pris connaissance / Master — acknowledged
 
-## 6.25 `AUTH_ANCHORAGE_POSITION` — Autorisation — Position de mouillage / Authorization — Anchorage position
+## 6.28 `AUTH_ANCHORAGE_POSITION` — Autorisation — Position de mouillage / Authorization — Anchorage position
 
 Partie émettrice : CAP — Capitainerie. Standard : Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique / Written act of the port's decision on the request (FLX-SPEC-002, EF-2.5); public verification code. Rôles émetteurs : CAP. Type de document : `AUTHORIZATION`. Répond à : `REQ:ANCHORAGE_POSITION`, `MA3:A3.01`. Offert : gabarit MA3. Orientation : portrait. Objet : L'acte écrit de la décision « Position de mouillage » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification.
 
@@ -1385,7 +1693,7 @@ Note de section : Les valeurs ci-dessus sont celles saisies par le demandeur dan
 
 **Signatures** : CAP — Autorité — décision / Authority — decision · AGE — Agence — réception / Agency — receipt · NAV — Capitaine — pris connaissance / Master — acknowledged
 
-## 6.26 `AUTH_STS_ZONE` — Autorisation — Autorisation de zone et de fenêtre STS / Authorization — STS area and window authorization
+## 6.29 `AUTH_STS_ZONE` — Autorisation — Autorisation de zone et de fenêtre STS / Authorization — STS area and window authorization
 
 Partie émettrice : CAP — Capitainerie. Standard : Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique / Written act of the port's decision on the request (FLX-SPEC-002, EF-2.5); public verification code. Rôles émetteurs : CAP. Type de document : `AUTHORIZATION`. Répond à : `REQ:STS_ZONE`, `M3:3.03`. Offert : gabarit M3 ou escale reliée. Orientation : portrait. Objet : L'acte écrit de la décision « Autorisation de zone et de fenêtre STS » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification.
 
@@ -1449,7 +1757,7 @@ Note de section : Les valeurs ci-dessus sont celles saisies par le demandeur dan
 
 **Signatures** : CAP — Autorité — décision / Authority — decision · AGE — Agence — réception / Agency — receipt · NAV — Capitaine — pris connaissance / Master — acknowledged
 
-## 6.27 `AUTH_BUNKERING` — Autorisation — Autorisation de soutage / Authorization — Bunkering authorization
+## 6.30 `AUTH_BUNKERING` — Autorisation — Autorisation de soutage / Authorization — Bunkering authorization
 
 Partie émettrice : CAP — Capitainerie. Standard : Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique / Written act of the port's decision on the request (FLX-SPEC-002, EF-2.5); public verification code. Rôles émetteurs : CAP. Type de document : `AUTHORIZATION`. Répond à : `REQ:BUNKERING`, `M4:4.01`. Offert : gabarit M4. Orientation : portrait. Objet : L'acte écrit de la décision « Autorisation de soutage » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification.
 
@@ -1512,7 +1820,7 @@ Note de section : Les valeurs ci-dessus sont celles saisies par le demandeur dan
 
 **Signatures** : CAP — Autorité — décision / Authority — decision · AGE — Agence — réception / Agency — receipt · NAV — Capitaine — pris connaissance / Master — acknowledged
 
-## 6.28 `AUTH_BALLAST_DISCHARGE` — Autorisation — Rejet d'eaux de ballast / Authorization — Ballast water discharge
+## 6.31 `AUTH_BALLAST_DISCHARGE` — Autorisation — Rejet d'eaux de ballast / Authorization — Ballast water discharge
 
 Partie émettrice : CAP — Capitainerie. Standard : Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique / Written act of the port's decision on the request (FLX-SPEC-002, EF-2.5); public verification code. Rôles émetteurs : APO, CAP. Type de document : `AUTHORIZATION`. Répond à : `REQ:BALLAST_DISCHARGE`, `M5:5.04`. Offert : gabarit M5. Orientation : portrait. Objet : L'acte écrit de la décision « Rejet d'eaux de ballast » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification.
 
@@ -1575,7 +1883,7 @@ Note de section : Les valeurs ci-dessus sont celles saisies par le demandeur dan
 
 **Signatures** : CAP — Autorité — décision / Authority — decision · APO — Autorité — décision / Authority — decision · AGE — Agence — réception / Agency — receipt · NAV — Capitaine — pris connaissance / Master — acknowledged
 
-## 6.29 `AUTH_GAS_FREEING` — Autorisation — Nettoyage / dégazage à quai / Authorization — Cleaning / gas-freeing alongside
+## 6.32 `AUTH_GAS_FREEING` — Autorisation — Nettoyage / dégazage à quai / Authorization — Cleaning / gas-freeing alongside
 
 Partie émettrice : CAP — Capitainerie. Standard : Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique / Written act of the port's decision on the request (FLX-SPEC-002, EF-2.5); public verification code. Rôles émetteurs : CAP. Type de document : `AUTHORIZATION`. Répond à : `REQ:GAS_FREEING`, `M6:6.04`. Offert : gabarit M6. Orientation : portrait. Objet : L'acte écrit de la décision « Nettoyage / dégazage à quai » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification.
 
@@ -1638,7 +1946,7 @@ Note de section : Les valeurs ci-dessus sont celles saisies par le demandeur dan
 
 **Signatures** : CAP — Autorité — décision / Authority — decision · AGE — Agence — réception / Agency — receipt · NAV — Capitaine — pris connaissance / Master — acknowledged
 
-## 6.30 `AUTH_HOT_WORK` — Autorisation — Autorisation de travaux (point chaud) / Authorization — Works authorization (hot work)
+## 6.33 `AUTH_HOT_WORK` — Autorisation — Autorisation de travaux (point chaud) / Authorization — Works authorization (hot work)
 
 Partie émettrice : CAP — Capitainerie. Standard : Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique / Written act of the port's decision on the request (FLX-SPEC-002, EF-2.5); public verification code. Rôles émetteurs : CAP. Type de document : `AUTHORIZATION`. Répond à : `REQ:HOT_WORK`, `M7:7.04`. Offert : gabarit M7. Orientation : portrait. Objet : L'acte écrit de la décision « Autorisation de travaux (point chaud) » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification.
 
@@ -1701,7 +2009,7 @@ Note de section : Les valeurs ci-dessus sont celles saisies par le demandeur dan
 
 **Signatures** : CAP — Autorité — décision / Authority — decision · AGE — Agence — réception / Agency — receipt · NAV — Capitaine — pris connaissance / Master — acknowledged
 
-## 6.31 `AUTH_IMMOBILIZATION` — Autorisation — Immobilisation des machines / Authorization — Engine immobilisation
+## 6.34 `AUTH_IMMOBILIZATION` — Autorisation — Immobilisation des machines / Authorization — Engine immobilisation
 
 Partie émettrice : CAP — Capitainerie. Standard : Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique / Written act of the port's decision on the request (FLX-SPEC-002, EF-2.5); public verification code. Rôles émetteurs : CAP. Type de document : `AUTHORIZATION`. Répond à : `REQ:IMMOBILIZATION`, `M7:7.08`. Offert : gabarit M7. Orientation : portrait. Objet : L'acte écrit de la décision « Immobilisation des machines » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification.
 
@@ -1763,7 +2071,7 @@ Note de section : Les valeurs ci-dessus sont celles saisies par le demandeur dan
 
 **Signatures** : CAP — Autorité — décision / Authority — decision · AGE — Agence — réception / Agency — receipt · NAV — Capitaine — pris connaissance / Master — acknowledged
 
-## 6.32 `AUTH_CREW_CHANGE` — Autorisation — Relève d'équipage et laissez-passer / Authorization — Crew change and passes
+## 6.35 `AUTH_CREW_CHANGE` — Autorisation — Relève d'équipage et laissez-passer / Authorization — Crew change and passes
 
 Partie émettrice : ADM — Douanes, immigration, santé. Standard : Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique / Written act of the port's decision on the request (FLX-SPEC-002, EF-2.5); public verification code. Rôles émetteurs : ADM. Type de document : `AUTHORIZATION`. Répond à : `REQ:CREW_CHANGE`, `M8:8.02`. Offert : gabarit M8. Orientation : portrait. Objet : L'acte écrit de la décision « Relève d'équipage et laissez-passer » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification.
 
@@ -1829,7 +2137,7 @@ Lignes préremplies : aucune ; lignes vierges ajoutées : 6.
 
 **Signatures** : ADM — Autorité — décision / Authority — decision · AGE — Agence — réception / Agency — receipt
 
-## 6.33 `AUTH_DOUBLE_BANKING` — Autorisation — Accostage à couple / Authorization — Double banking
+## 6.36 `AUTH_DOUBLE_BANKING` — Autorisation — Accostage à couple / Authorization — Double banking
 
 Partie émettrice : CAP — Capitainerie. Standard : Acte écrit de la décision du port sur la demande (FLX-SPEC-002, EF-2.5) ; code de vérification publique / Written act of the port's decision on the request (FLX-SPEC-002, EF-2.5); public verification code. Rôles émetteurs : CAP. Type de document : `AUTHORIZATION`. Répond à : `REQ:DOUBLE_BANKING`, `M9:9.01`. Offert : gabarit M9 ou escale reliée. Orientation : portrait. Objet : L'acte écrit de la décision « Accostage à couple » : la demande telle que déposée, la décision, sa validité, ses conditions et son code de vérification.
 
@@ -1892,7 +2200,7 @@ Note de section : Les valeurs ci-dessus sont celles saisies par le demandeur dan
 
 **Signatures** : CAP — Autorité — décision / Authority — decision · AGE — Agence — réception / Agency — receipt · NAV — Capitaine — pris connaissance / Master — acknowledged
 
-## 6.34 `BERTH_LIMITS` — Conditions limites d'exploitation du poste / Berth operating limits
+## 6.37 `BERTH_LIMITS` — Conditions limites d'exploitation du poste / Berth operating limits
 
 Partie émettrice : CAP — Capitainerie. Standard : Pratique portuaire — ISGOTT 6e édition (limites du poste), PIANC (critères d'accostage), règlement d'exploitation du port / Port practice — ISGOTT 6th edition (berth limits), PIANC (berthing criteria), port operating regulations. Rôles émetteurs : CAP, TER. Type de document : `BERTH_LIMITS`. Répond à : `M0:12`, `M9:9.11`. Offert : toujours. Orientation : portrait. Objet : Les conditions limites (vent, houle, courant, visibilité, marée) publiées par la capitainerie pour le poste de l'escale.
 
@@ -1940,7 +2248,7 @@ Note de section : Au-delà d'une limite, l'opération concernée est suspendue e
 
 **Signatures** : CAP — Capitainerie / Harbour master · TER — Terminal / Terminal · NAV — Capitaine — pris connaissance / Master — acknowledged
 
-## 6.35 `ACCESS_LIST` — Demande et autorisation d'accès en zone portuaire / Port area access request and authorization
+## 6.38 `ACCESS_LIST` — Demande et autorisation d'accès en zone portuaire / Port area access request and authorization
 
 Partie émettrice : SUR — Sûreté. Standard : Code ISPS (contrôle d'accès à l'installation portuaire) ; règlement de sûreté du port / ISPS Code (port facility access control); port security regulations. Rôles émetteurs : AGE, SUR. Type de document : `ACCESS_LIST`. Répond à : `M8:8.04`. Offert : gabarit M7 ou M8. Orientation : portrait. Objet : La liste nominative des personnes et véhicules dont l'accès à la zone portuaire est demandé par l'agence et accordé par la sûreté.
 
@@ -1982,7 +2290,7 @@ Note de section : Code ISPS, partie A §16 et partie B §16.10–16.17 : contrô
 
 **Signatures** : AGE — Agence — demande / Agency — request · SUR — Autorité de sûreté — décision / Security authority — decision
 
-## 6.36 `PRE_ARRIVAL_SECURITY` — Information de sûreté avant l'arrivée / Pre-arrival security information
+## 6.39 `PRE_ARRIVAL_SECURITY` — Information de sûreté avant l'arrivée / Pre-arrival security information
 
 Partie émettrice : SUR — Sûreté. Standard : SOLAS XI-2 règle 9.2.1 ; circulaire OMI MSC.1/Circ.1305 ; Convention FAL (formulaire d'information de sûreté) / SOLAS XI-2 regulation 9.2.1; IMO circular MSC.1/Circ.1305; FAL Convention (security information form). Rôles émetteurs : AGE, NAV. Type de document : `PRE_ARRIVAL_SECURITY`. Répond à : `M0:17`. Offert : toujours. Orientation : portrait. Objet : Les renseignements de sûreté que le navire communique avant l'arrivée : certificat ISSC, niveau de sûreté, dix dernières escales, opérations navire-navire.
 
@@ -2025,7 +2333,7 @@ Note de section : Jeu de données normalisé de l'information de sûreté avant 
 
 **Signatures** : NAV — Capitaine ou agent de sûreté du navire (SSO) / Master or ship security officer (SSO) · SUR — Autorité de sûreté — reçu / Security authority — received
 
-## 6.37 `ARRIVAL_NOTICE` — Avis d'arrivée (préavis 72 / 48 / 24 h) / Arrival notice (72 / 48 / 24 h pre-arrival notification)
+## 6.40 `ARRIVAL_NOTICE` — Avis d'arrivée (préavis 72 / 48 / 24 h) / Arrival notice (72 / 48 / 24 h pre-arrival notification)
 
 Partie émettrice : AGE — Agence maritime. Standard : Pratique portuaire — règlement d'exploitation du port ; Convention FAL (notification préalable) / Port practice — port operating regulations; FAL Convention (advance notification). Rôles émetteurs : AGE. Type de document : `ARRIVAL_NOTICE`. Répond à : `M0:01`, `M0:08`. Offert : toujours. Orientation : portrait. Objet : Le préavis d'arrivée de l'agence : navire, heures prévues, opérations, services et formalités sollicités.
 
@@ -2087,7 +2395,7 @@ Note de section : Avis d'arrivée transmis à la capitainerie, à l'autorité po
 
 **Signatures** : AGE — Agence maritime / Shipping agency · CAP — Capitainerie — reçu / Harbour master — received
 
-## 6.38 `SANCTIONS_CHECK` — Attestation de contrôle des listes de sanctions / Sanctions screening attestation
+## 6.41 `SANCTIONS_CHECK` — Attestation de contrôle des listes de sanctions / Sanctions screening attestation
 
 Partie émettrice : AGE — Agence maritime. Standard : OFAC Sanctions Advisory for the Maritime Industry (2020) ; guides BIMCO / ICS de conformité aux sanctions / OFAC Sanctions Advisory for the Maritime Industry (2020); BIMCO / ICS sanctions compliance guidance. Rôles émetteurs : AGE. Type de document : `SANCTIONS_CHECK`. Répond à : `M0:05`. Offert : toujours. Orientation : portrait. Objet : L'attestation par laquelle l'agence confirme le contrôle des listes de sanctions du navire, de ses intérêts et de la cargaison.
 
@@ -2130,7 +2438,7 @@ Note de section : Bonnes pratiques de conformité aux sanctions du transport mar
 
 **Signatures** : AGE — Agence — responsable conformité / Agency — compliance officer
 
-## 6.39 `STS_NOTIFICATION` — Notification d'opération STS à l'État côtier / STS operation notification to the coastal State
+## 6.42 `STS_NOTIFICATION` — Notification d'opération STS à l'État côtier / STS operation notification to the coastal State
 
 Partie émettrice : AGE — Agence maritime. Standard : MARPOL annexe I, chapitre 8, règle 42 (notification 48 h) ; OCIMF Ship to Ship Transfer Guide / MARPOL Annex I, chapter 8, regulation 42 (48 h notification); OCIMF Ship to Ship Transfer Guide. Rôles émetteurs : AGE. Type de document : `STS_NOTIFICATION`. Répond à : `M3:3.01`. Offert : gabarit M3 ou escale reliée. Orientation : portrait. Objet : La notification préalable (48 h) de l'opération STS à l'État côtier : navires, lieu, date, produit, quantité, POAC.
 
@@ -2169,7 +2477,7 @@ Colonnes à cocher : Oui / Yes · Non / No ; colonne remarques.
 
 **Signatures** : AGE — Agence, pour le capitaine / Agency, for the master · CAP — Autorité — reçu / Authority — received
 
-## 6.40 `POAC_DESIGNATION` — Désignation du POAC — mandat écrit / POAC designation — written mandate
+## 6.43 `POAC_DESIGNATION` — Désignation du POAC — mandat écrit / POAC designation — written mandate
 
 Partie émettrice : AGE — Agence maritime. Standard : OCIMF Ship to Ship Transfer Guide (2013) ; MARPOL annexe I, règle 41 / OCIMF Ship to Ship Transfer Guide (2013); MARPOL Annex I, regulation 41. Rôles émetteurs : AGE. Type de document : `STS_DOC`. Répond à : `M3:3.04`. Offert : gabarit M3 ou escale reliée. Orientation : portrait. Objet : Le mandat écrit désignant le POAC de l'opération STS, avec ses qualifications.
 
@@ -2212,54 +2520,9 @@ Note de section : OCIMF Ship to Ship Transfer Guide for Petroleum, Chemicals and
 
 **Signatures** : AGE — Agence / Agency · PRE — POAC — accepte le mandat / POAC — accepts the mandate · NAV — Capitaine / Master
 
-## 6.41 `CARGO_DECLARATION` — Déclaration de cargaison (FAL 2) — arrivée / Cargo declaration (FAL 2) — arrival
+## 6.44 `CARGO_DECLARATION` — Déclaration de cargaison (FAL 2) — arrivée / Cargo declaration (FAL 2) — arrival
 
-Partie émettrice : AGE — Agence maritime. Standard : Convention FAL de l'OMI, formulaire 2 / IMO FAL Convention, form 2. Rôles émetteurs : AGE. Type de document : `CARGO_DECLARATION`. Répond à : `M1:1.18`. Offert : gabarit M1. Orientation : portrait. Objet : La déclaration douanière de la cargaison déchargée (FAL 2), pré-remplie du produit et de la quantité de l'escale.
-
-**Section (champs) — Navire et escale / Ship and call**
-
-| Champ FR / EN | Source de préremplissage | Largeur |
-|---|---|---|
-| Arrivée ☐ Départ ☐ / Arrival ☐ Departure ☐ | — (à compléter sur le papier) | demi |
-| Nom et type du navire / Name and type of ship | Vessel.name, vessel_type | demi |
-| Numéro OMI / IMO number | Vessel.imo | demi |
-| Indicatif / Call sign | Vessel.call_sign | demi |
-| Pavillon / Flag State of ship | Vessel.flag | demi |
-| Nom du capitaine / Name of master | — (à compléter sur le papier) | demi |
-| Port d'arrivée / de départ / Port of arrival / departure | Port.name | demi |
-| Date d'arrivée / de départ / Date of arrival / departure | PortCall.ata, eta | demi |
-| Dernier port / prochain port / Last port / next port | PortCall.last_port, next_port | demi |
-| Agent / Agent | PortCall.agency | demi |
-
-**Section (tableau) — Cargaison / Cargo**
-
-Colonnes : N° de connaissement / B/L number · Description des marchandises (produit, grade) / Description of goods (product, grade) · Quantité (masse / volume) / Quantity (mass / volume) · Port de chargement / Port of loading · Port de déchargement / Port of discharge · Marques, observations / Marks, remarks.
-
-Lignes préremplies : PortCall.product, quantity, last_port, next_port ; lignes vierges ajoutées : 3.
-
-**Section (champs) — Compléments / Additional particulars**
-
-| Champ FR / EN | Source de préremplissage | Largeur |
-|---|---|---|
-| Cargaison restant à bord (transit) / Cargo remaining on board (in transit) | — (à compléter sur le papier) | demi |
-| Date de fin des opérations / Date of completion of cargo operations | jalon TRANSFER_END | demi |
-| Déclaration douanière / manifeste n° / Customs declaration / manifest number | — (à compléter sur le papier) | demi |
-| Régime douanier / Customs procedure | — (à compléter sur le papier) | demi |
-
-Note de section : Modèle de la déclaration de cargaison, formulaire FAL 2 de l'OMI (Convention FAL, annexe, section 2) ; vrac liquide : une ligne par produit et par connaissement. / Model of the cargo declaration, IMO FAL form 2 (FAL Convention, annex, section 2); liquid bulk: one line per product and per bill of lading.
-
-**Section (texte) — Déclaration / Declaration**
-
-> Le capitaine (ou l'agent autorisé) certifie l'exactitude de la présente déclaration.
->
-> *The master (or authorized agent) certifies this declaration to be correct.*
-
-
-**Signatures** : AGE — Agent autorisé / Authorized agent · ADM — Douanes — visa / Customs — endorsement
-
-## 6.42 `EXPORT_MANIFEST` — Manifeste et déclaration de cargaison (FAL 2) — départ / Outward manifest and cargo declaration (FAL 2) — departure
-
-Partie émettrice : AGE — Agence maritime. Standard : Convention FAL de l'OMI, formulaire 2 (départ) / IMO FAL Convention, form 2 (departure). Rôles émetteurs : AGE. Type de document : `EXPORT_MANIFEST`. Répond à : `M2:2.18`. Offert : gabarit M2. Orientation : portrait. Objet : Le manifeste de sortie et la déclaration d'exportation de la cargaison chargée (FAL 2).
+Partie émettrice : AGE — Agence maritime. Standard : Convention FAL de l'OMI, formulaire 2 / IMO FAL Convention, form 2. Rôles émetteurs : AGE. Type de document : `CARGO_DECLARATION`. Répond à : `M1:1.18`, `MB1:B1.16`, `MC1:C1.13`, `MG1:G1.13`, `MR1:R1.11`, `MX1:X1.09`. Offert : gabarit M1 ou MB1 ou MC1 ou MG1 ou MR1 ou MX1. Orientation : portrait. Objet : La déclaration douanière de la cargaison déchargée (FAL 2), pré-remplie du produit et de la quantité de l'escale.
 
 **Section (champs) — Navire et escale / Ship and call**
 
@@ -2302,7 +2565,52 @@ Note de section : Modèle de la déclaration de cargaison, formulaire FAL 2 de l
 
 **Signatures** : AGE — Agent autorisé / Authorized agent · ADM — Douanes — visa / Customs — endorsement
 
-## 6.43 `FAL_STORES` — Provisions de bord et effets de l'équipage (FAL 3 et 4) / Ship's stores and crew's effects (FAL 3 and 4)
+## 6.45 `EXPORT_MANIFEST` — Manifeste et déclaration de cargaison (FAL 2) — départ / Outward manifest and cargo declaration (FAL 2) — departure
+
+Partie émettrice : AGE — Agence maritime. Standard : Convention FAL de l'OMI, formulaire 2 (départ) / IMO FAL Convention, form 2 (departure). Rôles émetteurs : AGE. Type de document : `EXPORT_MANIFEST`. Répond à : `M2:2.18`, `MB2:B2.18`. Offert : gabarit M2 ou MB2. Orientation : portrait. Objet : Le manifeste de sortie et la déclaration d'exportation de la cargaison chargée (FAL 2).
+
+**Section (champs) — Navire et escale / Ship and call**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Arrivée ☐ Départ ☐ / Arrival ☐ Departure ☐ | — (à compléter sur le papier) | demi |
+| Nom et type du navire / Name and type of ship | Vessel.name, vessel_type | demi |
+| Numéro OMI / IMO number | Vessel.imo | demi |
+| Indicatif / Call sign | Vessel.call_sign | demi |
+| Pavillon / Flag State of ship | Vessel.flag | demi |
+| Nom du capitaine / Name of master | — (à compléter sur le papier) | demi |
+| Port d'arrivée / de départ / Port of arrival / departure | Port.name | demi |
+| Date d'arrivée / de départ / Date of arrival / departure | PortCall.ata, eta | demi |
+| Dernier port / prochain port / Last port / next port | PortCall.last_port, next_port | demi |
+| Agent / Agent | PortCall.agency | demi |
+
+**Section (tableau) — Cargaison / Cargo**
+
+Colonnes : N° de connaissement / B/L number · Description des marchandises (produit, grade) / Description of goods (product, grade) · Quantité (masse / volume) / Quantity (mass / volume) · Port de chargement / Port of loading · Port de déchargement / Port of discharge · Marques, observations / Marks, remarks.
+
+Lignes préremplies : PortCall.product, quantity, last_port, next_port ; lignes vierges ajoutées : 3.
+
+**Section (champs) — Compléments / Additional particulars**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Cargaison restant à bord (transit) / Cargo remaining on board (in transit) | — (à compléter sur le papier) | demi |
+| Date de fin des opérations / Date of completion of cargo operations | jalon TRANSFER_END | demi |
+| Déclaration douanière / manifeste n° / Customs declaration / manifest number | — (à compléter sur le papier) | demi |
+| Régime douanier / Customs procedure | — (à compléter sur le papier) | demi |
+
+Note de section : Modèle de la déclaration de cargaison, formulaire FAL 2 de l'OMI (Convention FAL, annexe, section 2) ; vrac liquide : une ligne par produit et par connaissement. / Model of the cargo declaration, IMO FAL form 2 (FAL Convention, annex, section 2); liquid bulk: one line per product and per bill of lading.
+
+**Section (texte) — Déclaration / Declaration**
+
+> Le capitaine (ou l'agent autorisé) certifie l'exactitude de la présente déclaration.
+>
+> *The master (or authorized agent) certifies this declaration to be correct.*
+
+
+**Signatures** : AGE — Agent autorisé / Authorized agent · ADM — Douanes — visa / Customs — endorsement
+
+## 6.46 `FAL_STORES` — Provisions de bord et effets de l'équipage (FAL 3 et 4) / Ship's stores and crew's effects (FAL 3 and 4)
 
 Partie émettrice : AGE — Agence maritime. Standard : Convention FAL de l'OMI, formulaires 3 et 4 / IMO FAL Convention, forms 3 and 4. Rôles émetteurs : AGE, NAV. Type de document : `FAL_FORMS`. Répond à : `M0:13`, `M8:8.05`. Offert : toujours. Orientation : portrait. Objet : Les déclarations des provisions de bord et des effets de l'équipage (FAL 3 et 4) remises aux douanes.
 
@@ -2344,7 +2652,7 @@ Note de section : Modèles des formulaires FAL 3 (provisions de bord) et FAL 4 (
 
 **Signatures** : NAV — Capitaine / Master · ADM — Douanes — visa / Customs — endorsement
 
-## 6.44 `CREW_CHANGE_LIST` — Liste de relève d'équipage / Crew change list
+## 6.47 `CREW_CHANGE_LIST` — Liste de relève d'équipage / Crew change list
 
 Partie émettrice : AGE — Agence maritime. Standard : Convention FAL de l'OMI (relèves d'équipage) ; Convention STCW ; pratique de l'immigration / IMO FAL Convention (crew changes); STCW Convention; immigration practice. Rôles émetteurs : AGE. Type de document : `CREW_DOC`. Répond à : `M8:8.01`. Offert : gabarit M8. Orientation : portrait. Objet : La liste des embarquants et débarquants avec leurs documents, déposée pour la relève d'équipage.
 
@@ -2386,9 +2694,9 @@ Note de section : Documents contrôlés par l'immigration (passeports, visas), l
 
 **Signatures** : AGE — Agence / Agency · NAV — Capitaine / Master · ADM — Immigration — visa / Immigration — endorsement
 
-## 6.45 `BILL_OF_LADING` — Connaissement — données d'émission / Bill of lading — issuing data
+## 6.48 `BILL_OF_LADING` — Connaissement — données d'émission / Bill of lading — issuing data
 
-Partie émettrice : AGE — Agence maritime. Standard : Pratique du commerce des hydrocarbures (connaissement de charte-partie, type CONGENBILL / BIMCO) ; Règles de La Haye-Visby / Oil trade practice (charter-party bill of lading, CONGENBILL / BIMCO type); Hague-Visby Rules. Rôles émetteurs : AGE. Type de document : `BILL_OF_LADING`. Répond à : `M2:2.17`. Offert : gabarit M2. Orientation : portrait. Objet : Les données d'émission du connaissement, pré-remplies de la quantité convenue ; l'émission reste verrouillée par le point d'arrêt BL_ISSUE.
+Partie émettrice : AGE — Agence maritime. Standard : Pratique du commerce des hydrocarbures (connaissement de charte-partie, type CONGENBILL / BIMCO) ; Règles de La Haye-Visby / Oil trade practice (charter-party bill of lading, CONGENBILL / BIMCO type); Hague-Visby Rules. Rôles émetteurs : AGE. Type de document : `BILL_OF_LADING`. Répond à : `M2:2.17`, `MB2:B2.17`. Offert : gabarit M2 ou MB2. Orientation : portrait. Objet : Les données d'émission du connaissement, pré-remplies de la quantité convenue ; l'émission reste verrouillée par le point d'arrêt BL_ISSUE.
 
 **Section (champs) — Parties / Parties**
 
@@ -2431,7 +2739,7 @@ Note de section : Le connaissement est émis sur l'instruction documentaire écr
 
 **Signatures** : AGE — Agent, pour le capitaine / Agent, for the master · NAV — Capitaine / Master
 
-## 6.46 `PORT_ACCOUNT` — Compte d'escale final (FDA) / Final disbursement account (FDA)
+## 6.49 `PORT_ACCOUNT` — Compte d'escale final (FDA) / Final disbursement account (FDA)
 
 Partie émettrice : AGE — Agence maritime. Standard : Pratique de l'agence maritime (FONASBA — Standard Disbursement Account) / Shipping agency practice (FONASBA — Standard Disbursement Account). Rôles émetteurs : AGE. Type de document : `PORT_ACCOUNT`. Répond à : `M0:38`. Offert : toujours. Orientation : portrait. Objet : Le compte d'escale final transmis au mandant avec ses justificatifs.
 
@@ -2467,7 +2775,7 @@ Note de section : Compte d'escale final (FDA) établi sur les justificatifs des 
 
 **Signatures** : AGE — Agence / Agency · COM — Mandant — reçu / Principal — received
 
-## 6.47 `BALLAST_NOTIFICATION` — Notification des eaux de ballast (BWRF) / Ballast water reporting form (BWRF)
+## 6.50 `BALLAST_NOTIFICATION` — Notification des eaux de ballast (BWRF) / Ballast water reporting form (BWRF)
 
 Partie émettrice : NAV — Navire / capitaine. Standard : Convention BWM 2004 ; résolution OMI A.868(20), appendice 2 (Ballast Water Reporting Form) / BWM Convention 2004; IMO resolution A.868(20), appendix 2 (Ballast Water Reporting Form). Rôles émetteurs : NAV. Type de document : `BALLAST_NOTIFICATION`. Répond à : `M0:15`, `M5:5.02`, `M5:5.03`. Offert : toujours. Orientation : portrait. Objet : La notification des eaux de ballast à bord : volumes, origine, méthode de conformité, rejets prévus.
 
@@ -2515,7 +2823,7 @@ Note de section : Modèle du Ballast Water Reporting Form (résolution OMI A.868
 
 **Signatures** : NAV — Officier responsable des eaux de ballast / Responsible ballast water officer · CAP — Autorité — reçu / Authority — received
 
-## 6.48 `DISCHARGE_PLAN` — Plan de déchargement et de ballastage / Discharge and ballast plan
+## 6.51 `DISCHARGE_PLAN` — Plan de déchargement et de ballastage / Discharge and ballast plan
 
 Partie émettrice : NAV — Navire / capitaine. Standard : ISGOTT, 6e édition, chapitre 22 / ISGOTT, 6th edition, chapter 22. Rôles émetteurs : NAV. Type de document : `DISCHARGE_PLAN`. Répond à : `M1:1.02`. Offert : gabarit M1. Orientation : portrait. Objet : Le plan de déchargement et de ballastage remis au terminal avant la réunion pré-transfert.
 
@@ -2568,7 +2876,7 @@ Note de section : ISGOTT, 6e édition, chapitre 22 (plans de chargement et de d�
 
 **Signatures** : NAV — Chef de la cargaison / capitaine / Chief officer / master · TER — Terminal — accord / Terminal — agreed
 
-## 6.49 `LOADING_PLAN` — Plan de chargement / Loading plan
+## 6.52 `LOADING_PLAN` — Plan de chargement / Loading plan
 
 Partie émettrice : NAV — Navire / capitaine. Standard : ISGOTT, 6e édition, chapitre 22 / ISGOTT, 6th edition, chapter 22. Rôles émetteurs : NAV. Type de document : `LOADING_PLAN`. Répond à : `M2:2.03`. Offert : gabarit M2. Orientation : portrait. Objet : Le plan de chargement : séquence, stabilité, contraintes de structure, tirant d'eau.
 
@@ -2621,7 +2929,7 @@ Note de section : ISGOTT, 6e édition, chapitre 22 (plans de chargement et de d�
 
 **Signatures** : NAV — Chef de la cargaison / capitaine / Chief officer / master · TER — Terminal — accord / Terminal — agreed
 
-## 6.50 `LAST_CARGOES` — Déclaration des trois dernières cargaisons / Last three cargoes declaration
+## 6.53 `LAST_CARGOES` — Déclaration des trois dernières cargaisons / Last three cargoes declaration
 
 Partie émettrice : NAV — Navire / capitaine. Standard : Pratique des terminaux et du vetting (Q88, ISGOTT ch. 22.4) / Terminal and vetting practice (Q88, ISGOTT ch. 22.4). Rôles émetteurs : NAV. Type de document : `LAST_CARGOES`. Répond à : `M2:2.02`. Offert : gabarit M2. Orientation : portrait. Objet : La déclaration des trois dernières cargaisons par citerne et du nettoyage effectué, avant chargement.
 
@@ -2664,7 +2972,7 @@ Note de section : Exigence usuelle des terminaux et du vetting (questionnaire Q8
 
 **Signatures** : NAV — Capitaine / Master · TER — Terminal — reçu / Terminal — received
 
-## 6.51 `INERT_GAS_DECLARATION` — Déclaration d'inertage et de teneur en oxygène / Inert gas and oxygen content declaration
+## 6.54 `INERT_GAS_DECLARATION` — Déclaration d'inertage et de teneur en oxygène / Inert gas and oxygen content declaration
 
 Partie émettrice : NAV — Navire / capitaine. Standard : SOLAS II-2 règle 16.3 ; code FSS chapitre 15 ; ISGOTT 6e édition, chapitre 7 / SOLAS II-2 regulation 16.3; FSS Code chapter 15; ISGOTT 6th edition, chapter 7. Rôles émetteurs : NAV. Type de document : `INERT_GAS_DECLARATION`. Répond à : `M1:1.04`, `M2:2.06`. Offert : gabarit M1 ou M2 ou M3 ou escale reliée. Orientation : portrait. Objet : La déclaration de l'état du gaz inerte et de la teneur en oxygène des citernes avant le transfert.
 
@@ -2709,7 +3017,7 @@ Note de section : SOLAS II-2 règle 16.3 et FSS code ch. 15 (gaz inerte) ; ISGOT
 
 **Signatures** : NAV — Chef de la cargaison / capitaine / Chief officer / master · TER — Terminal — reçu / Terminal — received
 
-## 6.52 `HOT_WORK_PERMIT` — Permis de travail par point chaud / Hot work permit
+## 6.55 `HOT_WORK_PERMIT` — Permis de travail par point chaud / Hot work permit
 
 Partie émettrice : NAV — Navire / capitaine. Standard : ISGOTT 6e édition, chapitre 9 (modèle de permis de travail par point chaud) / ISGOTT 6th edition, chapter 9 (model hot work permit). Rôles émetteurs : NAV. Type de document : `HOT_WORK_PERMIT`. Répond à : `M7:7.06`. Offert : gabarit M7. Orientation : portrait. Objet : Le permis nominatif et limité dans le temps délivré par le capitaine pour les travaux par point chaud.
 
@@ -2767,7 +3075,7 @@ Note de section : ISGOTT 6e édition, chapitre 9 (travaux par point chaud) et mo
 
 **Signatures** : NAV — Capitaine — délivre / Master — issues · NAV — Responsable des travaux / Person in charge of the work · TER — Terminal — informé / Terminal — informed
 
-## 6.53 `ENCLOSED_SPACE_PERMIT` — Permis d'entrée en espace clos / Enclosed space entry permit
+## 6.56 `ENCLOSED_SPACE_PERMIT` — Permis d'entrée en espace clos / Enclosed space entry permit
 
 Partie émettrice : NAV — Navire / capitaine. Standard : Résolution OMI A.1050(27) ; ISGOTT 6e édition, chapitre 10 / IMO resolution A.1050(27); ISGOTT 6th edition, chapter 10. Rôles émetteurs : NAV. Type de document : `ENCLOSED_SPACE_PERMIT`. Répond à : `M6:6.06`. Offert : gabarit M6 ou M7. Orientation : portrait. Objet : Le permis nominatif et limité dans le temps délivré par le capitaine pour l'entrée dans un espace clos.
 
@@ -2822,7 +3130,7 @@ Note de section : Résolution OMI A.1050(27) — recommandations révisées sur 
 
 **Signatures** : NAV — Capitaine — délivre / Master — issues · NAV — Responsable de l'entrée / Person in charge of the entry
 
-## 6.54 `INCIDENT_REPORT` — Déclaration d'événement à bord ou au poste / Declaration of an event on board or at the berth
+## 6.57 `INCIDENT_REPORT` — Déclaration d'événement à bord ou au poste / Declaration of an event on board or at the berth
 
 Partie émettrice : NAV — Navire / capitaine. Standard : Pratique portuaire (déclaration d'événement de mer) ; code IGS ; Convention FAL (passagers clandestins) / Port practice (declaration of a marine event); ISM Code; FAL Convention (stowaways). Rôles émetteurs : AGE, INS, NAV, PRE, SVC, TER. Type de document : `INCIDENT_REPORT`. Répond à : `M8:8.07`. Offert : toujours. Orientation : portrait. Objet : La déclaration à la capitainerie de tout événement particulier : blessé, décès, passager clandestin, pollution, avarie.
 
@@ -2864,7 +3172,7 @@ Note de section : La déclaration est faite sans délai à la capitainerie, qui 
 
 **Signatures** : NAV — Capitaine ou déclarant / Master or declarant · CAP — Capitainerie — reçu / Harbour master — received
 
-## 6.55 `VETTING_REQUEST` — Demande d'acceptation du navire — synthèse du vetting / Vessel acceptance request — vetting summary
+## 6.58 `VETTING_REQUEST` — Demande d'acceptation du navire — synthèse du vetting / Vessel acceptance request — vetting summary
 
 Partie émettrice : TER — Terminal / dépôt. Standard : OCIMF SIRE 2.0 / CDI ; TMSA ; politique de vetting du terminal / OCIMF SIRE 2.0 / CDI; TMSA; the terminal's vetting policy. Rôles émetteurs : TER. Type de document : `VETTING_REPORT`. Répond à : `M0:06`. Offert : toujours. Orientation : portrait. Objet : La synthèse du vetting interne du terminal jointe à la demande d'acceptation du navire.
 
@@ -2903,7 +3211,7 @@ Note de section : OCIMF SIRE 2.0 / CDI ; Tanker Management and Self Assessment (
 
 **Signatures** : TER — Terminal — responsable vetting / Terminal — vetting officer · CAP — Autorité — reçu / Authority — received
 
-## 6.56 `BERTH_READINESS` — Attestation de mise en sécurité du poste / Berth readiness and safety attestation
+## 6.59 `BERTH_READINESS` — Attestation de mise en sécurité du poste / Berth readiness and safety attestation
 
 Partie émettrice : TER — Terminal / dépôt. Standard : ISGOTT 6e édition, chapitres 15–16 ; règlement d'exploitation du terminal / ISGOTT 6th edition, chapters 15–16; terminal operating regulations. Rôles émetteurs : TER. Type de document : `BERTH_READINESS`. Répond à : `M0:31`, `M1:1.03`. Offert : toujours. Orientation : portrait. Objet : L'attestation du terminal que le poste est prêt et mis en sécurité avant l'accostage.
 
@@ -2949,7 +3257,7 @@ Note de section : ISGOTT 6e édition, chapitre 15 et 16 (préparation du poste) 
 
 **Signatures** : TER — Responsable du poste / Berth supervisor · CAP — Capitainerie — informée / Harbour master — informed
 
-## 6.57 `SHORE_TANK_REPORT` — Relevé des bacs et compteurs à terre / Shore tank and meter measurement report
+## 6.60 `SHORE_TANK_REPORT` — Relevé des bacs et compteurs à terre / Shore tank and meter measurement report
 
 Partie émettrice : TER — Terminal / dépôt. Standard : API MPMS chapitres 3, 7 et 12 ; EI HM ; ASTM D1250 / API MPMS chapters 3, 7 and 12; EI HM; ASTM D1250. Rôles émetteurs : TER. Type de document : `SHORE_TANK_REPORT`. Répond à : `M1:1.06`, `M2:2.08`. Offert : gabarit M1 ou M2. Orientation : portrait. Objet : Le relevé des bacs récepteurs ou expéditeurs et des compteurs, avant et après le transfert.
 
@@ -3002,7 +3310,7 @@ Note de section : API MPMS chapitres 3 (jaugeage), 7 (température), 12 (calculs
 
 **Signatures** : TER — Terminal / Terminal · INS — Inspecteur — témoin / Surveyor — witness
 
-## 6.58 `TERMINAL_RECEIPT` — Bon de réception du terminal / Terminal receipt
+## 6.61 `TERMINAL_RECEIPT` — Bon de réception du terminal / Terminal receipt
 
 Partie émettrice : TER — Terminal / dépôt. Standard : Pratique des terminaux (outturn / discharge certificate) ; API MPMS chapitre 17 / Terminal practice (outturn / discharge certificate); API MPMS chapter 17. Rôles émetteurs : TER. Type de document : `TERMINAL_RECEIPT`. Répond à : `M1:1.17`. Offert : gabarit M1. Orientation : portrait. Objet : Le bon par lequel le terminal reconnaît la quantité reçue dans ses bacs.
 
@@ -3046,7 +3354,7 @@ Lignes préremplies : Measurement et MeasurementValue (valeurs courantes par par
 
 **Signatures** : TER — Terminal / Terminal · NAV — Capitaine / Master · INS — Inspecteur / Surveyor
 
-## 6.59 `SPM_INSPECTION` — Rapport d'inspection de la bouée (SPM) / SPM buoy inspection report
+## 6.62 `SPM_INSPECTION` — Rapport d'inspection de la bouée (SPM) / SPM buoy inspection report
 
 Partie émettrice : TER — Terminal / dépôt. Standard : OCIMF SMOG ; OCIMF GMPHOM (flexibles) / OCIMF SMOG; OCIMF GMPHOM (hoses). Rôles émetteurs : TER. Type de document : `SPM_DOC`. Répond à : `MA2:A2.01`. Offert : gabarit MA2. Orientation : portrait. Objet : Le rapport d'inspection de la bouée, des flexibles et du système d'amarrage avant l'escale.
 
@@ -3082,7 +3390,7 @@ Note de section : OCIMF — Single Point Mooring Maintenance and Operations Guid
 
 **Signatures** : TER — Exploitant de la bouée / Buoy operator · CAP — Capitainerie — reçu / Harbour master — received
 
-## 6.60 `DOUBLE_BANKING_STUDY` — Dossier d'accostage à couple — compatibilité, amarrage, déhalage d'urgence / Double banking file — compatibility, mooring, emergency unberthing
+## 6.63 `DOUBLE_BANKING_STUDY` — Dossier d'accostage à couple — compatibilité, amarrage, déhalage d'urgence / Double banking file — compatibility, mooring, emergency unberthing
 
 Partie émettrice : TER — Terminal / dépôt. Standard : OCIMF MEG4 ; OCIMF Ship to Ship Transfer Guide ; ISGOTT 6e édition, chapitre 23 / OCIMF MEG4; OCIMF Ship to Ship Transfer Guide; ISGOTT 6th edition, chapter 23. Rôles émetteurs : TER. Type de document : `DOUBLE_BANKING_DOC`. Répond à : `M9:9.03`, `M9:9.04`, `M9:9.06`, `M9:9.08`. Offert : gabarit M9 ou escale reliée. Orientation : portrait. Objet : L'étude de compatibilité, l'analyse d'amarrage, la matrice des opérations simultanées et le plan de déhalage d'urgence de l'accostage à couple.
 
@@ -3134,7 +3442,7 @@ Note de section : OCIMF Mooring Equipment Guidelines (MEG4) ; OCIMF Ship to Ship
 
 **Signatures** : TER — Terminal / Terminal · NAV — Capitaine — ce navire / Master — this vessel · NAV — Capitaine — navire partenaire / Master — partner vessel · CAP — Capitainerie / Harbour master
 
-## 6.61 `SAMPLING_RECORD` — Procès-verbal d'échantillonnage / Sampling record
+## 6.64 `SAMPLING_RECORD` — Procès-verbal d'échantillonnage / Sampling record
 
 Partie émettrice : INS — Inspecteur et laboratoire. Standard : API MPMS chapitre 8 ; ISO 3170 / 3171 ; EI HM 23 / API MPMS chapter 8; ISO 3170 / 3171; EI HM 23. Rôles émetteurs : INS. Type de document : `SAMPLING_RECORD`. Répond à : `M1:1.07`. Offert : gabarit M1 ou M2 ou M3 ou escale reliée. Orientation : portrait. Objet : Le procès-verbal des échantillons prélevés, scellés et distribués.
 
@@ -3179,7 +3487,7 @@ Note de section : API MPMS chapitre 8.1 (échantillonnage manuel) et 8.2 (automa
 
 **Signatures** : INS — Inspecteur / Surveyor · NAV — Navire — témoin / Ship — witness · TER — Terminal — témoin / Terminal — witness
 
-## 6.62 `QUANTITY_CERT` — Certificat de quantité / Certificate of quantity
+## 6.65 `QUANTITY_CERT` — Certificat de quantité / Certificate of quantity
 
 Partie émettrice : INS — Inspecteur et laboratoire. Standard : API MPMS chapitres 11, 12 et 17 ; EI HM 28 / 50 ; ASTM D1250 / API MPMS chapters 11, 12 and 17; EI HM 28 / 50; ASTM D1250. Rôles émetteurs : INS. Type de document : `QQ_CERT`. Répond à : `M1:1.08`, `M1:1.16`, `M2:2.15`, `M3:3.14`. Offert : gabarit M1 ou M2 ou M3 ou escale reliée. Orientation : portrait. Objet : Le certificat de quantité de l'inspecteur, établi sur les jaugeages bord et terre du registre.
 
@@ -3228,7 +3536,7 @@ Note de section : API MPMS chapitre 17.1 (inspection des cargaisons maritimes), 
 
 **Signatures** : INS — Inspecteur / Surveyor
 
-## 6.63 `QUALITY_CERT` — Certificat de qualité — rapport d'analyse / Certificate of quality — analysis report
+## 6.66 `QUALITY_CERT` — Certificat de qualité — rapport d'analyse / Certificate of quality — analysis report
 
 Partie émettrice : INS — Inspecteur et laboratoire. Standard : ISO/IEC 17025 (rapport d'essai) ; méthodes ISO / ASTM / EN / ISO/IEC 17025 (test report); ISO / ASTM / EN methods. Rôles émetteurs : INS. Type de document : `QUALITY_CERT`. Répond à : `M1:1.16`, `M2:2.07`. Offert : gabarit M1 ou M2 ou M3 ou M4 ou escale reliée. Orientation : portrait. Objet : Le rapport d'analyse du laboratoire et sa conclusion de conformité à la spécification.
 
@@ -3272,7 +3580,7 @@ Note de section : Rapport d'essai selon ISO/IEC 17025 ; méthodes ISO / ASTM / E
 
 **Signatures** : INS — Laboratoire / Laboratory
 
-## 6.64 `CLEANLINESS_CERT` — Certificat de propreté des citernes / Tank cleanliness certificate
+## 6.67 `CLEANLINESS_CERT` — Certificat de propreté des citernes / Tank cleanliness certificate
 
 Partie émettrice : INS — Inspecteur et laboratoire. Standard : Pratique de l'inspection des cargaisons ; ISGOTT 6e édition, chapitre 22.4 / Cargo inspection practice; ISGOTT 6th edition, chapter 22.4. Rôles émetteurs : INS. Type de document : `CLEANLINESS_CERT`. Répond à : `M2:2.04`. Offert : gabarit M2. Orientation : portrait. Objet : Le certificat de propreté des citernes délivré après l'inspection contradictoire, avant chargement.
 
@@ -3315,7 +3623,7 @@ Note de section : Pratique de l'inspection des cargaisons (tank cleanliness / dr
 
 **Signatures** : INS — Inspecteur / Surveyor · NAV — Chef de la cargaison / Chief officer · TER — Terminal / Terminal
 
-## 6.65 `EMPTY_TANKS_CERT` — Certificat de citernes vides — constat de ROB / Empty tanks certificate — ROB statement
+## 6.68 `EMPTY_TANKS_CERT` — Certificat de citernes vides — constat de ROB / Empty tanks certificate — ROB statement
 
 Partie émettrice : INS — Inspecteur et laboratoire. Standard : API MPMS chapitre 17.1 et 17.4 ; pratique de l'inspection des cargaisons / API MPMS chapter 17.1 and 17.4; cargo inspection practice. Rôles émetteurs : INS. Type de document : `EMPTY_TANKS_CERT`. Répond à : `M1:1.14`. Offert : gabarit M1 ou M3 ou escale reliée. Orientation : portrait. Objet : Le constat contradictoire des quantités restant à bord après déchargement.
 
@@ -3360,7 +3668,7 @@ Note de section : API MPMS chapitre 17.1 et 17.4 (OBQ / ROB) ; pratique de l'ins
 
 **Signatures** : INS — Inspecteur / Surveyor · NAV — Chef de la cargaison / Chief officer · TER — Terminal / Terminal
 
-## 6.66 `GAS_FREE_CERT` — Certificat de dégazage / Gas-free certificate
+## 6.69 `GAS_FREE_CERT` — Certificat de dégazage / Gas-free certificate
 
 Partie émettrice : INS — Inspecteur et laboratoire. Standard : ISGOTT 6e édition, chapitres 9–10 ; NFPA 306 ; résolution OMI A.1050(27) / ISGOTT 6th edition, chapters 9–10; NFPA 306; IMO resolution A.1050(27). Rôles émetteurs : INS. Type de document : `GAS_FREE_CERT`. Répond à : `M6:6.05`, `M7:7.05`. Offert : gabarit M6 ou M7. Orientation : portrait. Objet : Le certificat de dégazage des espaces contrôlés, avec sa durée de validité explicite.
 
@@ -3403,7 +3711,7 @@ Note de section : ISGOTT 6e édition, chapitres 9 et 10 ; NFPA 306 (Standard for
 
 **Signatures** : INS — Inspecteur / chimiste maritime / Surveyor / marine chemist · NAV — Capitaine — reçu / Master — received
 
-## 6.67 `MOVEMENT_ORDER` — Ordre de mouvement — confirmation des services nautiques / Movement order — marine services confirmation
+## 6.70 `MOVEMENT_ORDER` — Ordre de mouvement — confirmation des services nautiques / Movement order — marine services confirmation
 
 Partie émettrice : SVC — Services nautiques. Standard : Résolution OMI A.960(23) ; règlement des services nautiques du port / IMO resolution A.960(23); port marine services regulations. Rôles émetteurs : SVC. Type de document : `MOVEMENT_ORDER`. Répond à : `REQ:MARINE_SERVICES`, `M0:18`. Offert : toujours. Orientation : portrait. Objet : La confirmation des services nautiques réservés (pilote, remorqueurs, lamaneurs) et l'ordre de mouvement.
 
@@ -3452,7 +3760,7 @@ Note de section : Résolution OMI A.960(23) (pilotage) ; règlement des services
 
 **Signatures** : SVC — Services nautiques / Marine services · NAV — Capitaine — reçu / Master — received · CAP — Capitainerie — informée / Harbour master — informed
 
-## 6.68 `SERVICE_NOTE` — Bon de prestation de service / Service delivery note
+## 6.71 `SERVICE_NOTE` — Bon de prestation de service / Service delivery note
 
 Partie émettrice : SVC — Services nautiques. Standard : Pratique portuaire (bon de pilotage, de remorquage, de lamanage, de livraison) ; FONASBA (compte d'escale) / Port practice (pilotage, towage, mooring, delivery vouchers); FONASBA (disbursement account). Rôles émetteurs : PRE, SVC. Type de document : `SERVICE_NOTE`. Répond à : `REQ:MARINE_SERVICES`, `REQ:WASTE_COLLECTION`, `M8:8.06`, `MA2:A2.03`. Offert : toujours. Orientation : portrait. Objet : Le bon de prestation signé par le capitaine pour chaque service rendu (pilotage, remorquage, lamanage, eau, provisions, vedette).
 
@@ -3494,7 +3802,7 @@ Note de section : Bon de prestation signé par le capitaine (ou l'agent) et le p
 
 **Signatures** : SVC — Prestataire / Provider · NAV — Capitaine — reçu / Master — received · AGE — Agence — visa / Agency — endorsement
 
-## 6.69 `WASTE_RECEIPT` — Bordereau de réception des déchets / Waste delivery receipt
+## 6.72 `WASTE_RECEIPT` — Bordereau de réception des déchets / Waste delivery receipt
 
 Partie émettrice : PRE — Prestataires. Standard : Circulaire OMI MEPC.1/Circ.834/Rev.1, appendice 3 (MARPOL) / IMO circular MEPC.1/Circ.834/Rev.1, appendix 3 (MARPOL). Rôles émetteurs : PRE. Type de document : `WASTE_RECEIPT`. Répond à : `REQ:WASTE_COLLECTION`, `M0:32`, `M5:5.07`, `M6:6.07`. Offert : toujours. Orientation : portrait. Objet : Le bordereau par lequel l'installation de réception atteste les déchets reçus du navire.
 
@@ -3536,7 +3844,7 @@ Note de section : Modèle du bordereau de réception des déchets, appendice 3 d
 
 **Signatures** : PRE — Installation de réception / Reception facility · NAV — Capitaine / Master
 
-## 6.70 `BUNKER_CHECKLIST` — Liste de contrôle sécurité soutage / Bunkering safety checklist
+## 6.73 `BUNKER_CHECKLIST` — Liste de contrôle sécurité soutage / Bunkering safety checklist
 
 Partie émettrice : PRE — Prestataires. Standard : ISGOTT 6e édition, chapitre 25.5 ; ISO 13739 ; MEPC.1/Circ.875/Add.1 / ISGOTT 6th edition, chapter 25.5; ISO 13739; MEPC.1/Circ.875/Add.1. Rôles émetteurs : NAV, PRE. Type de document : `BUNKER_CHECKLIST`. Répond à : `M4:4.03`, `M4:4.04`, `M4:4.05`. Offert : gabarit M4. Orientation : portrait. Objet : La liste de contrôle signée conjointement avant le soutage, avec l'agrément de l'avitailleur et les scellés du comptage.
 
@@ -3591,7 +3899,7 @@ Note de section : ISGOTT 6e édition, chapitre 25.5 (liste de contrôle soutage)
 
 **Signatures** : PRE — Avitailleur / Supplier · NAV — Chef mécanicien / Chief engineer
 
-## 6.71 `STS_COMPATIBILITY` — Étude de compatibilité STS des deux navires / STS compatibility study of the two vessels
+## 6.74 `STS_COMPATIBILITY` — Étude de compatibilité STS des deux navires / STS compatibility study of the two vessels
 
 Partie émettrice : PRE — Prestataires. Standard : OCIMF Ship to Ship Transfer Guide (2013), chapitres 2, 4, 5 et 6 / OCIMF Ship to Ship Transfer Guide (2013), chapters 2, 4, 5 and 6. Rôles émetteurs : PRE. Type de document : `STS_DOC`. Répond à : `M3:3.05`, `M3:3.11`. Offert : gabarit M3 ou escale reliée. Orientation : portrait. Objet : L'étude de compatibilité des deux navires et le plan d'opération du prestataire STS.
 
@@ -3629,7 +3937,7 @@ Note de section : OCIMF Ship to Ship Transfer Guide for Petroleum, Chemicals and
 
 **Signatures** : PRE — Prestataire STS / POAC / STS provider / POAC · NAV — Capitaine — ce navire / Master — this vessel · NAV — Capitaine — navire partenaire / Master — partner vessel
 
-## 6.72 `STS_EQUIPMENT` — Attestation des défenses et flexibles STS / STS fenders and hoses attestation
+## 6.75 `STS_EQUIPMENT` — Attestation des défenses et flexibles STS / STS fenders and hoses attestation
 
 Partie émettrice : PRE — Prestataires. Standard : OCIMF Ship to Ship Transfer Guide (2013) ; ISO 17357 ; OCIMF GMPHOM 2009 / OCIMF Ship to Ship Transfer Guide (2013); ISO 17357; OCIMF GMPHOM 2009. Rôles émetteurs : PRE. Type de document : `STS_DOC`. Répond à : `M3:3.07`, `M3:3.08`, `M9:9.05`. Offert : gabarit M3 ou M9 ou escale reliée. Orientation : portrait. Objet : L'attestation des certificats et essais des défenses et des flexibles mis en œuvre.
 
@@ -3671,7 +3979,7 @@ Note de section : OCIMF Ship to Ship Transfer Guide (2013), chapitres 4 et 5 ; I
 
 **Signatures** : PRE — Prestataire STS / STS provider · NAV — Capitaine — reçu / Master — received
 
-## 6.73 `RECEPTION_FACILITY` — Attestation d'agrément et de capacité de l'installation de réception / Reception facility licence and capacity attestation
+## 6.76 `RECEPTION_FACILITY` — Attestation d'agrément et de capacité de l'installation de réception / Reception facility licence and capacity attestation
 
 Partie émettrice : PRE — Prestataires. Standard : MARPOL ; circulaire OMI MEPC.1/Circ.834/Rev.1 / MARPOL; IMO circular MEPC.1/Circ.834/Rev.1. Rôles émetteurs : PRE. Type de document : `CLEANING_DOC`. Répond à : `M6:6.02`. Offert : gabarit M5 ou M6. Orientation : portrait. Objet : L'attestation d'agrément et de capacité disponible de l'installation de réception pour l'escale.
 
@@ -3710,7 +4018,7 @@ Note de section : MARPOL (installations de réception adéquates) ; circulaire O
 
 **Signatures** : PRE — Installation de réception / Reception facility · AGE — Agence — reçu / Agency — received
 
-## 6.74 `WORKS_CREW` — Dossier des intervenants extérieurs — qualifications, certificats, assurances / Outside contractors' file — qualifications, certificates, insurance
+## 6.77 `WORKS_CREW` — Dossier des intervenants extérieurs — qualifications, certificats, assurances / Outside contractors' file — qualifications, certificates, insurance
 
 Partie émettrice : PRE — Prestataires. Standard : Code IGS ; ISGOTT 6e édition, chapitre 9 ; règlement du port (entreprises extérieures) / ISM Code; ISGOTT 6th edition, chapter 9; port regulations (outside contractors). Rôles émetteurs : PRE. Type de document : `WORKS_DOC`. Répond à : `M7:7.02`. Offert : gabarit M7. Orientation : portrait. Objet : Le dossier des intervenants extérieurs : qualifications, certificats et assurances avant les travaux.
 
@@ -3746,7 +4054,7 @@ Note de section : Pièces exigées avant les travaux à bord ou à quai : qualif
 
 **Signatures** : PRE — Entreprise intervenante / Contractor · NAV — Capitaine — reçu / Master — received
 
-## 6.75 `CP_RECAP` — Nomination et extrait de charte-partie / Nomination and charter-party recap
+## 6.78 `CP_RECAP` — Nomination et extrait de charte-partie / Nomination and charter-party recap
 
 Partie émettrice : COM — Armateur / affréteur. Standard : Pratique de l'affrètement pétrolier (ASBATANKVOY, SHELLVOY, BPVOY) ; BIMCO / Tanker chartering practice (ASBATANKVOY, SHELLVOY, BPVOY); BIMCO. Rôles émetteurs : COM. Type de document : `CP_RECAP`. Répond à : `M0:04`. Offert : toujours. Orientation : portrait. Objet : L'extrait de recap ou de charte-partie et les clauses d'escale que le mandant communique à l'agence.
 
@@ -3791,9 +4099,9 @@ Note de section : Extrait communiqué à l'agence pour l'escale ; les clauses no
 
 **Signatures** : COM — Mandant / Principal · AGE — Agence — reçu / Agency — received
 
-## 6.76 `DOC_INSTRUCTIONS` — Instruction documentaire du mandant (connaissement) / Principal's documentary instructions (bill of lading)
+## 6.79 `DOC_INSTRUCTIONS` — Instruction documentaire du mandant (connaissement) / Principal's documentary instructions (bill of lading)
 
-Partie émettrice : COM — Armateur / affréteur. Standard : Pratique du commerce des hydrocarbures ; Règles de La Haye-Visby / Oil trade practice; Hague-Visby Rules. Rôles émetteurs : COM. Type de document : `DOC_INSTRUCTIONS`. Répond à : `M2:2.16`. Offert : gabarit M2. Orientation : portrait. Objet : L'instruction écrite du mandant pour l'émission du connaissement et des documents de cargaison.
+Partie émettrice : COM — Armateur / affréteur. Standard : Pratique du commerce des hydrocarbures ; Règles de La Haye-Visby / Oil trade practice; Hague-Visby Rules. Rôles émetteurs : COM. Type de document : `DOC_INSTRUCTIONS`. Répond à : `M2:2.16`, `MB2:B2.16`. Offert : gabarit M2 ou MB2. Orientation : portrait. Objet : L'instruction écrite du mandant pour l'émission du connaissement et des documents de cargaison.
 
 **Section (champs) — Navire et escale / Vessel and call**
 
@@ -3842,7 +4150,7 @@ Note de section : FLX-CDC-001 EF-7.4 — verrou du connaissement : l'instruction
 
 **Signatures** : COM — Mandant / Principal · AGE — Agence — reçu / Agency — received
 
-## 6.77 `INSURANCE` — Confirmation des couvertures d'assurance / Insurance cover confirmation
+## 6.80 `INSURANCE` — Confirmation des couvertures d'assurance / Insurance cover confirmation
 
 Partie émettrice : COM — Armateur / affréteur. Standard : Pratique du P&I et de l'assurance maritime ; OCIMF Ship to Ship Transfer Guide (assurances) / P&I and marine insurance practice; OCIMF Ship to Ship Transfer Guide (insurance). Rôles émetteurs : COM. Type de document : `INSURANCE`. Répond à : `M3:3.09`, `M9:9.10`. Offert : gabarit M3 ou M9 ou escale reliée. Orientation : portrait. Objet : La confirmation des couvertures d'assurance des navires et du prestataire pour l'opération STS ou à couple.
 
@@ -3878,7 +4186,7 @@ Note de section : Les attestations des assureurs sont jointes au dossier ; la co
 
 **Signatures** : COM — Mandant / Principal · AGE — Agence — reçu / Agency — received
 
-## 6.78 `LOI` — Lettre de garantie — livraison sans connaissement original / Letter of indemnity — delivery without original bill of lading
+## 6.81 `LOI` — Lettre de garantie — livraison sans connaissement original / Letter of indemnity — delivery without original bill of lading
 
 Partie émettrice : COM — Armateur / affréteur. Standard : Formules types du Groupe international des clubs P&I (LOI A / B) / International Group of P&I Clubs standard forms (LOI A / B). Rôles émetteurs : COM. Type de document : `LOI`. Répond à : —. Offert : gabarit M1 ou M3 ou escale reliée. Orientation : portrait. Objet : La lettre de garantie remise à l'armateur pour une livraison sans présentation du connaissement original.
 
@@ -3919,3 +4227,637 @@ Partie émettrice : COM — Armateur / affréteur. Standard : Formules types du 
 Note de section : Structure des lettres de garantie types du Groupe international des clubs P&I (formules A / B, livraison sans connaissement, livraison dans un port autre) ; à signer par le mandant et, le cas échéant, contresigner par une banque. / Structure of the International Group of P&I Clubs standard letters of indemnity (forms A / B, delivery without bill of lading, delivery at another port); signed by the principal and, where required, countersigned by a bank.
 
 **Signatures** : COM — Mandant (réceptionnaire / affréteur) / Principal (receiver / charterer) · COM — Banque — contresignature (le cas échéant) / Bank — countersignature (if required) · AGE — Agence — reçu pour l'armateur / Agency — received for the owner
+
+## 6.82 `PAEC` — Échange d'informations avant l'arrivée (PAEC) / Pre-arrival exchange of information (PAEC)
+
+Partie émettrice : NAV — Navire / capitaine. Standard : ISGOTT, 6e édition, 22.2 — échange d'informations navire / terminal avant l'arrivée / ISGOTT, 6th edition, 22.2 — pre-arrival ship / terminal exchange of information. Rôles émetteurs : AGE, NAV, TER. Type de document : `PAEC`. Répond à : `M0:02`. Offert : toujours. Orientation : portrait. Objet : Les informations que le navire et le terminal échangent 72 h avant l'arrivée, point par point, avec les confirmations d'ETA et les documents attendus.
+
+**Section (champs) — Navire et escale / Vessel and call**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Navire / Vessel | Vessel.name, Vessel.imo | demi |
+| Pavillon / type / Flag / type | Vessel.flag, Vessel.vessel_type | demi |
+| Escale / voyage / Call / voyage | PortCall.reference, PortCall.voyage_number | demi |
+| Port / Port | Port.name, Port.code | demi |
+| Poste / zone / Berth / area | PortCall.berth ou CallStage.berth_kind de l'étape en cours | demi |
+| Agence / Agency | PortCall.agency (Organization.name) | demi |
+| Opération / Operation | PortCall.template_codes | demi |
+| Cargaison / quantité / Cargo / quantity | PortCall.product, quantity | demi |
+
+**Section (texte) — Objet / Purpose**
+
+> Au moins 72 heures avant l'arrivée, ou dès le départ du dernier port, le navire communique au terminal les informations ci-dessous (ISGOTT 22.2) ; le terminal communique les siennes. L'ETA est confirmée à 72, 48, 36 et 24 heures de la station de pilotage.
+>
+> *At least 72 hours before arrival, or after departure from the last port, the ship gives the terminal the information below (ISGOTT 22.2); the terminal gives its own. The ETA is confirmed 72, 48, 36 and 24 hours before the pilot station.*
+
+
+**Section (tableau) — Informations échangées / Information exchanged**
+
+Colonnes : Réf. / Ref. · Information / Information · Demandé au navire — réponse / Requested from ship — answer · Demandé au terminal — réponse / Requested from shore — answer.
+
+Lignes préremplies : Vessel (nom, indicatif, pavillon, LOA, largeur, tirant d'eau, déplacement, hauteur de collecteur, SWL grue), PortCall (ETA, produit, quantité, poste), CallParty TER ; lignes vierges ajoutées : 0.
+
+**Section (tableau) — Confirmations de l'ETA / ETA confirmations**
+
+Colonnes : Préavis / Notice · Échéance (UTC) / Due (UTC) · ETA confirmée / ETA confirmed · Par / canal / By / channel.
+
+Lignes préremplies : PortCall.eta − 72 / 48 / 36 / 24 h ; lignes vierges ajoutées : 0.
+
+**Section (tableau) — Documents attendus après le départ du dernier port / Documents expected after departure from the last port**
+
+Colonnes : Document / Document · Reçu / Received · Référence / version / Reference / version.
+
+Lignes préremplies : Document.type.code (BILL_OF_LADING, QUALITY_CERT, QQ_CERT, CARGO_MANIFEST) ; lignes vierges ajoutées : 0.
+
+**Signatures** : NAV — Capitaine / Master · TER — Terminal / Terminal
+
+## 6.83 `VETTING_CHECKLIST` — Grille de vetting du navire / Vessel vetting checklist
+
+Partie émettrice : TER — Terminal / dépôt. Standard : Grilles de vetting des terminaux ; questionnaire OCIMF Q88 / VPQ ; limites du poste paramétrées / Terminal vetting grids; OCIMF Q88 / VPQ questionnaire; parametrised berth limits. Rôles émetteurs : CAP, TER. Type de document : `VETTING_CHECKLIST`. Répond à : `M0:06`, `REQ:VESSEL_ACCEPTANCE`. Offert : toujours. Orientation : portrait. Objet : La grille de vetting : chaque limite du poste au regard des données du navire, le statut Y / N / K / Z et l'avis, les éléments documentaires.
+
+**Section (champs) — Navire et escale / Vessel and call**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Navire / Vessel | Vessel.name, Vessel.imo | demi |
+| Pavillon / type / Flag / type | Vessel.flag, Vessel.vessel_type | demi |
+| Escale / voyage / Call / voyage | PortCall.reference, PortCall.voyage_number | demi |
+| Port / Port | Port.name, Port.code | demi |
+| Poste / zone / Berth / area | PortCall.berth ou CallStage.berth_kind de l'étape en cours | demi |
+| Agence / Agency | PortCall.agency (Organization.name) | demi |
+| Poste / type / Berth / type | PortCall.berth ou requested_berth | demi |
+| Cargaison / Cargo | PortCall.product | demi |
+| N° de vetting / Vetting no. | ServiceRequest VESSEL_ACCEPTANCE.reference | demi |
+| Type de navire / Kind of vessel | Vessel.vessel_kind, vessel_type | demi |
+| Année de construction / Year built | Vessel.built_year | demi |
+
+**Section (tableau) — Limites du poste et données du navire / Berth limits and vessel data**
+
+Colonnes : Q88 / Q88 · Critère / Item · Limite / Limit · Navire / Vessel data · Statut / Status · Règle / Rule.
+
+Lignes préremplies : Berth.max_loa_m, max_draft_m, max_beam_m, max_displacement_t, max_dwt, max_manifold_height_m, max_air_draft_m, max_vessel_age_years, min_crane_swl_t ; Vessel.loa_m, draft_m, beam_m, displacement_t, dwt, manifold_height_m, air_draft_m, built_year, crane_swl_t ; lignes vierges ajoutées : 0.
+
+Note de section : Y : dans la limite · N : hors limite obligatoire · K : vigilance · Z : non évalué (limite ou donnée absente). / Y: within the limit · N: outside a compulsory limit · K: caution · Z: not assessed (limit or data missing).
+
+**Section (liste de contrôle) — Éléments documentaires / Documentary items**
+
+Colonnes à cocher : Conforme / Compliant · Observation / Remark ; colonne remarques.
+
+| Point de contrôle FR / EN |
+|---|
+| 1.9 — Type de coque (double coque pour un pétrolier) / 1.9 — Hull type (double hull for a tanker) |
+| — Rapport d'inspection OCIMF SIRE / CDI disponible / — OCIMF SIRE / CDI inspection report available |
+| 2.0 — Certificats statutaires valides à la date de départ prévue — fournis / provided / 2.0 — Statutory certificates valid at the planned departure date |
+| 1.16 — Dernière mise en cale sèche ≤ 5 ans (sinon dérogation de classe) / 1.16 — Last dry dock ≤ 5 years (otherwise class derogation) |
+| 3.4 — Langue de communication : anglais / 3.4 — Communication language: English |
+| 8.34 — Conformité MARPOL / 8.34 — Complies with MARPOL |
+| 5.23 — Alarmes de niveau haut installées et essayées / 5.23 — High level alarms fitted and tested |
+| 5.30 — Conformité aux recommandations OCIMF (collecteurs, amarrage) / 5.30 — Complies with the OCIMF recommendations (manifolds, mooring) |
+| 8.9 — Assurance P&I pollution en vigueur / 8.9 — P&I pollution liability in force |
+| 8.12 — Dernier contrôle par l'État du port : date et lieu / 8.12 — Last port State control: date and place |
+| 8.14 — Aucun événement de pollution, échouement, incident grave non déclaré / 8.14 — No undeclared pollution, grounding or serious incident |
+| 8.15 — Trois dernières cargaisons compatibles / 8.15 — Last three cargoes compatible |
+| — Cadence de pompage historique acceptable / — Historical pumping rate acceptable |
+| — Accepté par le mandant / l'armateur de l'installation / — Accepted by the principal / terminal owner |
+| — Accepté par l'autorité portuaire / — Accepted by the port authority |
+
+**Section (champs) — Avis / Verdict**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Résultat de la grille / Grid result | calcul : statuts de la table des limites | pleine |
+| Décision d'acceptation (registre) / Acceptance decision (registry) | ServiceRequest VESSEL_ACCEPTANCE.decision, decided_at | demi |
+| Conditions / Conditions | ServiceRequest.decision_conditions | pleine |
+| Commentaires et remarques / Comments and remarks | — (à compléter sur le papier) | pleine |
+
+**Signatures** : TER — Terminal / Terminal · CAP — Capitainerie / Harbour master
+
+## 6.84 `CARGO_HANDLING_PLAN` — Plan de manutention de la cargaison / Cargo handling plan
+
+Partie émettrice : TER — Terminal / dépôt. Standard : Plans de manutention des terminaux pétroliers ; ISGOTT, 6e édition (plan de transfert, alignement, scellés) / Oil terminal cargo handling plans; ISGOTT, 6th edition (transfer plan, line-up, seals). Rôles émetteurs : TER. Type de document : `CARGO_HANDLING_PLAN`. Répond à : `M1:1.03`, `M2:2.03`. Offert : toujours. Orientation : paysage. Objet : Le plan de manutention du terminal : lots et citernes du bord, bacs à terre, déplacement de ligne, alignement et scellés, comparaison des instruments, permanences, données des bacs.
+
+**Section (champs) — 1 · Informations générales / 1 · General information**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Navire / Vessel | Vessel | demi |
+| Port / poste / Port / berth | Port, PortCall.berth | demi |
+| Cargaison / Cargo | PortCall.product | demi |
+| Quantité (MT vac.) / Quantity (MT vac) | PortCall.quantity | demi |
+| Tirant d'eau à l'arrivée (m) / Arrival draft (m) | Vessel.draft_m | demi |
+| Tirant d'eau au départ (m) / Departure draft (m) | — (à compléter sur le papier) | demi |
+| Densité / température / Density / temperature | PumpingLogSheet.density | demi |
+| Agent / Agent | PortCall.agency | demi |
+| Inspecteur / Surveyor | CallParty INS | demi |
+| Opération / Operation | PortCall.template_codes | demi |
+| Date du plan / Date of the plan | PortCall.etb | demi |
+
+**Section (tableau) — 2 · Opérations de cargaison — côté navire (par lot) / 2 · Cargo operations — ship side (per parcel)**
+
+Colonnes : N° / No. · Élément / Item · Lot 1 / Parcel 1 · Lot 2 / Parcel 2 · Lot 3 / Parcel 3.
+
+Lignes préremplies : PortCall.quantity, PumpingLogSheet (SHIP).tank ; lignes vierges ajoutées : 0.
+
+**Section (tableau) — Déplacement de ligne / Line displacement**
+
+Colonnes : N° / No. · Élément / Item · Lot 1 / Parcel 1 · Lot 2 / Parcel 2.
+
+Lignes préremplies : aucune ; lignes vierges ajoutées : 0.
+
+**Section (tableau) — Côté terre — bacs récepteurs ou émetteurs / Shore side — receiving or delivering tanks**
+
+Colonnes : Produit / Product · Quantité (MT vac.) / Quantity (MT vac) · Bac / Tank · Creux (mm) / Ullage (mm) · Densité / temp. / Density / temp. · Bac de départ / Starting tank · Débit initial (m³/h) / Start rate (m³/h) · Débit max (m³/h) / Max rate (m³/h) · Pression max (bar) / Max pressure (bar).
+
+Lignes préremplies : PumpingLogSheet (SHORE) : tank, product, planned_quantity_mt, start_level_mm, density, expected_rate_m3h, expected_pressure_bar ; lignes vierges ajoutées : 1.
+
+**Section (tableau) — 3 · Alignement — scellés et vannes / 3 · Line-up — seals and valves**
+
+Colonnes : N° / No. · N° de scellé / Seal number · Emplacement de la vanne / Valve location · Ouverte / Opened · Fermée / Closed · Observations / Comments.
+
+Lignes préremplies : aucune ; lignes vierges ajoutées : 12.
+
+**Section (tableau) — 4 · Comparaison des équipements de mesure / 4 · Measurement equipment comparison**
+
+Colonnes : Équipement / Equipment · N° de série / Serial number · Moyenne avant / Average before · Moyenne après / Average after.
+
+Lignes préremplies : aucune ; lignes vierges ajoutées : 0.
+
+**Section (tableau) — 5 · Représentants du terminal — permanences / 5 · Terminal representatives — duties**
+
+Colonnes : N° / No. · Nom / Name · Fonction / Rank · De (heure) / From (time) · À (heure) / To (time).
+
+Lignes préremplies : aucune ; lignes vierges ajoutées : 4.
+
+**Section (liste de contrôle) — Responsabilités des représentants du terminal / Responsibilities of the terminal representatives**
+
+Colonnes à cocher : Vu / Seen · Visa / Initials ; colonne remarques.
+
+| Point de contrôle FR / EN |
+|---|
+| Vérifier que tous les points des listes de contrôle de sécurité sont en ordre / Ensure all safety checklist items are in order |
+| Présence continue au parc à bacs, à l'appontement, au navire et au collecteur / Continuous manning of tank farm, jetty, vessel and manifold |
+| Vigilance permanente contre tout déversement à terre, à bord, au collecteur, en mer / Be always alert of any oil spill on shore, vessel, manifold, sea |
+| Lire et viser les consignes permanentes / Read and acknowledge the standing instructions |
+| Amarres, passerelle, dalots, parc à bacs surveillés en permanence / Moorings, gangway, scuppers, tank farm attended at all times |
+| Vannes, tuyauteries, manomètres, bacs en ordre / Valves, pipelines, pressure gauges, tanks all in order |
+| Appeler le chef de quart terre en cas de doute / Call the shore officer whenever in doubt |
+| Vérifier l'éclairage et les points d'accès de sûreté / Check lights and security access points |
+| Rapprochement horaire des quantités et investigation de tout écart / Hourly reconciliation and investigation of any discrepancy |
+| Communication maintenue entre toutes les parties ; rondes de sécurité continues / Communications maintained between all parties; continuous safety patrols |
+
+**Section (tableau) — 6 · Données des bacs du parc / 6 · Tank farm tanks data**
+
+Colonnes : Bac / Shore tank · Produit / Product · Avant — HLA / Before — HLA · Avant — ATG / Before — ATG · Avant — ruban / Before — hand dip · Après déplacement — ATG / After line displacement — ATG · Après opération — HLA / After — HLA · Après opération — ATG / After — ATG · Après opération — ruban / After — hand dip.
+
+Lignes préremplies : PumpingLogSheet (SHORE).start_level_mm, actual_stop_level_mm ; lignes vierges ajoutées : 4.
+
+**Section (champs) — 7 · Commentaires, remarques, observations / 7 · Comments, remarks, observations**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| / | — (à compléter sur le papier) | pleine |
+
+**Signatures** : TER — Préparé par — terminal / Prepared by — terminal · NAV — Pris connaissance — navire / Acknowledged — ship
+
+## 6.85 `DRAFT_SURVEY` — Rapport de draft survey / Draft survey report
+
+Partie émettrice : INS — Inspecteur et laboratoire. Standard : Code de procédures uniformes pour les draft surveys (CEE-ONU) ; pratique des inspecteurs / UNECE code of uniform standards and procedures for draught surveys; surveyors' practice. Rôles émetteurs : INS. Type de document : `DRAFT_SURVEY_REPORT`. Répond à : `MB1:B1.13`, `MB2:B2.14`. Offert : gabarit MB1 ou MB2. Orientation : portrait. Objet : Le rapport de draft survey : tirants d'eau, déplacements, déductions, quantité par différence, avec les valeurs bord, terre et inspecteur.
+
+**Section (champs) — Navire et escale / Vessel and call**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Navire / Vessel | Vessel.name, Vessel.imo | demi |
+| Pavillon / type / Flag / type | Vessel.flag, Vessel.vessel_type | demi |
+| Escale / voyage / Call / voyage | PortCall.reference, PortCall.voyage_number | demi |
+| Port / Port | Port.name, Port.code | demi |
+| Poste / zone / Berth / area | PortCall.berth ou CallStage.berth_kind de l'étape en cours | demi |
+| Agence / Agency | PortCall.agency (Organization.name) | demi |
+| Cargaison / Cargo | PortCall.product | demi |
+| Quantité déclarée / Declared quantity | PortCall.quantity | demi |
+| Longueur entre perpendiculaires (m) / Length between perpendiculars (m) | — (à compléter sur le papier) | demi |
+| Port en lourd (t) / Deadweight (t) | Vessel.dwt | demi |
+| Draft survey initial / Initial draft survey | jalon DRAFT_SURVEY_INITIAL | demi |
+| Draft survey final / Final draft survey | jalon DRAFT_SURVEY_FINAL | demi |
+
+**Section (tableau) — Tirants d'eau lus / Drafts read**
+
+Colonnes : Lecture / Reading · Initial (m) / Initial (m) · Final (m) / Final (m).
+
+Lignes préremplies : aucune ; lignes vierges ajoutées : 0.
+
+**Section (tableau) — Déplacement et déductions / Displacement and deductibles**
+
+Colonnes : Élément / Item · Initial (t) / Initial (t) · Final (t) / Final (t).
+
+Lignes préremplies : aucune ; lignes vierges ajoutées : 0.
+
+**Section (tableau) — Quantité de cargaison / Cargo quantity**
+
+Colonnes : Mesure / Measurement · Navire / Ship · Terre / Shore · Inspecteur / Surveyor.
+
+Lignes préremplies : Measurement DRAFT_I / DRAFT_F : valeurs SHIP, SHORE, SURVEYOR ; lignes vierges ajoutées : 0.
+
+Note de section : La quantité de cargaison est la différence des déplacements nets ; aucune des trois valeurs n'est la référence (EF-8.1). / The cargo quantity is the difference of the net displacements; none of the three figures is the reference (EF-8.1).
+
+**Section (champs) — Conditions et remarques / Conditions and remarks**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| État de la mer, houle, visibilité des marques / Sea state, swell, visibility of the marks | — (à compléter sur le papier) | pleine |
+| Réserves / Remarks | — (à compléter sur le papier) | pleine |
+
+**Signatures** : INS — Inspecteur / Surveyor · NAV — Capitaine / chef officier / Master / chief officer · TER — Terminal / Terminal
+
+## 6.86 `CARGO_MANIFEST` — Manifeste de cargaison / Cargo manifest
+
+Partie émettrice : AGE — Agence maritime. Standard : Convention FAL de l'OMI, formulaire 2 (déclaration de cargaison) / IMO FAL Convention, form 2 (cargo declaration). Rôles émetteurs : AGE, NAV. Type de document : `CARGO_MANIFEST`. Répond à : `MB1:B1.01`, `MC1:C1.03`, `MG1:G1.01`, `MR1:R1.01`, `MX1:X1.01`. Offert : toujours. Orientation : portrait. Objet : Le manifeste de cargaison et ses listes : connaissements, marques, colis ou unités, poids, chargeur et destinataire.
+
+**Section (champs) — Navire et escale / Vessel and call**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Navire / Vessel | Vessel.name, Vessel.imo | demi |
+| Pavillon / type / Flag / type | Vessel.flag, Vessel.vessel_type | demi |
+| Escale / voyage / Call / voyage | PortCall.reference, PortCall.voyage_number | demi |
+| Port / Port | Port.name, Port.code | demi |
+| Poste / zone / Berth / area | PortCall.berth ou CallStage.berth_kind de l'étape en cours | demi |
+| Agence / Agency | PortCall.agency (Organization.name) | demi |
+| Opération / Operation | PortCall.template_codes | demi |
+| Port de chargement / déchargement / Port of loading / discharge | PortCall.last_port, next_port | demi |
+| Cargaison déclarée / Declared cargo | PortCall.product, quantity | demi |
+
+**Section (tableau) — Marchandises / Cargo**
+
+Colonnes : Connaissement / B/L no. · Marques et numéros / Marks and numbers · Nombre et nature des colis / unités / Number and kind of packages / units · Description / Description · Poids brut (kg) / Gross weight (kg) · Volume (m³) / Measurement (m³) · Chargeur / Shipper · Destinataire / Consignee · Remarques / Remarks.
+
+Lignes préremplies : PortCall.product, CallParty COM ; lignes vierges ajoutées : 8.
+
+**Section (champs) — Totaux / Totals**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Nombre total de colis / unités / conteneurs / Total packages / units / containers | — (à compléter sur le papier) | demi |
+| Poids brut total (t) / Total gross weight (t) | PortCall.quantity (MT) | demi |
+| Marchandises dangereuses (voir déclaration DG) / Dangerous goods (see DG declaration) | — (à compléter sur le papier) | demi |
+
+**Signatures** : NAV — Capitaine ou agent autorisé / Master or authorised agent
+
+## 6.87 `STOWAGE_PLAN` — Plan d'arrimage / de chargement ou de déchargement / Stowage / loading or discharge plan
+
+Partie émettrice : NAV — Navire / capitaine. Standard : Code BLU §3 (vrac) ; Code CSS et manuel d'assujettissement (divers, roulier) / BLU Code §3 (bulk); CSS Code and cargo securing manual (general cargo, ro-ro). Rôles émetteurs : AGE, NAV. Type de document : `STOWAGE_PLAN`. Répond à : `MB1:B1.02`, `MB2:B2.03`, `MG1:G1.03`, `MR1:R1.02`. Offert : gabarit MB1 ou MB2 ou MG1 ou MR1. Orientation : portrait. Objet : Le plan par cale, baie ou pont : cargaison, quantités, séquence, cadence, ballastage, contraintes et accords.
+
+**Section (champs) — Navire et escale / Vessel and call**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Navire / Vessel | Vessel.name, Vessel.imo | demi |
+| Pavillon / type / Flag / type | Vessel.flag, Vessel.vessel_type | demi |
+| Escale / voyage / Call / voyage | PortCall.reference, PortCall.voyage_number | demi |
+| Port / Port | Port.name, Port.code | demi |
+| Poste / zone / Berth / area | PortCall.berth ou CallStage.berth_kind de l'étape en cours | demi |
+| Agence / Agency | PortCall.agency (Organization.name) | demi |
+| Opération / Operation | PortCall.template_codes | demi |
+| Cargaison / quantité / Cargo / quantity | PortCall.product, quantity | demi |
+| Tirant d'eau à l'arrivée / au départ (m) / Draft arrival / departure (m) | Vessel.draft_m | demi |
+
+**Section (tableau) — Plan par cale ou pont / Plan per hold or deck**
+
+Colonnes : Cale ou pont / Hold or deck / Cale ou pont / Hold or deck · Cargaison / lot / Cargo / parcel · Quantité prévue / Planned quantity · Séquence / Sequence · Cadence (t/h, mvts/h) / Rate (t/h, moves/h) · Ballastage / stabilité / Ballast / stability · Observations / Remarks.
+
+Lignes préremplies : aucune ; lignes vierges ajoutées : 3.
+
+**Section (champs) — Contraintes et accords / Limits and agreements**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Contraintes de structure (moments, efforts tranchants, charge par cale ou par pont) / Structural limits (bending, shear, load per hold or deck) | — (à compléter sur le papier) | pleine |
+| Tirant d'eau et assiette visés à la fin / Target draft and trim on completion | — (à compléter sur le papier) | demi |
+| Nivellement / saisissage / Trimming / lashing | — (à compléter sur le papier) | demi |
+| Ordre d'arrêt et délai / Stop order and stop time | — (à compléter sur le papier) | demi |
+| Communication (VHF, téléphone) / Communication (VHF, telephone) | — (à compléter sur le papier) | demi |
+
+Note de section : Plan d'arrimage conforme au manuel d'assujettissement de la cargaison (Code CSS) et aux calculs de stabilité du bord. / Stowage plan per the cargo securing manual (CSS Code) and the ship's stability calculations.
+
+**Signatures** : NAV — Capitaine / chef officier / Master / chief officer · TER — Terminal / Terminal
+
+## 6.88 `DG_DECLARATION` — Déclaration de marchandises dangereuses / Dangerous goods declaration
+
+Partie émettrice : AGE — Agence maritime. Standard : Code IMDG, chapitre 5.4 ; Convention FAL, formulaire 7 / IMDG Code, chapter 5.4; FAL Convention, form 7. Rôles émetteurs : AGE, NAV. Type de document : `DG_DECLARATION`. Répond à : `MC1:C1.02`, `MG1:G1.02`, `MX1:X1.02`. Offert : toujours. Orientation : portrait. Objet : La déclaration des marchandises dangereuses à bord : positions, n° ONU, classes, emballages, polluants marins.
+
+**Section (champs) — Navire et escale / Vessel and call**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Navire / Vessel | Vessel.name, Vessel.imo | demi |
+| Pavillon / type / Flag / type | Vessel.flag, Vessel.vessel_type | demi |
+| Escale / voyage / Call / voyage | PortCall.reference, PortCall.voyage_number | demi |
+| Port / Port | Port.name, Port.code | demi |
+| Poste / zone / Berth / area | PortCall.berth ou CallStage.berth_kind de l'étape en cours | demi |
+| Agence / Agency | PortCall.agency (Organization.name) | demi |
+| Opération / Operation | PortCall.template_codes | demi |
+| Niveau de sûreté / Security level | — (à compléter sur le papier) | demi |
+
+**Section (tableau) — Marchandises dangereuses / Dangerous goods**
+
+Colonnes : Position / conteneur / Stowage position / container · N° ONU / UN number · Désignation officielle / Proper shipping name · Classe / division / Class / division · Groupe d'emballage / Packing group · Risques subsidiaires / Subsidiary risks · Nombre et type de colis / Number and kind of packages · Masse / volume / Mass / volume · Point d'éclair / Flashpoint · Polluant marin / Marine pollutant · EmS / EmS.
+
+Lignes préremplies : aucune ; lignes vierges ajoutées : 8.
+
+**Section (texte) — Déclaration du chargeur / Shipper's declaration**
+
+> Je déclare que le contenu de cet envoi est décrit ci-dessus de façon complète et exacte par sa désignation officielle de transport, et qu'il est classé, emballé, marqué, étiqueté ou placardé et à tous égards en état d'être transporté conformément aux règlements internationaux et nationaux applicables.
+>
+> *I hereby declare that the contents of this consignment are fully and accurately described above by the proper shipping name, and are classified, packaged, marked and labelled/placarded, and are in all respects in proper condition for transport according to the applicable international and national governmental regulations.*
+
+
+**Signatures** : AGE — Chargeur / agent / Shipper / agent · NAV — Capitaine / Master
+
+## 6.89 `HOLD_INSPECTION` — Rapport d'inspection des cales / de la cargaison / Hold / cargo inspection report
+
+Partie émettrice : INS — Inspecteur et laboratoire. Standard : Pratique des inspecteurs de cargaisons sèches ; Code BLU ; Code IMSBC / Dry cargo surveyors' practice; BLU Code; IMSBC Code. Rôles émetteurs : INS, TER. Type de document : `HOLD_INSPECTION`. Répond à : `MB1:B1.06`, `MB2:B2.05`, `MG1:G1.05`, `MR1:R1.04`. Offert : gabarit MB1 ou MB2 ou MG1 ou MR1. Orientation : portrait. Objet : L'inspection des cales ou de la cargaison avant les opérations : propreté, étanchéité, réserves, acceptation.
+
+**Section (champs) — Navire et escale / Vessel and call**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Navire / Vessel | Vessel.name, Vessel.imo | demi |
+| Pavillon / type / Flag / type | Vessel.flag, Vessel.vessel_type | demi |
+| Escale / voyage / Call / voyage | PortCall.reference, PortCall.voyage_number | demi |
+| Port / Port | Port.name, Port.code | demi |
+| Poste / zone / Berth / area | PortCall.berth ou CallStage.berth_kind de l'étape en cours | demi |
+| Agence / Agency | PortCall.agency (Organization.name) | demi |
+| Cargaison prévue / Intended cargo | PortCall.product | demi |
+| Inspection / Inspection | jalon HOLDS_ACCEPTED | demi |
+| Inspecteur / Surveyor | CallParty INS | demi |
+
+**Section (tableau) — Cales / espaces inspectés / Holds / spaces inspected**
+
+Colonnes : Cale / Hold · Propreté / Cleanliness · Sèche / Dry · Étanchéité des panneaux / Hatch cover tightness · Odeur / résidus / Odour / residues · Infestation / Infestation · Échelles / éclairage / Ladders / lighting · Acceptée / Accepted · Réserves / Remarks.
+
+Lignes préremplies : aucune ; lignes vierges ajoutées : 2.
+
+**Section (champs) — Conclusion / Conclusion**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Cales acceptées pour la cargaison prévue / Holds accepted for the intended cargo | jalon HOLDS_ACCEPTED | demi |
+| Cales refusées et travaux demandés / Holds rejected and work required | — (à compléter sur le papier) | pleine |
+
+**Signatures** : INS — Inspecteur / Surveyor · NAV — Capitaine / Master · TER — Terminal / Terminal
+
+## 6.90 `TALLY_SHEET` — Feuille de pointage et constat de réception / Tally sheet and out-turn statement
+
+Partie émettrice : INS — Inspecteur et laboratoire. Standard : Pratique du pointage contradictoire ; constat de réception (out-turn) / Joint tally practice; out-turn statement. Rôles émetteurs : INS, TER. Type de document : `TALLY_SHEET`. Répond à : `MG1:G1.07`, `MG1:G1.10`, `MR1:R1.06`, `MR1:R1.09`. Offert : gabarit MC1 ou MG1 ou MR1. Orientation : portrait. Objet : Le pointage des colis ou unités par le navire et par la terre, les écarts, les dommages, le constat de réception contre le manifeste.
+
+**Section (champs) — Navire et escale / Vessel and call**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Navire / Vessel | Vessel.name, Vessel.imo | demi |
+| Pavillon / type / Flag / type | Vessel.flag, Vessel.vessel_type | demi |
+| Escale / voyage / Call / voyage | PortCall.reference, PortCall.voyage_number | demi |
+| Port / Port | Port.name, Port.code | demi |
+| Poste / zone / Berth / area | PortCall.berth ou CallStage.berth_kind de l'étape en cours | demi |
+| Agence / Agency | PortCall.agency (Organization.name) | demi |
+| Cargaison / Cargo | PortCall.product | demi |
+| Quantité au manifeste / Manifest quantity | PortCall.quantity | demi |
+| Début / fin des opérations / Start / end of operations | jalons CARGO_OPS_START / END | demi |
+
+**Section (tableau) — Pointage / Tally**
+
+Colonnes : Date / équipe / Date / shift · Cale / pont / lot / Hold / deck / lot · Marques / Marks · Pointé navire / Ship tally · Pointé terre / Shore tally · Écart / Difference · Endommagés / Damaged · Observations / Remarks.
+
+Lignes préremplies : aucune ; lignes vierges ajoutées : 10.
+
+**Section (tableau) — Constat de réception (out-turn) / Out-turn statement**
+
+Colonnes : Mesure / Measurement · Navire / Ship · Terre / Shore · Inspecteur / Surveyor.
+
+Lignes préremplies : Measurement TALLY : valeurs SHIP, SHORE, SURVEYOR ; PortCall.quantity ; lignes vierges ajoutées : 0.
+
+**Signatures** : TER — Terminal / Terminal · NAV — Navire / Ship · INS — Inspecteur / Surveyor
+
+## 6.91 `MATES_RECEIPT` — Reçu de bord (mate's receipt) / Mate's receipt
+
+Partie émettrice : NAV — Navire / capitaine. Standard : Pratique maritime — reçu de bord, préalable au connaissement / Maritime practice — mate's receipt before the bill of lading. Rôles émetteurs : NAV. Type de document : `MATES_RECEIPT`. Répond à : `MB2:B2.15`, `MG1:G1.11`. Offert : gabarit MB2 ou MG1. Orientation : portrait. Objet : Le reçu de bord de la cargaison chargée, avec les réserves du bord, avant l'émission du connaissement.
+
+**Section (champs) — Navire et escale / Vessel and call**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Navire / Vessel | Vessel.name, Vessel.imo | demi |
+| Pavillon / type / Flag / type | Vessel.flag, Vessel.vessel_type | demi |
+| Escale / voyage / Call / voyage | PortCall.reference, PortCall.voyage_number | demi |
+| Port / Port | Port.name, Port.code | demi |
+| Poste / zone / Berth / area | PortCall.berth ou CallStage.berth_kind de l'étape en cours | demi |
+| Agence / Agency | PortCall.agency (Organization.name) | demi |
+| Chargeur / Shipper | CallParty COM | demi |
+| Port de destination / Port of destination | PortCall.next_port | demi |
+
+**Section (tableau) — Marchandises reçues à bord / Cargo received on board**
+
+Colonnes : Marques et numéros / Marks and numbers · Nombre et nature des colis / Number and kind of packages · Description / Description · Poids brut / Gross weight · Volume / Measurement · Cale / pont / Hold / deck.
+
+Lignes préremplies : PortCall.product, quantity ; lignes vierges ajoutées : 5.
+
+**Section (champs) — Réserves du bord / Master's remarks**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| État apparent de la marchandise et de l'emballage / Apparent order and condition of the goods and packing | — (à compléter sur le papier) | pleine |
+| Reçu à bord le / Received on board on | jalon CARGO_OPS_END | demi |
+
+**Signatures** : NAV — Chef officier / capitaine / Chief officer / master · AGE — Agent / chargeur / Agent / shipper
+
+## 6.92 `OUTTURN_REPORT` — Rapport d'opération du terminal (out-turn) / Terminal operation report (out-turn)
+
+Partie émettrice : TER — Terminal / dépôt. Standard : Rapports d'opération des terminaux ; pesées et pointages / Terminal operation reports; weighings and tallies. Rôles émetteurs : TER. Type de document : `OUTTURN_REPORT`. Répond à : `MB1:B1.14`, `MC1:C1.11`, `MX1:X1.08`. Offert : gabarit MB1 ou MB2 ou MC1 ou MG1 ou MR1 ou MX1. Orientation : portrait. Objet : Le rapport d'opération du terminal : relevé par équipe, arrêts, quantités pesées ou pointées, unités endommagées.
+
+**Section (champs) — Navire et escale / Vessel and call**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Navire / Vessel | Vessel.name, Vessel.imo | demi |
+| Pavillon / type / Flag / type | Vessel.flag, Vessel.vessel_type | demi |
+| Escale / voyage / Call / voyage | PortCall.reference, PortCall.voyage_number | demi |
+| Port / Port | Port.name, Port.code | demi |
+| Poste / zone / Berth / area | PortCall.berth ou CallStage.berth_kind de l'étape en cours | demi |
+| Agence / Agency | PortCall.agency (Organization.name) | demi |
+| Opération / Operation | PortCall.template_codes | demi |
+| Cargaison / quantité / Cargo / quantity | PortCall.product, quantity | demi |
+| Début / fin des opérations / Start / end of operations | jalons CARGO_OPS_START / END | demi |
+
+**Section (tableau) — Relevé par équipe / Record per shift**
+
+Colonnes : Date / équipe / Date / shift · Moyens (grues, portiques, bennes) / Means (cranes, gantries, grabs) · Cale / baie / lot / Hold / bay / lot · Quantité ou mouvements / Quantity or moves · Cadence / Rate · Arrêts (h) / Stoppages (h) · Incidents / Incidents.
+
+Lignes préremplies : aucune ; lignes vierges ajoutées : 8.
+
+**Section (tableau) — Arrêts enregistrés / Stoppages recorded**
+
+Colonnes : Début / From · Fin / To · Cause / Cause · Imputable à / Attributable to.
+
+Lignes préremplies : reports.interruptions ; lignes vierges ajoutées : 0.
+
+**Section (champs) — Quantités constatées / Quantities established**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Pesée à terre (bascule, bande) / Shore weighing (weighbridge, belt scale) | Measurement SCALE (SHORE) | demi |
+| Pointage terre / Shore tally | Measurement TALLY (SHORE) | demi |
+| Unités ou conteneurs endommagés / Damaged units or containers | — (à compléter sur le papier) | pleine |
+| Observations / Remarks | — (à compléter sur le papier) | pleine |
+
+**Signatures** : TER — Terminal / Terminal · NAV — Navire / Ship
+
+## 6.93 `CARGO_DAMAGE` — Constat de dommages ou de manquants / Damage or shortage report
+
+Partie émettrice : INS — Inspecteur et laboratoire. Standard : Usage maritime — constat contradictoire, réserve de droits / Maritime practice — joint report, reservation of rights. Rôles émetteurs : AGE, INS, NAV, TER. Type de document : `CARGO_DAMAGE_REPORT`. Répond à : `MB1:B1.15`, `MC1:C1.12`, `MG1:G1.12`, `MR1:R1.10`. Offert : toujours. Orientation : portrait. Objet : Le constat contradictoire de dommages ou de manquants, avec réserve de droits.
+
+**Section (champs) — Navire et escale / Vessel and call**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Navire / Vessel | Vessel.name, Vessel.imo | demi |
+| Pavillon / type / Flag / type | Vessel.flag, Vessel.vessel_type | demi |
+| Escale / voyage / Call / voyage | PortCall.reference, PortCall.voyage_number | demi |
+| Port / Port | Port.name, Port.code | demi |
+| Poste / zone / Berth / area | PortCall.berth ou CallStage.berth_kind de l'étape en cours | demi |
+| Agence / Agency | PortCall.agency (Organization.name) | demi |
+| Opération / Operation | PortCall.template_codes | demi |
+
+**Section (champs) — Constat / Report**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Date et heure du constat / Date and time of the report | — (à compléter sur le papier) | demi |
+| Lieu (cale, pont, quai, aire) / Place (hold, deck, quay, yard) | — (à compléter sur le papier) | demi |
+| Objet endommagé ou manquant (cargaison, navire, installation, engin) / Damaged or missing item (cargo, vessel, facility, equipment) | — (à compléter sur le papier) | pleine |
+| Description des dommages ou des manquants / Description of the damage or shortage | — (à compléter sur le papier) | pleine |
+| Circonstances et cause apparente / Circumstances and apparent cause | — (à compléter sur le papier) | pleine |
+| Témoins / Witnesses | — (à compléter sur le papier) | demi |
+| Photos jointes (références) / Photos attached (references) | — (à compléter sur le papier) | demi |
+| Mesures conservatoires prises / Protective measures taken | — (à compléter sur le papier) | pleine |
+
+**Section (texte) — Réserve de droits / Reservation of rights**
+
+> Le présent constat est dressé contradictoirement sans reconnaissance de responsabilité ; chaque partie réserve ses droits.
+>
+> *This report is drawn up jointly without admission of liability; each party reserves its rights.*
+
+
+**Signatures** : INS — Inspecteur / Surveyor · NAV — Navire / Ship · TER — Terminal / Terminal
+
+## 6.94 `BLU_AGREEMENT` — Accord de chargement / déchargement navire-terminal (Code BLU) / Ship/terminal loading / unloading agreement (BLU Code)
+
+Partie émettrice : TER — Terminal / dépôt. Standard : Code BLU de l'OMI, §3 et appendice 2 — plan de chargement ou de déchargement / IMO BLU Code, §3 and appendix 2 — loading or unloading plan. Rôles émetteurs : NAV, TER. Type de document : `BLU_AGREEMENT`. Répond à : `MB1:B1.07`, `MB2:B2.07`. Offert : gabarit MB1 ou MB2. Orientation : portrait. Objet : Le plan de chargement ou de déchargement convenu entre le vraquier et le terminal : passes, cadences, déballastage, arrêts.
+
+**Section (champs) — Navire et escale / Vessel and call**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Navire / Vessel | Vessel.name, Vessel.imo | demi |
+| Pavillon / type / Flag / type | Vessel.flag, Vessel.vessel_type | demi |
+| Escale / voyage / Call / voyage | PortCall.reference, PortCall.voyage_number | demi |
+| Port / Port | Port.name, Port.code | demi |
+| Poste / zone / Berth / area | PortCall.berth ou CallStage.berth_kind de l'étape en cours | demi |
+| Agence / Agency | PortCall.agency (Organization.name) | demi |
+| Cargaison / quantité / Cargo / quantity | PortCall.product, quantity | demi |
+| Terminal / Terminal | CallParty TER | demi |
+| Opération / Operation | PortCall.template_codes | demi |
+
+**Section (tableau) — Plan convenu — séquence par passe / Agreed plan — sequence per pour**
+
+Colonnes : Passe / Pour · Cale / Hold · Quantité (t) / Quantity (t) · Cadence (t/h) / Rate (t/h) · Déballastage / ballastage pendant / Deballasting / ballasting during · Durée estimée / Estimated duration · Observations / Remarks.
+
+Lignes préremplies : aucune ; lignes vierges ajoutées : 8.
+
+**Section (champs) — Accords / Agreements**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Cadence maximale convenue (t/h) / Agreed maximum rate (t/h) | — (à compléter sur le papier) | demi |
+| Quantité maximale par passe (t) / Maximum quantity per pour (t) | — (à compléter sur le papier) | demi |
+| Signal et délai d'arrêt / Stop signal and stop time | — (à compléter sur le papier) | demi |
+| Communication (canal VHF, téléphone) / Communication (VHF channel, telephone) | — (à compléter sur le papier) | demi |
+| Nivellement et moyens / Trimming and means | — (à compléter sur le papier) | demi |
+| Tirant d'eau et assiette finaux visés / Target final draft and trim | — (à compléter sur le papier) | demi |
+| Conditions d'arrêt (météo, houle, dommages) / Stop conditions (weather, swell, damage) | — (à compléter sur le papier) | pleine |
+
+Note de section : Le plan est convenu avant le début des opérations et modifié d'un commun accord ; le navire peut demander l'arrêt à tout moment (Code BLU §3 et §5). / The plan is agreed before the operations start and changed by mutual agreement; the ship may ask for a stop at any time (BLU Code §3 and §5).
+
+**Signatures** : NAV — Capitaine / Master · TER — Représentant du terminal / Terminal representative
+
+## 6.95 `BAY_PLAN` — Plan de chargement conteneurs (bay plan) / Container bay plan
+
+Partie émettrice : AGE — Agence maritime. Standard : Pratique des terminaux à conteneurs — messages BAPLIE / COPRAR ; SOLAS VI (VGM) / Container terminal practice — BAPLIE / COPRAR messages; SOLAS VI (VGM). Rôles émetteurs : AGE, NAV. Type de document : `BAY_PLAN`. Répond à : `MC1:C1.01`, `MC1:C1.10`. Offert : gabarit MC1. Orientation : portrait. Objet : Les listes et plans échangés pour les opérations conteneurs et le plan final tel qu'arrimé.
+
+**Section (champs) — Navire et escale / Vessel and call**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Navire / Vessel | Vessel.name, Vessel.imo | demi |
+| Pavillon / type / Flag / type | Vessel.flag, Vessel.vessel_type | demi |
+| Escale / voyage / Call / voyage | PortCall.reference, PortCall.voyage_number | demi |
+| Port / Port | Port.name, Port.code | demi |
+| Poste / zone / Berth / area | PortCall.berth ou CallStage.berth_kind de l'étape en cours | demi |
+| Agence / Agency | PortCall.agency (Organization.name) | demi |
+| Mouvements prévus / Planned moves | PortCall.quantity (MOVES / BOX / TEU) | demi |
+| Terminal / Terminal | CallParty TER | demi |
+
+**Section (tableau) — Listes et messages échangés / Lists and messages exchanged**
+
+Colonnes : Liste / message / List / message · Référence / Reference · Reçu le / Received on · Conteneurs / Containers · TEU / TEU · Observations / Remarks.
+
+Lignes préremplies : aucune ; lignes vierges ajoutées : 0.
+
+**Section (champs) — Confirmation du bord / Ship's confirmation**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Stabilité et contraintes vérifiées / Stability and stresses checked | — (à compléter sur le papier) | demi |
+| Saisissage vérifié / Lashing checked | — (à compléter sur le papier) | demi |
+| Poids vérifiés (VGM) / Verified gross masses (VGM) | — (à compléter sur le papier) | demi |
+| Observations / Remarks | — (à compléter sur le papier) | pleine |
+
+**Signatures** : NAV — Capitaine / chef officier / Master / chief officer · TER — Planificateur du terminal / Terminal planner
+
+## 6.96 `CARGO_INFO_IMSBC` — Déclaration de cargaison du chargeur (Code IMSBC) / Shipper's cargo declaration (IMSBC Code)
+
+Partie émettrice : AGE — Agence maritime. Standard : Code IMSBC, section 4 — information sur la cargaison / IMSBC Code, section 4 — cargo information. Rôles émetteurs : AGE, COM. Type de document : `CARGO_INFO_IMSBC`. Répond à : `MB2:B2.01`. Offert : gabarit MB2. Orientation : portrait. Objet : L'information du chargeur sur la cargaison en vrac : groupe, humidité, TML, risques, certificats.
+
+**Section (champs) — Navire et escale / Vessel and call**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Navire / Vessel | Vessel.name, Vessel.imo | demi |
+| Pavillon / type / Flag / type | Vessel.flag, Vessel.vessel_type | demi |
+| Escale / voyage / Call / voyage | PortCall.reference, PortCall.voyage_number | demi |
+| Port / Port | Port.name, Port.code | demi |
+| Poste / zone / Berth / area | PortCall.berth ou CallStage.berth_kind de l'étape en cours | demi |
+| Agence / Agency | PortCall.agency (Organization.name) | demi |
+| Chargeur / Shipper | CallParty COM | demi |
+| Cargaison / Cargo | PortCall.product | demi |
+| Quantité (t) / Quantity (t) | PortCall.quantity | demi |
+
+**Section (champs) — Information sur la cargaison (Code IMSBC §4.2) / Cargo information (IMSBC Code §4.2)**
+
+| Champ FR / EN | Source de préremplissage | Largeur |
+|---|---|---|
+| Nom d'expédition de la cargaison en vrac (BCSN) / Bulk cargo shipping name (BCSN) | PortCall.product | demi |
+| Groupe (A, B, C) / Group (A, B, C) | — (à compléter sur le papier) | demi |
+| Classe OMI / risque / IMO class / hazard | — (à compléter sur le papier) | demi |
+| Facteur d'arrimage (m³/t) / Stowage factor (m³/t) | — (à compléter sur le papier) | demi |
+| Angle de repos / Angle of repose | — (à compléter sur le papier) | demi |
+| Teneur en humidité (%) / Moisture content (%) | — (à compléter sur le papier) | demi |
+| Limite d'humidité transportable (TML, %) / Transportable moisture limit (TML, %) | — (à compléter sur le papier) | demi |
+| Date de l'essai d'humidité / Date of the moisture test | — (à compléter sur le papier) | demi |
+| Date de l'essai de TML / Date of the TML test | — (à compléter sur le papier) | demi |
+| Propriétés chimiques pertinentes / Relevant chemical properties | — (à compléter sur le papier) | pleine |
+| Certificats joints / Certificates attached | — (à compléter sur le papier) | pleine |
+
+Note de section : L'échantillonnage et les essais suivent le Code IMSBC (section 8) ; pour une cargaison du groupe A, la teneur en humidité est inférieure à la TML. / Sampling and testing follow the IMSBC Code (section 8); for a group A cargo the moisture content is below the TML.
+
+**Signatures** : COM — Chargeur / Shipper · NAV — Capitaine / Master

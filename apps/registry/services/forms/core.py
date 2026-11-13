@@ -1,4 +1,4 @@
-"""Standard forms of a tanker call, generated from the registry in ONE structure (docs/FORMULAIRES.md).
+"""Standard forms of a call — every kind of cargo since 1.5 —, generated from the registry in ONE structure (docs/FORMULAIRES.md).
 
 Every form shares the same frame: a header (port, call, vessel, berth or stage, dates, form number), a body made
 of sections (fields, tables, checklists, text, a verification QR code), a signature block (one column per signing
@@ -116,8 +116,21 @@ def _quantity(call: PortCall) -> str | None:
     return f"{call.quantity} {call.quantity_unit}" if call.quantity else None
 
 
+OPERATION_LABELS = {
+    "M1": "déchargement / discharge", "M2": "chargement / loading", "M3": "transbordement STS / STS transfer",
+    "M4": "soutage / bunkering", "MB1": "déchargement de vrac sec / dry bulk discharge", "MB2": "chargement de vrac sec / dry bulk loading",
+    "MC1": "opérations conteneurs / container operations", "MG1": "marchandises diverses / general cargo",
+    "MR1": "roulier / ro-ro", "MX1": "autre opération / other operation",
+}
+
+
 def _operation(call: PortCall) -> str:
-    return "chargement / loading" if "M2" in call.template_codes else "déchargement / discharge"
+    """The operation of the call, named after its templates (every kind of cargo since 1.5)."""
+    codes = call.template_codes
+    for code, label in OPERATION_LABELS.items():
+        if code in codes:
+            return label
+    return "escale / call"
 
 
 def _partner(call: PortCall) -> str | None:
@@ -198,6 +211,7 @@ class Form:
     needs_link: bool = False  # also offered when the call has a partner call (STS, double banking)
     answers: tuple = ()  # task references ("M0:12") or request types ("REQ:BERTH") this form answers
     purpose: Pair | None = None  # one line: what the form is for (catalogue, specification)
+    cargo_kinds: frozenset = frozenset()  # offered only for these kinds of cargo (empty = every kind) — v1.5
 
     @property
     def family_label(self) -> Pair:
@@ -216,7 +230,9 @@ def _register(form: Form) -> Form:
 
 # ------------------------------------------------------------------------------------------------ rendering, filing
 def offered(call: PortCall, form: Form) -> bool:
-    """Does this call call for the form (its operations and modules), whoever asks?"""
+    """Does this call call for the form (its kind of cargo, its operations and modules), whoever asks?"""
+    if form.cargo_kinds and (call.cargo_kind or "LIQUID") not in form.cargo_kinds:
+        return False
     if not form.templates and not form.needs_link:
         return True
     codes = set(call.template_codes)

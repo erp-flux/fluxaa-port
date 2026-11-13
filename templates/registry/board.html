@@ -1,0 +1,34 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "Placement conference" %}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div><h1>{% trans "Placement conference" %} — {{ port.name }} <span class="small muted">{{ now|date:"d/m/Y" }}</span></h1>
+    <p>{% trans "Every declared call of the port, as the placement conference lays it out: alongside, in the roads, expected, departed — berth, vessel, call number, agent, nature of the cargo and tonnage when the port shows them, ETA, FAL forms and manifest filed, arrival, ETB, ETD. Nothing else of another agency's call is shown; a call opens only for the organisations that hold a role on it." %}</p></div>
+  <div class="actions"><a class="btn secondary" href="{% url 'registry:board_occupation' %}">{% trans "Berth occupation plan" %}</a> <a class="btn secondary" href="{% url 'registry:board' %}?format=csv">{% trans "Download (CSV)" %}</a> <a class="btn quiet" href="{% url 'registry:call_list' %}">{% trans "My calls" %}</a></div>
+</div>
+{% for key, label, rows in groups %}
+<section class="section" aria-labelledby="board-{{ key }}">
+  <div class="section-head"><h2 id="board-{{ key }}">{{ label }}</h2><span class="small muted">{{ rows|length }}</span></div>
+  {% if rows %}
+  <div class="tablewrap"><table class="grid conference">
+    <tr><th>{% trans "Berth" %}</th><th>{% trans "Vessel" %}</th><th>{% trans "Call no." %}</th><th>{% trans "Agent" %}</th>{% if show_cargo %}<th>{% trans "Nature of the cargo" %}</th><th>{% trans "Tonnage" %}</th>{% endif %}<th>ETA</th><th>FAL</th><th>{% trans "Manifest" %}</th><th>{% trans "Arrived" %}</th><th>ETB</th><th>ETD</th><th>{% trans "State" %}</th></tr>
+    {% for r in rows %}
+    <tr><td><b>{{ r.area }}</b>{% if r.berth_kind != r.area %}<div class="small muted">{{ r.berth_kind }}</div>{% endif %}</td>
+      <td>{% if r.link %}<a href="{% url 'registry:call_detail' r.call.pk %}"><b>{{ r.vessel }}</b></a>{% else %}<b>{{ r.vessel }}</b>{% endif %}<div class="small muted">IMO {{ r.imo }}{% if r.flag %} — {{ r.flag }}{% endif %} — {{ r.vessel_kind }}</div>{% if r.sts_partner %}<div class="small">STS ↔ {{ r.sts_partner }}</div>{% endif %}</td>
+      <td><span class="code">{{ r.call.reference }}</span></td>
+      <td>{{ r.agency }}</td>
+      {% if show_cargo %}<td>{{ r.cargo|default:"—" }}<div class="small muted">{% for code in r.operations %}<span class="code">{{ code }}</span> {% endfor %}</div></td><td class="num">{{ r.quantity|default:"—" }}</td>{% endif %}
+      <td><time>{{ r.eta|date:"d/m H:i" }}</time></td>
+      <td>{% if r.fal %}<span class="chip done">{% trans "yes" %}</span>{% else %}<span class="chip na">{% trans "no" %}</span>{% endif %}</td>
+      <td>{% if r.manifest %}<span class="chip done">{% trans "yes" %}</span>{% else %}<span class="chip na">{% trans "no" %}</span>{% endif %}</td>
+      <td><time>{% if r.ata %}{{ r.ata|date:"d/m H:i" }}{% else %}—{% endif %}</time></td>
+      <td><time>{% if r.atb %}{{ r.atb|date:"d/m H:i" }}{% elif r.etb %}{{ r.etb|date:"d/m H:i" }} <span class="muted">est.</span>{% else %}—{% endif %}</time></td>
+      <td><time>{% if r.atd %}{{ r.atd|date:"d/m H:i" }}{% elif r.etd %}{{ r.etd|date:"d/m H:i" }} <span class="muted">est.</span>{% else %}—{% endif %}</time></td>
+      <td><span class="chip status st-{{ r.status_code }}">{{ r.status }}</span>{% if not r.link %}<div class="small muted">{% trans "consultation only" %}</div>{% endif %}</td></tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="empty">{% trans "No call in this state." %}</p>{% endif %}
+</section>
+{% endfor %}
+<p class="small muted">{% blocktrans with n=total %}{{ n }} call(s) on the board — the times are in the port's time zone; "est." marks an estimate.{% endblocktrans %}{% if not show_cargo %} {% trans "The port does not show the nature of the cargo nor the tonnage on this board." %}{% endif %}</p>
+{% endblock %}

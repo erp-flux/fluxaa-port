@@ -99,6 +99,7 @@ Deadline anchors. Every deadline is relative: no absolute date can be stored (EF
 | `ARCHIVED` | ARCHIVED | Archivée / Archived |
 | `REJECTED` | REJECTED | Refusée / Rejected |
 | `CANCELLED` | CANCELLED | Annulée / Cancelled |
+| `EXPIRED` | EXPIRED | Obsolète (validité échue) / Obsolete (validity expired) |
 
 ### `Transition`
 Transitions that the platform refuses while blocking tasks are not done (EF-11)
@@ -206,12 +207,57 @@ Transitions that the platform refuses while blocking tasks are not done (EF-11)
 | `EXPIRY` | EXPIRY | Autorisation expirée / Authorization expired |
 | `ASSISTANT` | ASSISTANT | Signalée depuis la revue assistée / Raised from the assistant review |
 
+### `CargoKind`
+What the vessel carries (FLX-CDC-002 v1.5, EXG-R-08): the platform is open to every cargo — the kind chooses the operation templates, the quantity units, the measurement methods and the safety checklist
+
+| Code | Nom | Libellé FR / EN |
+|---|---|---|
+| `LIQUID` | LIQUID | Vrac liquide (pétrole, chimie, huiles végétales, gaz) / Liquid bulk (petroleum, chemicals, vegetable oils, gas) |
+| `DRY` | DRY | Vrac sec (minerais, céréales, clinker, engrais, charbon…) / Dry bulk (minerals, grain, clinker, fertiliser, coal…) |
+| `CONTAINER` | CONTAINER | Conteneurs / Containers |
+| `GENERAL` | GENERAL | Marchandises diverses, colis, projets, ferrailles / General cargo, breakbulk, project cargo, scrap |
+| `RORO` | RORO | Roulier : véhicules et engins / Ro-ro: vehicles and rolling equipment |
+| `OTHER` | OTHER | Autre (passagers, navire d'État, pêche, recherche, sans cargaison) / Other (passengers, naval, fishing, research, no cargo) |
+
+### `VesselKind`
+| Code | Nom | Libellé FR / EN |
+|---|---|---|
+| `TANKER_CRUDE` | TANKER_CRUDE | Pétrolier brut / Crude oil tanker |
+| `TANKER_PRODUCT` | TANKER_PRODUCT | Pétrolier de produits / Product tanker |
+| `TANKER_CHEM` | TANKER_CHEM | Chimiquier / Chemical tanker |
+| `GAS` | GAS | Gazier (GPL / GNL) / Gas carrier (LPG / LNG) |
+| `BULK` | BULK | Vraquier / Bulk carrier |
+| `CONTAINER` | CONTAINER | Porte-conteneurs / Container ship |
+| `GENERAL` | GENERAL | Cargo divers / polyvalent / General cargo / multipurpose |
+| `RORO` | RORO | Roulier / transporteur de véhicules / Ro-ro / vehicle carrier |
+| `REEFER` | REEFER | Navire frigorifique / Reefer |
+| `PASSENGER` | PASSENGER | Passagers / croisière / Passenger / cruise |
+| `OSV` | OSV | Ravitailleur / service offshore / Offshore supply / service |
+| `TUG` | TUG | Remorqueur / barge / navire de servitude / Tug / barge / workboat |
+| `NAVAL` | NAVAL | Navire de guerre / d'État / Naval / government vessel |
+| `FISHING` | FISHING | Navire de pêche / Fishing vessel |
+| `OTHER` | OTHER | Autre / Other |
+
+### `StsRole`
+| Code | Nom | Libellé FR / EN |
+|---|---|---|
+| `DONOR` | DONOR | Livre la cargaison (navire livreur) / Delivers the cargo (discharging vessel) |
+| `RECEIVER` | RECEIVER | Reçoit la cargaison (navire receveur) / Receives the cargo (receiving vessel) |
+
 ### `TemplateVersion.Status`
 | Code | Nom | Libellé FR / EN |
 |---|---|---|
 | `DRAFT` | DRAFT | Brouillon / Draft |
 | `PUBLISHED` | PUBLISHED | Publiée / Published |
 | `RETIRED` | RETIRED | Retirée / Retired |
+
+### `ReportAccess.Report`
+| Code | Nom | Libellé FR / EN |
+|---|---|---|
+| `PUMPING_LOG` | PUMPING_LOG | Journal de pompage (relevés bord et terre, écart) / Pumping log (ship and shore readings, deviation) |
+| `MEASUREMENTS` | MEASUREMENTS | Mesures et relevés de citernes validés / Measurements and validated tank readings |
+| `SAFETY_CHECKLIST` | SAFETY_CHECKLIST | Liste de contrôle navire/terre (lecture) / Ship/shore safety checklist (reading) |
+| `CALL_BOARD` | CALL_BOARD | Tableau des escales du port (attendues, à quai, parties) / Port call board (expected, alongside, departed) |
 
 ### `CallStage.Status`
 | Code | Nom | Libellé FR / EN |
@@ -220,6 +266,13 @@ Transitions that the platform refuses while blocking tasks are not done (EF-11)
 | `CURRENT` | CURRENT | En cours / Current |
 | `DONE` | DONE | Faite / Done |
 | `CANCELLED` | CANCELLED | Annulée / Cancelled |
+
+### `CallParty.Access`
+| Code | Nom | Libellé FR / EN |
+|---|---|---|
+| `FULL` | FULL | Accès complet (tous les onglets, agit dans son rôle) / Full access (every tab, acts within its role) |
+| `PARTIAL` | PARTIAL | Accès partiel (les onglets listés, y agit) / Partial access (the tabs listed, acts within them) |
+| `READ` | READ | Lecture seule (tous les onglets, aucun acte) / Reading only (every tab, no act) |
 
 ### `MasterAccessLink.Channel`
 | Code | Nom | Libellé FR / EN |
@@ -252,7 +305,38 @@ Transitions that the platform refuses while blocking tasks are not done (EF-11)
 | `OBQ` | OBQ | Quantité à bord avant opération (OBQ) / On-board quantity (OBQ) |
 | `ROB` | ROB | Reste à bord (ROB) / Remaining on board (ROB) |
 | `BL` | BL | Chiffre du connaissement / Bill of lading figure |
+| `DRAFT_I` | DRAFT_INITIAL | Draft survey — initial |
+| `DRAFT_F` | DRAFT_FINAL | Draft survey — final |
+| `SCALE` | SCALE | Pesée à terre / bascule / bande / Shore scale / weighbridge / belt scale |
+| `TALLY` | TALLY | Pointage / comptage (unités, boîtes, EVP) / Tally / count (units, boxes, TEU) |
 | `OTHER` | OTHER | Autre / Other |
+
+### `TankReadingReview.State`
+| Code | Nom | Libellé FR / EN |
+|---|---|---|
+| `PENDING` | PENDING | En attente de l'inspecteur / Awaiting the surveyor |
+| `VALIDATED` | VALIDATED | Validé par l'inspecteur / Validated by the surveyor |
+| `REJECTED` | REJECTED | Rejeté par l'inspecteur / Rejected by the surveyor |
+
+### `PumpingLogSheet.Side`
+| Code | Nom | Libellé FR / EN |
+|---|---|---|
+| `SHIP` | SHIP | Bord (livré / reçu à bord) / Ship (delivered / received on board) |
+| `SHORE` | SHORE | Terre (reçu / livré par le terminal) / Shore (received / delivered by the terminal) |
+
+### `SafetyChecklist.Status`
+| Code | Nom | Libellé FR / EN |
+|---|---|---|
+| `OPEN` | OPEN | En cours de renseignement / Being completed |
+| `SIGNED` | SIGNED | Signée par les deux parties / Signed by both sides |
+| `CANCELLED` | CANCELLED | Annulée / Cancelled |
+
+### `SafetyCheckAnswer.State`
+| Code | Nom | Libellé FR / EN |
+|---|---|---|
+| `YES` | YES | Oui — vérifié / Yes — checked |
+| `NO` | NO | Non / No |
+| `NA` | NA | Sans objet / Not applicable |
 
 ### `DisputeEntry.Kind`
 | Code | Nom | Libellé FR / EN |
@@ -312,11 +396,11 @@ Transitions that the platform refuses while blocking tasks are not done (EF-11)
 
 | Depuis | Vers (autorisé) |
 |---|---|
-| `DRAFT` | `CANCELLED`, `DECLARED` |
-| `DECLARED` | `ACCEPTED`, `CANCELLED`, `REJECTED` |
-| `ACCEPTED` | `CANCELLED`, `PLANNED` |
-| `PLANNED` | `APPROACHING`, `CANCELLED` |
-| `APPROACHING` | `AT_BERTH`, `DEPARTED`, `IN_OPERATION` |
+| `DRAFT` | `CANCELLED`, `DECLARED`, `EXPIRED` |
+| `DECLARED` | `ACCEPTED`, `CANCELLED`, `EXPIRED`, `REJECTED` |
+| `ACCEPTED` | `CANCELLED`, `EXPIRED`, `PLANNED` |
+| `PLANNED` | `APPROACHING`, `CANCELLED`, `EXPIRED` |
+| `APPROACHING` | `AT_BERTH`, `DEPARTED`, `EXPIRED`, `IN_OPERATION` |
 | `AT_BERTH` | `DEPARTED`, `IN_OPERATION`, `SHIFTING` |
 | `IN_OPERATION` | `OPS_COMPLETE`, `SHIFTING` |
 | `OPS_COMPLETE` | `DEPARTED`, `SHIFTING` |
@@ -326,6 +410,7 @@ Transitions that the platform refuses while blocking tasks are not done (EF-11)
 | `ARCHIVED` | — (terminal) |
 | `REJECTED` | — (terminal) |
 | `CANCELLED` | — (terminal) |
+| `EXPIRED` | — (terminal) |
 
 Chaîne opérationnelle le long de laquelle un jalon fait avancer l'escale (`OPERATIONAL_CHAIN`) : `PLANNED` → `APPROACHING` → `AT_BERTH` → `IN_OPERATION` → `OPS_COMPLETE` → `DEPARTED`.
 

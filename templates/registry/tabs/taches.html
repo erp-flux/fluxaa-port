@@ -6,7 +6,8 @@
       {% if only_mine %}<a href="?tab=taches">{% trans "Show every task I can see" %}</a>{% else %}<a href="?tab=taches&mine=1">{% trans "Only my tasks" %}</a>{% endif %}
     </div>
   </div>
-  <p class="small muted">{% trans "Tasks are assigned to roles, never to persons. Each role sees its own tasks; the agency and the harbour master see them all." %}</p>
+  <p class="small muted">{% trans "Tasks are assigned to roles, never to persons. Each role sees its own tasks; the agency and the harbour master see them all. Every task of your role is carried out right here: the document to provide, the request to file or decide, the milestone to record, the confirmation to give." %}</p>
+  {% if not can_act_tasks %}<p class="small"><span class="chip hold">{% trans "Your access to this call does not allow acting on the tasks: the principal agent gives that right." %}</span></p>{% endif %}
   {% for code, tasks in task_groups.items %}
   <div class="tablewrap"><table class="grid" style="margin-bottom:14px">
     <tr class="section-row"><td colspan="6">{{ code }}</td></tr>
@@ -24,10 +25,12 @@
         {% if t.status == "PENDING" and t.alert_level != "NONE" %}<span class="chip {{ t.alert_level|alert_class }}">{{ t.alert_level|alert_label }}</span>{% endif %}
         {% if t.is_blocking %}<span class="chip blocking">{% trans "Blocking" %}</span>{% endif %}</td>
       <td class="actions">
+        {% if t.template_code == "M0" and t.number == "28" %}<a class="btn small {% if t.can_act %}{% else %}secondary{% endif %}" href="{% url 'registry:checklist' call.pk %}">{% trans "On-line checklist" %}</a>{% endif %}
         {% if t.can_act %}
-          {% if t.request_type_code %}<a class="btn small secondary" href="?tab=demandes&type={{ t.request_type_code }}">{% trans "Through its request" %}</a>
-          {% elif t.milestone_codes %}<a class="btn small secondary" href="?tab=jalons">{% trans "Record the milestone" %}</a>
-          {% elif t.document_type_code %}<a class="btn small secondary" href="?tab=documents&task={{ t.pk }}&type={{ t.document_type_code }}">{% trans "Provide the document" %}</a>{% endif %}
+          {% if t.execute and can_act_tasks %}{% include "registry/tabs/_task_execute.html" with t=t x=t.execute %}{% endif %}
+          {% if t.request_type_code %}<a class="btn small quiet" href="?tab=demandes&type={{ t.request_type_code }}">{% trans "Through its request" %}</a>
+          {% elif t.milestone_codes %}<a class="btn small quiet" href="?tab=jalons">{% trans "On the milestones tab" %}</a>
+          {% elif t.document_type_code %}<a class="btn small quiet" href="?tab=documents&task={{ t.pk }}&type={{ t.document_type_code }}">{% trans "On the documents tab" %}</a>{% endif %}
           {% if t.can_sign %}<form method="post" action="{% url 'registry:call_action' call.pk 'task_sign' %}" class="inline">{% csrf_token %}<input type="hidden" name="task_id" value="{{ t.pk }}"><input type="hidden" name="back" value="?tab=taches#t{{ t.pk }}"><button class="btn small">{% trans "Sign" %}</button></form>{% endif %}
           {% if t.can_complete %}
           <details class="action"><summary>{% if t.nature == "D" %}{% trans "Decide" %}{% else %}{% trans "Mark done" %}{% endif %}</summary><div>
@@ -46,7 +49,7 @@
   </table></div>
   {% empty %}<p class="empty">{% trans "No task for your roles." %}</p>{% endfor %}
 </section>
-{% if is_age or is_cap %}
+{% if can_act_tasks and is_age or can_act_tasks and is_cap %}
 <section class="section">
   <details class="action"><summary>{% trans "Add an ad hoc task" %}</summary><div>
     <p class="small muted">{% trans "Explicitly marked, never blocking: a blocking task must come from the port's templates." %}</p>

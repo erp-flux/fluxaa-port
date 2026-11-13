@@ -1,0 +1,104 @@
+{% extends "base.html" %}{% load i18n fluxaa %}
+{% block title %}{% trans "Safety checklist" %} — {{ call.reference }}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div><h1>{% trans "Safety checklist" %} — {% if LANGUAGE_CODE == "en" %}{{ standard_label.1 }}{% else %}{{ standard_label.0 }}{% endif %}</h1>
+    <p class="small muted">{% if LANGUAGE_CODE == "en" %}{{ standard_basis.1 }}{% else %}{{ standard_basis.0 }}{% endif %}</p>
+    <p><a class="code" href="{% url 'registry:call_detail' call.pk %}">{{ call.reference }}</a> — {{ call.vessel.name }} — {% if call.berth %}{{ call.berth.code }}{% else %}{{ call.get_requested_berth_kind_display }}{% endif %}
+      {% if checklist %} — v{{ checklist.version }} {% if checklist.status == "SIGNED" %}<span class="chip done">{% trans "signed by both sides" %}</span>{% elif checklist.status == "OPEN" %}<span class="chip pending">{% trans "being completed" %}</span>{% else %}<span class="chip na">{{ checklist.get_status_display }}</span>{% endif %}{% endif %}</p></div>
+  <div class="actions">
+    <a class="btn secondary" href="{% url 'registry:call_detail' call.pk %}?tab=taches">{% trans "Back to the call" %}</a>
+    {% if checklist %}<a class="btn secondary" href="{% url 'registry:form_preview' call.pk form_code %}" target="_blank" rel="noopener">{% trans "Printable form" %}</a>{% endif %}
+  </div>
+</div>
+{% if refusal %}{% include "registry/_refusal.html" %}{% endif %}
+
+{% if not checklist %}
+<section class="section">
+  <p>{% trans "The checklist follows the structure of the ISGOTT ship/shore safety checklist: the ship ticks its items, the terminal its own, the joint items need both; the agreements of the pre-transfer conference are written in; the repetitive checks (R) are ticked again at the agreed interval. Each tick is recorded under the name of the person who made it. When both sides have signed, task M0:28 is done, the milestone « checklist signed » is recorded and the printed form, pre-filled with the ticks, is filed in the call." %}</p>
+  {% if can_complete %}
+  <form method="post" action="{% url 'registry:call_action' call.pk 'checklist_open' %}" class="form">{% csrf_token %}
+    <div><label for="interval">{% trans "Interval of the repetitive checks (h) — may be agreed later (part 5A)" %}</label><input id="interval" name="repeat_interval_h" inputmode="decimal" placeholder="4" style="max-width:120px"></div>
+    <button class="btn">{% trans "Open the checklist" %}</button></form>
+  {% else %}<p class="empty">{% trans "Not opened yet by the ship or the terminal." %}</p>{% endif %}
+</section>
+{% else %}
+
+<section class="section">
+  <div class="sides">
+    <div class="side"><b>{% trans "Ship" %}</b>
+      <div>{{ progress.SHIP.answered }} / {{ progress.SHIP.total }} {% trans "items checked" %}{% if progress.SHIP.no %} — <span class="chip contested">{{ progress.SHIP.no|length }} {% trans "answered no" %}</span>{% endif %}</div>
+      <div class="small muted">{% if progress.SHIP.signed %}<span class="chip done">{% trans "signed" %}</span>{% else %}{% trans "not signed yet" %}{% endif %}</div></div>
+    <div class="side"><b>{% trans "Shore (terminal)" %}</b>
+      <div>{{ progress.SHORE.answered }} / {{ progress.SHORE.total }} {% trans "items checked" %}{% if progress.SHORE.no %} — <span class="chip contested">{{ progress.SHORE.no|length }} {% trans "answered no" %}</span>{% endif %}</div>
+      <div class="small muted">{% if progress.SHORE.signed %}<span class="chip done">{% trans "signed" %}</span>{% else %}{% trans "not signed yet" %}{% endif %}</div></div>
+    <div class="side"><b>{% trans "Agreements (part 5A)" %}</b>
+      <div>{{ progress.agreements.written }} / {{ progress.agreements.total }} {% trans "written" %}</div>
+      <div class="small muted">{% if checklist.repeat_interval_h %}{% trans "repetitive checks every" %} {{ checklist.repeat_interval_h|floatformat:"-1" }} h{% if progress.due %} — {% trans "next" %} <time>{{ progress.due|date:"d/m H:i" }}</time>{% endif %}{% else %}{% trans "interval of the repetitive checks to agree (5A.8)" %}{% endif %}</div></div>
+  </div>
+  <p class="small muted">{% trans "Opened by" %} {{ checklist.opened_label }} — <time>{{ checklist.opened_at|date:"d/m/Y H:i" }}</time>{% for sg in checklist.signatures.all %} · {% if sg.side == "SHIP" %}{% trans "ship" %}{% else %}{% trans "shore" %}{% endif %} {% trans "signed by" %} {{ sg.signer_label }} <time>{{ sg.signed_at|date:"d/m H:i" }}</time>{% endfor %}{% if checklist.document %} · <a href="{% url 'registry:document_download' call.pk checklist.document.pk %}?inline=1" target="_blank" rel="noopener">{% trans "filed form" %}</a>{% endif %}</p>
+</section>
+
+{% for part in parts %}
+<section class="section cl-part" id="{{ part.code }}" aria-labelledby="part-{{ part.code }}">
+  <form method="post" action="{% url 'registry:call_action' call.pk 'checklist_answer' %}">{% csrf_token %}<input type="hidden" name="part" value="{{ part.code }}">
+  <div class="section-head"><h3 id="part-{{ part.code }}">{% if LANGUAGE_CODE == "en" %}{{ part.en }}{% else %}{{ part.fr }}{% endif %}</h3>
+    {% if part.code == "6" %}<span class="small muted">{% trans "ticked before the transfer, then again at the agreed interval (R)" %}</span>{% endif %}</div>
+  {% for row in part.items %}{% with item=row.item %}
+  <div class="cl-item">
+    <div class="cl-text"><span class="cl-code">{{ item.code }}</span>{% if LANGUAGE_CODE == "en" %}{{ item.en }}<span class="en">{{ item.fr }}</span>{% else %}{{ item.fr }}<span class="en">{{ item.en }}</span>{% endif %}{% if item.repetitive %} <span class="code" title="{% trans 'repeated during the transfer' %}">R</span>{% endif %}
+      <div class="cl-other">
+        {% if "SHIP" in row.sides %}{% trans "Ship:" %} {% if row.ship %}{% if item.kind == "value" %}{{ row.ship.value }}{% else %}{{ row.ship.state|default:"—" }}{% endif %}{% if row.ship.remark %} — {{ row.ship.remark }}{% endif %} <span class="muted">({{ row.ship.author_label }}, {{ row.ship.answered_at|date:"d/m H:i" }})</span>{% else %}—{% endif %}{% endif %}
+        {% if "SHORE" in row.sides %}{% if "SHIP" in row.sides %} · {% endif %}{% trans "Shore:" %} {% if row.shore %}{% if item.kind == "value" %}{{ row.shore.value }}{% else %}{{ row.shore.state|default:"—" }}{% endif %}{% if row.shore.remark %} — {{ row.shore.remark }}{% endif %} <span class="muted">({{ row.shore.author_label }}, {{ row.shore.answered_at|date:"d/m H:i" }})</span>{% else %}—{% endif %}{% endif %}
+        {% for rep in row.repetitions %}<div>↻ {{ rep.answered_at|date:"d/m H:i" }} {% if rep.side == "SHIP" %}{% trans "ship" %}{% else %}{% trans "shore" %}{% endif %} {{ rep.state }} {{ rep.remark }} <span class="muted">({{ rep.author_label }})</span></div>{% endfor %}
+      </div>
+    </div>
+    <div class="cl-ticks">
+      {% if row.mine and can_complete and checklist.status == "OPEN" %}
+        <input type="hidden" name="item_code" value="{{ item.code }}">
+        {% if item.kind == "value" %}<input name="value_{{ item.code }}" value="{{ row.value }}" maxlength="300" aria-label="{{ item.fr }}" placeholder="{% trans 'agreed value' %}">
+        {% else %}
+        <label><input type="radio" name="state_{{ item.code }}" value="YES" {% if row.my_answer and row.my_answer.state == "YES" %}checked{% endif %}> {% trans "Yes" %}</label>
+        <label><input type="radio" name="state_{{ item.code }}" value="NO" {% if row.my_answer and row.my_answer.state == "NO" %}checked{% endif %}> {% trans "No" %}</label>
+        <label><input type="radio" name="state_{{ item.code }}" value="NA" {% if row.my_answer and row.my_answer.state == "NA" %}checked{% endif %}> {% trans "N/A" %}</label>
+        <input name="remark_{{ item.code }}" value="{{ row.my_answer.remark|default:'' }}" maxlength="300" placeholder="{% trans 'remark (required for a no)' %}" aria-label="{% trans 'Remark' %}">
+        {% endif %}
+      {% elif row.mine and can_complete and checklist.status == "SIGNED" and item.repetitive %}
+        <span class="cl-state">{% trans "repeated below" %}</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endwith %}{% endfor %}
+  {% if can_complete and checklist.status == "OPEN" %}<div class="actions" style="margin-top:8px"><button class="btn small">{% trans "Record this part" %}</button></div>{% endif %}
+  </form>
+  {% if can_complete and checklist.status == "SIGNED" and part.repeatable %}
+  <details class="action" style="margin-top:10px"><summary>{% trans "Repeat the (R) checks of this part now" %}</summary><div>
+    <form method="post" action="{% url 'registry:call_action' call.pk 'checklist_answer' %}" class="form">{% csrf_token %}<input type="hidden" name="part" value="{{ part.code }}"><input type="hidden" name="repetition" value="{{ next_repetition }}">
+      {% for row in part.items %}{% with item=row.item %}{% if item.repetitive and row.mine %}
+      <div class="cl-item"><div class="cl-text"><span class="cl-code">{{ item.code }}</span>{% if LANGUAGE_CODE == "en" %}{{ item.en }}{% else %}{{ item.fr }}{% endif %}</div>
+        <div class="cl-ticks"><input type="hidden" name="item_code" value="{{ item.code }}">
+          <label><input type="radio" name="state_{{ item.code }}" value="YES"> {% trans "Yes" %}</label><label><input type="radio" name="state_{{ item.code }}" value="NO"> {% trans "No" %}</label><label><input type="radio" name="state_{{ item.code }}" value="NA"> {% trans "N/A" %}</label>
+          <input name="remark_{{ item.code }}" maxlength="300" placeholder="{% trans 'remark' %}" aria-label="{% trans 'Remark' %}"></div></div>
+      {% endif %}{% endwith %}{% endfor %}
+      <button class="btn small secondary">{% trans "Record the repeated checks" %}</button></form></div></details>
+  {% endif %}
+</section>
+{% endfor %}
+
+<section class="section" id="sign">
+  <h2>{% trans "Signatures" %}</h2>
+  {% if can_complete and checklist.status == "OPEN" %}
+    {% if my_side in signed_sides %}<p><span class="chip done">{% trans "Your side has signed." %}</span> {% trans "Waiting for the other side." %}</p>
+    {% else %}
+    <form method="post" action="{% url 'registry:call_action' call.pk 'checklist_sign' %}" class="form" data-confirm="{% trans 'Sign the checklist for your side? Every item must be checked and the agreements written.' %}">{% csrf_token %}
+      <div><label for="sgc">{% trans "Comment (optional)" %}</label><input id="sgc" name="comment" maxlength="300"></div>
+      <button class="btn">{% if my_side == "SHIP" %}{% trans "Sign for the ship" %}{% else %}{% trans "Sign for the terminal" %}{% endif %}</button>
+      <p class="hint">{% trans "The signature is nominative and sealed; the second signature closes the checklist, completes task M0:28 and records the milestone the start of transfer waits for." %}</p></form>
+    {% endif %}
+  {% elif checklist.status == "SIGNED" %}<p>{% trans "Signed by both sides; the repetitive checks continue during the transfer." %}</p>
+  {% else %}<p class="small muted">{% trans "The ship and the terminal sign; the other parties read." %}</p>{% endif %}
+  {% if can_cancel %}<details class="action" style="margin-top:10px"><summary>{% trans "Cancel this checklist" %}</summary><div><form method="post" action="{% url 'registry:call_action' call.pk 'checklist_cancel' %}" class="form">{% csrf_token %}<input name="reason" required placeholder="{% trans 'Reason' %}" aria-label="{% trans 'Reason' %}"><button class="btn small danger">{% trans "Cancel" %}</button></form></div></details>{% endif %}
+</section>
+{% if versions|length > 1 %}<p class="small muted">{% trans "Versions:" %} {% for v in versions %}v{{ v.version }} {{ v.get_status_display }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+{% endif %}
+{% endblock %}

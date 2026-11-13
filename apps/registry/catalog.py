@@ -9,9 +9,12 @@ causes, berth names) are proposals to be confirmed with the parties before go-li
 """
 from __future__ import annotations
 
+from . import catalog_cargo
+
 # --------------------------------------------------------------------------------------------
 # Deadlines: key -> (anchor, offset in minutes, label FR, label EN)
 # --------------------------------------------------------------------------------------------
+
 D = 1440
 H = 60
 TIMING = {
@@ -67,13 +70,15 @@ QUAY = ["JETTY", "SPM"]  # ship/shore interface tasks exist only alongside a ter
 
 
 def T(num, role, nature, timing, crit, fr, en, *, co=(), joint=False, conf="N2", req="", side="", ms=(), doc="",
-      auto="", cont=False, na=True, kinds=(), basis="", per_vessel=False):
+      auto="", cont=False, na=True, kinds=(), basis="", per_vessel=False, green=False, cargo=()):
     return {
         "number": num, "role": role, "co_roles": list(co), "joint": joint, "nature": nature, "timing": timing,
         "criticality": crit, "confidentiality": conf, "title_fr": fr, "title_en": en, "request_type_code": req,
         "request_side": side, "milestone_codes": list(ms), "document_type_code": doc, "auto_event": auto,
         "continuous": cont, "not_applicable_allowed": na, "berth_kinds": list(kinds), "per_vessel": per_vessel,
         "hold_basis": basis or ("PRO-MAR-001 — point d'arrêt / hold point" if crit == "B" else ""),
+        # a green light shown on the call's panel (v1.5); the kinds of cargo the line applies to (empty = all)
+        "green_light": green, "cargo_kinds": list(cargo),
     }
 
 
@@ -98,13 +103,15 @@ TEMPLATES = [
                        "Create the call and invite the stakeholders", auto="call.created", na=False,
                        basis="FLX-SPEC-001 règle 1 — l'agence crée l'escale")),
             ("M0.1", T("02", "AGE", "F", "ETA-7j", "B",
-                       "Fournir le jeu de données navire : Q88 ou VPQ, plans, particularités du collecteur, débit de pompage",
-                       "Provide the vessel dataset: Q88 or VPQ, plans, manifold particulars, pumping rate", doc="Q88",
+                       "Fournir le jeu de données navire : Q88 ou VPQ pour un pétrolier, fiche de particularités et plans pour tout autre navire (grues, rampes, cales)",
+                       "Provide the vessel dataset: Q88 or VPQ for a tanker, ship's particulars and plans for any other vessel (cranes, ramps, holds)", doc="Q88",
                        basis="PRO-MAR-001 §3.2 — dossier navire / OCIMF")),
+            # the agency may file the certificates on the master's behalf (co-role): the declaration is not held
+            # by a master who has not yet opened his access (FLX-CDC-002 v1.4, EXG-Q-09)
             ("M0.1", T("03", "NAV", "F", "ETA-72h", "B",
                        "Fournir les certificats statutaires et d'assurance — validité contrôlée à la date de départ prévue",
                        "Provide statutory and insurance certificates — validity checked against the planned departure date",
-                       doc="CERTIFICATES", basis="SOLAS / MARPOL / CLC — certificats statutaires")),
+                       co=("AGE",), doc="CERTIFICATES", basis="SOLAS / MARPOL / CLC — certificats statutaires")),
             ("M0.1", T("04", "COM", "F", "ETA-72h", "N",
                        "Fournir l'extrait de recap ou de charte-partie et les clauses d'escale",
                        "Provide the recap or charter-party extract and the port-call clauses", doc="CP_RECAP")),
@@ -123,8 +130,10 @@ TEMPLATES = [
             ("M0.1", T("08", "AGE", "R", "ETA-72h", "B", "Déclarer l'escale et solliciter le green light",
                        "Declare the call and request the green light", auto="call.declared",
                        basis="Règlement d'exploitation du port — déclaration d'escale")),
-            ("M0.1", T("09", "CAP", "D", "ETA-48h", "B", "Accorder le green light", "Grant the green light",
-                       req="GREEN_LIGHT", side="decide", basis="PRO-MAR-001 — green light de la capitainerie")),
+            ("M0.1", T("09", "CAP", "D", "ETA-48h", "B", "Accorder le green light de la capitainerie", "Grant the harbour master's green light",
+                       req="GREEN_LIGHT", side="decide", green=True, basis="PRO-MAR-001 — green light de la capitainerie")),
+            # the other green lights of the call (v1.5, EXG-R-03): naval base / security, terminal, principal
+            *[line for line in catalog_cargo.GREEN_LIGHT_TASKS if line[1]["number"].startswith("09")],
             ("M0.1", T("10", "AGE", "F", "ETA-72h", "B", "Demander le poste et le créneau", "Request the berth and the slot",
                        req="BERTH", side="submit", basis="Règlement d'exploitation — attribution des postes")),
             ("M0.1", T("11", "APO", "D", "ETA-24h", "B", "Attribuer le poste et le créneau", "Assign the berth and the slot",
@@ -175,16 +184,17 @@ TEMPLATES = [
                        basis="ISGOTT — réunion pré-transfert")),
             ("M0.3", T("28", "TER", "S", "T0", "B", "Compléter et signer conjointement la liste de contrôle navire/terre",
                        "Complete and jointly sign the ship/shore safety checklist", co=("NAV",), joint=True, kinds=QUAY,
-                       na=False, basis="ISGOTT chap. 26 — SSSCL")),
+                       na=False, basis="ISGOTT chap. 26 — SSSCL ; Code BLU — liste de contrôle vrac sec")),
             ("M0.3", T("29", "TER", "R", "T0", "B", "Réaliser et consigner l'essai d'arrêt d'urgence",
                        "Perform and record the emergency shutdown test", co=("NAV",), ms=("ESD_TEST",), kinds=QUAY,
-                       na=False, basis="ISGOTT — essai ESD")),
+                       na=False, cargo=("LIQUID",), basis="ISGOTT — essai ESD")),
             ("M0.3", T("30", "SUR", "S", "ATB+2h", "N", "Établir la déclaration de sûreté si requise",
                        "Establish the declaration of security if required", co=("NAV",), joint=True, conf="N2")),
             ("M0.3", T("31", "TER", "C", "T0", "B",
                        "Confirmer la mise en sécurité du poste : dalots obturés, plateaux, kit antipollution, moyens incendie",
                        "Confirm berth safety: scuppers plugged, drip trays, spill kit, firefighting means", kinds=QUAY,
-                       basis="ISGOTT / MARPOL — prévention de la pollution")),
+                       cargo=("LIQUID",), basis="ISGOTT / MARPOL — prévention de la pollution")),
+            *[line for line in catalog_cargo.GREEN_LIGHT_TASKS if line[1]["number"] == "31b"],
             ("M0.4", T("32", "PRE", "F", "ATD", "B", "Remettre les déchets et fournir le bordereau de réception",
                        "Deliver the waste and issue the waste receipt", ms=("WASTE_DELIVERED",),
                        basis="MARPOL — installations de réception")),
@@ -210,7 +220,7 @@ TEMPLATES = [
         ],
     },
     {
-        "code": "M1", "kind": "OPERATION", "order": 1, "berth_kinds": QUAY,
+        "code": "M1", "cargo_kinds": ["LIQUID"], "kind": "OPERATION", "order": 1, "berth_kinds": QUAY,
         "name_fr": "Déchargement (import)", "name_en": "Discharge (import)",
         "description_fr": "En complément de M0.", "description_en": "In addition to M0.",
         "tasks": [
@@ -262,7 +272,7 @@ TEMPLATES = [
         ],
     },
     {
-        "code": "M2", "kind": "OPERATION", "order": 2, "berth_kinds": QUAY,
+        "code": "M2", "cargo_kinds": ["LIQUID"], "kind": "OPERATION", "order": 2, "berth_kinds": QUAY,
         "name_fr": "Chargement (export)", "name_en": "Loading (export)",
         "description_fr": "En complément de M0.", "description_en": "In addition to M0.",
         "tasks": [
@@ -317,7 +327,7 @@ TEMPLATES = [
         ],
     },
     {
-        "code": "M3", "kind": "OPERATION", "order": 3, "berth_kinds": ["ANCHORAGE", "STS_AREA"],
+        "code": "M3", "cargo_kinds": ["LIQUID"], "kind": "OPERATION", "order": 3, "berth_kinds": ["ANCHORAGE", "STS_AREA"],
         "requires_linked_call": True,
         "name_fr": "Transbordement navire-navire (STS)", "name_en": "Ship-to-ship transfer (STS)",
         "description_fr": "Relie deux escales : chaque navire a la sienne, avec son capitaine. Le POAC est porté par le prestataire STS (rôle PRE).",
@@ -425,7 +435,7 @@ TEMPLATES = [
         ],
     },
     {
-        "code": "M6", "kind": "OPERATION", "order": 6, "berth_kinds": ["JETTY", "ANCHORAGE"],
+        "code": "M6", "cargo_kinds": ["LIQUID"], "kind": "OPERATION", "order": 6, "berth_kinds": ["JETTY", "ANCHORAGE"],
         "name_fr": "Résidus, slops, dégazage et nettoyage", "name_en": "Residues, slops, gas-freeing and cleaning",
         "description_fr": "", "description_en": "",
         "tasks": [
@@ -581,7 +591,7 @@ TEMPLATES = [
         ],
     },
     {
-        "code": "MA2", "kind": "MODULE", "order": 11, "berth_kinds": ["SPM"],
+        "code": "MA2", "cargo_kinds": ["LIQUID"], "kind": "MODULE", "order": 11, "berth_kinds": ["SPM"],
         "name_fr": "Poste bouée / monobouée (SPM)", "name_en": "Buoy / single point mooring (SPM)",
         "description_fr": "Ajouté automatiquement pour une opération offshore sur bouée.",
         "description_en": "Added automatically for an offshore buoy operation.",
@@ -643,6 +653,10 @@ HOLD_POINTS = {
     "DEPARTURE": ["M0:34"],
     "CLOSE": ["M0:36"],
 }
+
+TEMPLATES += catalog_cargo.TEMPLATES
+for _transition, _refs in catalog_cargo.HOLD_POINT_ADDITIONS.items():
+    HOLD_POINTS[_transition] = [*HOLD_POINTS.get(_transition, []), *_refs]
 
 # --------------------------------------------------------------------------------------------
 # Milestone types — FLX-SPEC-001 §7 (single emitter, countersigners, contesters)
@@ -722,6 +736,8 @@ MILESTONES = [
     MT(33, "STS_SEPARATED", "PRE", ["NAV"], [], "STS — séparation des navires", "STS — vessels separated",
        completes_tasks=["M3:3.13"]),
 ]
+
+MILESTONES += catalog_cargo.MILESTONES
 
 # --------------------------------------------------------------------------------------------
 # Request types — configurable forms (EF-2.2)
@@ -851,10 +867,10 @@ REQUEST_TYPES = [
 # --------------------------------------------------------------------------------------------
 # Document types
 # --------------------------------------------------------------------------------------------
-def DT(code, fr, en, issuers, conf="N2", signers=(), audience=(), generated=False, bl=False, years=10):
+def DT(code, fr, en, issuers, conf="N2", signers=(), audience=(), generated=False, bl=False, years=10, exact=False):
     return {"code": code, "label_fr": fr, "label_en": en, "issuer_roles": list(issuers), "default_confidentiality": conf,
             "signer_roles": list(signers), "audience_roles": list(audience), "generated": generated,
-            "is_bill_of_lading": bl, "retention_years": years}
+            "is_bill_of_lading": bl, "retention_years": years, "readers_exact": exact}
 
 
 DOCUMENT_TYPES = [
@@ -878,7 +894,12 @@ DOCUMENT_TYPES = [
     DT("SECURITY_DECLARATION", "Déclaration de sûreté", "Declaration of security", ["SUR", "NAV"]),
     DT("WASTE_RECEIPT", "Bordereau de réception des déchets", "Waste delivery receipt", ["PRE"], audience=["APO", "NAV"]),
     DT("SOF", "Rapport des faits", "Statement of facts", ["AGE"], conf="N1", signers=["NAV", "TER"], generated=True),
-    DT("TIME_SHEET", "Time sheet", "Time sheet", ["AGE"], conf="N2", audience=["COM", "TER"], generated=True),
+    # the time sheet is read by every party of the call (FLX-CDC-002 v1.4, EXG-Q-02); the agency, the terminal
+    # or the ship generate it from the registry
+    DT("TIME_SHEET", "Time sheet", "Time sheet", ["AGE", "TER", "NAV"], conf="N1", generated=True),
+    # the pumping log, generated from the readings of both sides (EXG-Q-01): read by the loss-control parties
+    DT("PUMPING_LOG", "Journal de pompage (relevés bord et terre, écart)", "Pumping log (ship and shore readings, deviation)",
+       ["TER", "NAV"], audience=["NAV", "TER", "CAP", "INS", "COM", "DIR"], generated=True),
     DT("PORT_ACCOUNT", "Compte d'escale final", "Final port-call account", ["AGE"], conf="N3", audience=["COM"]),
     DT("IMPORT_AUTH", "Autorisation d'importation", "Import authorization", ["AGE"], audience=["ADM", "TER"]),
     DT("EXPORT_AUTH", "Autorisation d'exportation", "Export authorization", ["AGE"], audience=["ADM", "TER"]),
@@ -892,7 +913,10 @@ DOCUMENT_TYPES = [
        signers=["NAV", "TER"]),
     DT("QQ_CERT", "Certificat de quantité et de qualité", "Quantity and quality certificate", ["INS"],
        audience=["NAV", "TER"]),
-    DT("QUALITY_CERT", "Certificat de qualité à terre", "Shore quality certificate", ["INS"], audience=["NAV", "TER"]),
+    # the laboratory's quality certificate is read by the terminal, the trader (owner / charterer side), the vessel,
+    # the surveyor and the port only — not by the agency (FLX-CDC-002 v1.4, EXG-Q-06)
+    DT("QUALITY_CERT", "Certificat de qualité (laboratoire)", "Quality certificate (laboratory)", ["INS"],
+       audience=["NAV", "TER", "COM", "CAP", "APO", "DIR"], exact=True),
     DT("TERMINAL_RECEIPT", "Bon de réception du terminal", "Terminal receipt", ["TER"], audience=["INS"]),
     DT("CARGO_DECLARATION", "Déclaration douanière de cargaison", "Customs cargo declaration", ["AGE"], audience=["ADM"]),
     DT("PROTEST", "Lettre de protêt", "Letter of protest", ["AGE", "NAV", "TER", "INS", "PRE"], audience=["NAV", "TER", "INS"]),
@@ -959,6 +983,8 @@ DOCUMENT_TYPES = [
        ["AGE", "NAV", "TER", "INS", "ADM", "SUR", "PRE", "CAP", "APO", "SVC", "COM", "DIR"]),
 ]
 
+DOCUMENT_TYPES += catalog_cargo.DOCUMENT_TYPES
+
 # --------------------------------------------------------------------------------------------
 # Closed list of interruption causes — PROPOSAL to be negotiated with the parties (FLX-SPEC-002)
 # --------------------------------------------------------------------------------------------
@@ -1007,4 +1033,213 @@ PORTS = {
             ("LFW-STS", "STS_AREA", "Zone STS au large de Lomé", "Lomé offshore STS area", "6.000000", "1.350000", 2500),
         ],
     },
+}
+
+
+# --------------------------------------------------------------------------------------------
+# What the announcement asks for each operation model (FLX-CDC-002 v1.6, EXG-R-11)
+# --------------------------------------------------------------------------------------------
+# The announcement form adapts to the operations chosen: each model carries the questions the port needs from
+# the agency at the announcement — what a harbour master, a terminal or a mooring master asks before accepting the
+# operation. The answers are kept on the call (operation_details), shown on its overview, exported, and they
+# pre-fill the requests the model's tasks will raise (the keys are those of the request forms: BUNKERING,
+# BALLAST_DISCHARGE, GAS_FREEING, HOT_WORK, IMMOBILIZATION, CREW_CHANGE, STS_ZONE, DOUBLE_BANKING, ANCHORAGE).
+def Q(key, fr, en, ftype="text", required=False, options=None, help_fr="", help_en=""):
+    field = F(key, fr, en, ftype, required, options)
+    if help_fr or help_en:
+        field["help_fr"], field["help_en"] = help_fr, help_en
+    return field
+
+
+YES_NO_NA = [("YES", "Oui", "Yes"), ("NO", "Non", "No"), ("TBC", "À confirmer", "To be confirmed")]
+
+INTAKE = {
+    "M1": [
+        Q("max_rate_m3h", "Débit maximal de déchargement (m³/h)", "Maximum discharge rate (m³/h)", "number",
+          help_fr="Capacité des pompes cargo du navire ; le terminal le compare à l'acceptation de ses lignes et de ses bacs",
+          help_en="Capacity of the vessel's cargo pumps; the terminal compares it with what its lines and tanks accept"),
+        Q("max_manifold_pressure_bar", "Pression maximale au collecteur (bar)", "Maximum manifold pressure (bar)", "number"),
+        Q("manifold_connections", "Collecteur : nombre et diamètre des raccords", "Manifold: number and size of connections",
+          help_fr="ex. 2 × 12 pouces, brides ANSI 150", help_en="e.g. 2 × 12 inches, ANSI 150 flanges"),
+        Q("cargo_heating", "Cargaison chauffée (température de transfert)", "Heated cargo (transfer temperature)",
+          help_fr="Température au déchargement si le produit est chauffé (fuel, bitume, huiles)",
+          help_en="Discharge temperature when the product is heated (fuel oil, bitumen, vegetable oils)"),
+        Q("inert_gas", "Citernes inertées à l'arrivée", "Tanks inerted on arrival", "select", options=YES_NO_NA),
+        Q("vapour_return", "Retour de vapeurs demandé", "Vapour return requested", "select", options=YES_NO_NA),
+        Q("crude_oil_washing", "Lavage au brut (COW) prévu", "Crude oil washing (COW) planned", "select", options=YES_NO_NA),
+        Q("stripping_rob", "ROB attendu après assèchement", "Expected ROB after stripping",
+          help_fr="Quantité résiduelle annoncée par le navire ; le certificat de citernes vides la constate",
+          help_en="Residual quantity announced by the vessel; the empty-tank certificate records it"),
+    ],
+    "M2": [
+        Q("max_rate_m3h", "Débit maximal de chargement accepté (m³/h)", "Maximum loading rate accepted (m³/h)", "number"),
+        Q("max_manifold_pressure_bar", "Pression maximale au collecteur (bar)", "Maximum manifold pressure (bar)", "number"),
+        Q("manifold_connections", "Collecteur : nombre et diamètre des raccords", "Manifold: number and size of connections"),
+        Q("tank_condition", "État des citernes à l'arrivée", "Condition of the tanks on arrival", "select",
+          options=[("CLEAN", "Propres et inspectables", "Clean, ready for inspection"),
+                   ("LAST_CARGO", "Résidus de la cargaison précédente (compatibles)", "Residues of the previous cargo (compatible)"),
+                   ("TO_CLEAN", "Nettoyage nécessaire avant chargement", "Cleaning needed before loading")],
+          help_fr="Les trois dernières cargaisons sont demandées par l'inspecteur avant l'acceptation des citernes",
+          help_en="The surveyor asks for the last three cargoes before accepting the tanks"),
+        Q("last_cargoes", "Trois dernières cargaisons", "Last three cargoes"),
+        Q("inert_gas", "Citernes inertées", "Tanks inerted", "select", options=YES_NO_NA),
+        Q("loading_temperature", "Température de chargement attendue", "Expected loading temperature"),
+        Q("bl_quantity_basis", "Base de la quantité du connaissement", "Bill of lading quantity basis", "select",
+          options=[("SHORE", "Jaugeage des bacs à terre", "Shore tank gauging"), ("METER", "Compteur à terre", "Shore meter"),
+                   ("SHIP", "Jaugeage bord avec VEF", "Ship's figures with VEF")],
+          help_fr="Selon la charte-partie et le contrat de vente ; l'inspecteur le constate",
+          help_en="As the charter-party and sales contract provide; the surveyor records it"),
+    ],
+    "M3": [
+        Q("window_from", "Fenêtre d'opération demandée — début", "Requested operation window — from", "datetime"),
+        Q("window_to", "Fenêtre d'opération demandée — fin", "Requested operation window — to", "datetime"),
+        Q("poac", "POAC pressenti (personne et société)", "Intended POAC (person and company)",
+          help_fr="Person in Overall Advisory Control — mandaté par les deux navires ; sa désignation écrite est la tâche 3.04",
+          help_en="Person in Overall Advisory Control — mandated by both vessels; the written appointment is task 3.04"),
+        Q("equipment_by", "Défenses et flexibles fournis par", "Fenders and hoses supplied by", "select",
+          options=[("PROVIDER", "Le prestataire STS", "The STS provider"), ("VESSEL", "L'un des navires", "One of the vessels"),
+                   ("TERMINAL", "Le terminal", "The terminal")]),
+        Q("transfer_mode", "Configuration", "Configuration", "select",
+          options=[("UNDERWAY", "En route (underway)", "Underway"), ("ANCHOR", "Au mouillage, navire récepteur ancré", "At anchor, receiving vessel anchored"),
+                   ("DRIFTING", "En dérive", "Drifting")]),
+        Q("compatibility_done", "Étude de compatibilité déjà réalisée", "Compatibility study already done", "select", options=YES_NO_NA),
+    ],
+    "M4": [
+        Q("grade", "Grade(s) de soute", "Bunker grade(s)", "select", True,
+          options=[("VLSFO", "VLSFO 0,5 %", "VLSFO 0.5%"), ("HSFO", "HSFO 3,5 % (épurateur à bord)", "HSFO 3.5% (scrubber fitted)"),
+                   ("MGO", "MGO / LSMGO 0,1 %", "MGO / LSMGO 0.1%"), ("MIXED", "Plusieurs grades", "Several grades"),
+                   ("LNG", "GNL", "LNG"), ("OTHER", "Autre", "Other")]),
+        Q("quantity_mt", "Quantité totale (t)", "Total quantity (t)", "number", True),
+        Q("supplier", "Soutier pressenti", "Intended bunker supplier", "text",
+          help_fr="Invitez-le aussi comme partie (prestataire) : sa licence et la certification de la barge sont la tâche 4.03",
+          help_en="Also invite it as a party (provider): its licence and the barge certification are task 4.03"),
+        Q("delivery_mode", "Mode de livraison", "Delivery mode", "select", True,
+          options=[("BARGE", "Barge à couple", "Barge alongside"), ("TRUCK", "Camions-citernes au poste", "Tank trucks at the berth"),
+                   ("PIPELINE", "Ligne du terminal", "Terminal pipeline")]),
+        Q("barge_name", "Nom de la barge (si connue)", "Name of the barge (if known)"),
+        Q("terminal_agreement", "Soutage pendant les opérations commerciales (SIMOPS) — accord du terminal demandé",
+          "Bunkering during cargo operations (SIMOPS) — terminal agreement requested", "boolean",
+          help_fr="Sans accord du terminal, le soutage attend la fin des opérations ou se fait en rade",
+          help_en="Without the terminal's agreement bunkering waits for the end of the operations, or takes place at the anchorage"),
+    ],
+    "M5": [
+        Q("volume_m3", "Volume de ballast à rejeter dans le port (m³)", "Ballast volume to discharge in the port (m³)", "number", True),
+        Q("method", "Méthode de conformité (Convention BWM)", "Compliance method (BWM Convention)", "select", True,
+          options=[("D2", "D-2 — système de traitement (BWMS) en service", "D-2 — treatment system (BWMS) in service"),
+                   ("D1", "D-1 — renouvellement en haute mer (>200 milles, >200 m)", "D-1 — exchange at sea (>200 nm, >200 m)"),
+                   ("NONE", "Aucun rejet prévu dans le port", "No discharge planned in the port"),
+                   ("EXEMPT", "Exemption / dérogation (justificatif)", "Exemption (supporting document)")]),
+        Q("exchange_position", "Position et date du renouvellement (D-1)", "Position and date of the exchange (D-1)"),
+        Q("bwms_type", "Type du BWMS et certificat d'approbation", "BWMS type and type-approval certificate"),
+    ],
+    "M6": [
+        Q("residue_type", "Nature des résidus", "Nature of the residues", "select", True,
+          options=[("SLOPS", "Slops / eaux de lavage", "Slops / washing water"), ("SLUDGE", "Boues (sludge)", "Sludge"),
+                   ("BILGE", "Eaux de cale huileuses", "Oily bilge water"), ("CARGO", "Résidus de cargaison", "Cargo residues"),
+                   ("GARBAGE", "Ordures (MARPOL V)", "Garbage (MARPOL V)"), ("MIXED", "Plusieurs", "Several")]),
+        Q("slops_m3", "Quantité à débarquer (m³)", "Quantity to be landed (m³)", "number", True),
+        Q("gas_freeing", "Dégazage ou nettoyage de citernes au port", "Gas-freeing or tank cleaning in the port", "select", True, options=YES_NO_NA),
+        Q("method", "Méthode, effluents, vapeurs", "Method, effluents, vapours", "textarea",
+          help_fr="Reprise telle quelle dans la demande de nettoyage / dégazage", help_en="Carried as is into the cleaning / gas-freeing request"),
+        Q("reception_contractor", "Installation de réception pressentie", "Intended reception facility"),
+    ],
+    "M7": [
+        Q("works", "Nature et méthode des travaux", "Nature and method of works", "textarea", True),
+        Q("hot_work", "Travaux par point chaud", "Hot work", "select", True, options=YES_NO_NA,
+          help_fr="Soudure, meulage, découpe : autorisation de travaux et gaz-free des espaces concernés",
+          help_en="Welding, grinding, cutting: works authorization and gas-free spaces"),
+        Q("immobilisation", "Immobilisation de la propulsion", "Propulsion immobilised", "select", True, options=YES_NO_NA,
+          help_fr="Un navire immobilisé à quai impose un remorqueur en veille et l'accord de la capitainerie",
+          help_en="An immobilised vessel alongside needs a standby tug and the harbour master's agreement"),
+        Q("duration_h", "Durée prévue (h)", "Expected duration (h)", "number"),
+        Q("return_to_service", "Remise en service garantie", "Guaranteed return to service", "datetime"),
+        Q("contractor", "Entreprise de réparation", "Repair contractor"),
+        Q("class_attendance", "Présence de la société de classification", "Class attendance", "select", options=YES_NO_NA),
+    ],
+    "M8": [
+        Q("joining", "Relevants (embarquent)", "Joining crew", "integer"),
+        Q("leaving", "Débarquants", "Leaving crew", "integer"),
+        Q("provisions", "Avitaillement (vivres, pièces)", "Provisions (stores, spares)", "select", options=YES_NO_NA),
+        Q("fresh_water_m3", "Eau douce (m³)", "Fresh water (m³)", "number"),
+        Q("medical", "Évacuation ou consultation médicale", "Medical evacuation or consultation", "select", options=YES_NO_NA),
+        Q("other", "Autre motif de l'escale", "Other purpose of the call"),
+    ],
+    "M9": [
+        Q("purpose", "Objet de l'accostage à couple", "Purpose of the double banking", "select", True,
+          options=[("LIGHTERING", "Allègement ou complément de cargaison au poste", "Lightering or top-off at the berth"),
+                   ("STS_BERTH", "Transfert navire-navire au poste", "Ship-to-ship transfer at the berth"),
+                   ("BUNKER", "Soutage par navire-citerne", "Bunkering by tanker"),
+                   ("SIMOPS", "Opérations commerciales simultanées des deux navires", "Simultaneous cargo operations of both vessels"),
+                   ("WAITING", "Attente de poste (pas d'opération)", "Waiting for a berth (no operation)"),
+                   ("OTHER", "Autre", "Other")]),
+        Q("duration_h", "Durée prévue de la configuration (h)", "Expected duration of the configuration (h)", "number", True),
+        Q("loading_condition", "États de chargement prévisionnels des deux navires", "Expected loading conditions of both vessels", "textarea", True,
+          help_fr="Tirants d'eau et francs-bords attendus à l'accostage et à la séparation ; l'analyse d'amarrage en dépend",
+          help_en="Expected draughts and freeboards at mooring and at separation; the mooring analysis depends on them"),
+        Q("fenders_by", "Défenses fournies par", "Fenders supplied by", "select",
+          options=[("TERMINAL", "Le terminal", "The terminal"), ("OUTER", "Le navire extérieur", "The outer vessel"),
+                   ("PROVIDER", "Un prestataire", "A provider")]),
+    ],
+    "MA3": [
+        Q("eta_anchorage", "Arrivée prévue en rade", "Expected arrival at anchorage", "datetime"),
+        Q("anchorage_reason", "Motif du séjour au mouillage", "Reason for the stay at anchorage", "select",
+          options=[("WAIT_BERTH", "Attente de poste", "Waiting for a berth"), ("ORDERS", "Attente d'instructions", "Awaiting orders"),
+                   ("STS", "Opération en rade", "Operation at the anchorage"), ("SHELTER", "Abri / avarie", "Shelter / damage")]),
+    ],
+    "MB1": [
+        Q("holds", "Nombre de cales à décharger", "Number of holds to discharge", "integer"),
+        Q("geared", "Navire gréé (grues et grappins du bord)", "Geared vessel (own cranes and grabs)", "select", True, options=YES_NO_NA),
+        Q("imsbc_group", "Groupe IMSBC de la cargaison", "IMSBC group of the cargo", "select",
+          options=[("A", "A — peut se liquéfier (TML)", "A — may liquefy (TML)"), ("B", "B — risque chimique", "B — chemical hazard"),
+                   ("C", "C — ni l'un ni l'autre", "C — neither"), ("AB", "A et B", "A and B"), ("NA", "Hors Code IMSBC", "Outside the IMSBC Code")]),
+        Q("discharge_rate_tpd", "Cadence de déchargement attendue (t/jour)", "Expected discharge rate (t/day)", "number"),
+        Q("stevedore", "Entreprise de manutention", "Stevedoring company"),
+        Q("dust_or_odour", "Poussières, odeurs ou contraintes de voisinage", "Dust, odour or neighbourhood constraints", "select", options=YES_NO_NA),
+    ],
+    "MB2": [
+        Q("holds", "Nombre de cales à charger", "Number of holds to load", "integer"),
+        Q("geared", "Navire gréé", "Geared vessel", "select", True, options=YES_NO_NA),
+        Q("imsbc_group", "Groupe IMSBC de la cargaison", "IMSBC group of the cargo", "select",
+          options=[("A", "A — peut se liquéfier (TML)", "A — may liquefy (TML)"), ("B", "B — risque chimique", "B — chemical hazard"),
+                   ("C", "C — ni l'un ni l'autre", "C — neither"), ("AB", "A et B", "A and B"), ("NA", "Hors Code IMSBC", "Outside the IMSBC Code")]),
+        Q("moisture_tml", "Teneur en humidité et TML déclarées (groupe A)", "Declared moisture content and TML (group A)",
+          help_fr="La déclaration du chargeur (Code IMSBC § 4) précède le chargement", help_en="The shipper's declaration (IMSBC Code § 4) comes before loading"),
+        Q("loading_rate_tpd", "Cadence de chargement (t/jour)", "Loading rate (t/day)", "number"),
+        Q("hold_condition", "État des cales attendu", "Expected condition of the holds", "select",
+          options=[("GRAIN_CLEAN", "Propreté grain", "Grain clean"), ("NORMAL", "Propreté normale", "Normal clean"),
+                   ("SHOVEL", "Propreté « shovel »", "Shovel clean")]),
+        Q("stevedore", "Entreprise de manutention", "Stevedoring company"),
+    ],
+    "MC1": [
+        Q("moves_discharge", "Mouvements au déchargement (boîtes)", "Discharge moves (boxes)", "integer"),
+        Q("moves_load", "Mouvements au chargement (boîtes)", "Loading moves (boxes)", "integer"),
+        Q("restows", "Restows", "Restows", "integer"),
+        Q("reefers", "Conteneurs frigorifiques", "Reefer containers", "integer"),
+        Q("dg_units", "Conteneurs de marchandises dangereuses", "Dangerous goods containers", "integer"),
+        Q("oog_units", "Hors gabarit (OOG) et colis lourds", "Out-of-gauge and heavy units", "integer"),
+        Q("transhipment", "Transbordement (boîtes en transit)", "Transhipment (boxes in transit)", "integer"),
+        Q("gearless", "Navire sans grues (portiques du terminal)", "Gearless vessel (terminal gantries)", "select", options=YES_NO_NA),
+    ],
+    "MG1": [
+        Q("packages", "Nombre de colis ou d'unités", "Number of packages or units", "integer"),
+        Q("heaviest_piece_t", "Colis le plus lourd (t)", "Heaviest piece (t)", "number",
+          help_fr="Au-delà du SWL des grues du bord ou du quai : moyen de levage spécial à prévoir",
+          help_en="Beyond the SWL of the ship's or quay cranes: special lifting means to be arranged"),
+        Q("dangerous_goods", "Marchandises dangereuses à bord", "Dangerous goods on board", "select", options=YES_NO_NA),
+        Q("project_cargo", "Colis de projet (plan de levage)", "Project cargo (lifting plan)", "select", options=YES_NO_NA),
+        Q("stevedore", "Entreprise de manutention", "Stevedoring company"),
+    ],
+    "MR1": [
+        Q("units", "Nombre d'unités roulantes", "Number of rolling units", "integer"),
+        Q("high_heavy", "Engins lourds (high & heavy)", "High and heavy units", "integer"),
+        Q("ramp", "Rampe utilisée", "Ramp used", "select",
+          options=[("STERN", "Arrière", "Stern"), ("QUARTER", "Quart arrière", "Quarter"), ("SIDE", "Latérale", "Side")]),
+        Q("ramp_load_t", "Charge maximale sur la rampe (t)", "Maximum ramp load (t)", "number"),
+        Q("vehicle_customs", "Véhicules sous douane (parc dédié)", "Vehicles under customs (dedicated yard)", "select", options=YES_NO_NA),
+    ],
+    "MX1": [
+        Q("description", "Description de l'escale ou de l'opération", "Description of the call or the operation", "textarea", True),
+        Q("passengers", "Passagers à bord", "Passengers on board", "integer"),
+        Q("special_needs", "Moyens particuliers demandés au port", "Special means requested from the port", "textarea"),
+    ],
 }

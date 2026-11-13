@@ -119,11 +119,111 @@
     }
     box.querySelectorAll("[data-party-row]").forEach(wire);
     var add = box.querySelector("[data-add]"), body = box.querySelector("tbody");
-    if (add && body) add.addEventListener("click", function () {
-      var rows = body.querySelectorAll("[data-party-row]"), clone = rows[rows.length - 1].cloneNode(true);
-      clone.querySelectorAll("input").forEach(function (f) { f.value = ""; });
-      clone.querySelectorAll("select[data-party-org]").forEach(function (f) { f.value = ""; });
-      body.appendChild(clone); wire(clone); clone.querySelector("select").focus();
+    function addRow(role, kind) {
+      var rows = body.querySelectorAll("[data-party-row]"), last = rows[rows.length - 1], target = last;
+      var empty = last && !last.querySelector("select[data-party-org]").value && !last.querySelector("input[name=party_name]").value;
+      if (!empty) {
+        target = last.cloneNode(true);
+        target.querySelectorAll("input").forEach(function (f) { f.value = ""; });
+        target.querySelectorAll("select[data-party-org]").forEach(function (f) { f.value = ""; });
+        body.appendChild(target); wire(target);
+      }
+      if (role) { var r = target.querySelector("select[data-party-role]"); if (r) { r.value = role; } }
+      if (kind) { var k = target.querySelector("input[data-party-kind]"); if (k) { k.value = kind; } }
+      sync(target); target.querySelector("select").focus();
+      return target;
+    }
+    box.addRow = addRow;
+    if (add && body) add.addEventListener("click", function () { addRow("", ""); });
+  });
+
+  // The announcement of a call (v1.5): the kind of cargo filters the operation models and the units; the
+  // operations chosen reveal the documents their templates require; the STS block follows the STS model or
+  // area; the open list of other documents clones its last row.
+  document.querySelectorAll("form[data-announce]").forEach(function (form) {
+    function cargo() { var c = form.querySelector("input[data-cargo-kind]:checked"); return c ? c.value : ""; }
+    function fits(el, kind) { var kinds = (el.getAttribute("data-cargo") || "").trim(); return !kinds || kinds.split(" ").indexOf(kind) >= 0; }
+    function syncCargo() {
+      var kind = cargo();
+      form.querySelectorAll("label[data-operation], label[data-cargo]").forEach(function (label) {
+        var ok = fits(label, kind); label.hidden = !ok;
+        var box = label.querySelector("input"); if (box && !ok && box.checked) { box.checked = false; }
+      });
+      var unit = form.querySelector("#quantity_unit"), first = null;
+      if (unit) {
+        Array.prototype.forEach.call(unit.options, function (opt) {
+          var ok = fits(opt, kind); opt.hidden = !ok; if (ok && first === null) first = opt.value;
+          if (!ok && opt.selected && first !== null) unit.value = first;
+        });
+        if (unit.selectedOptions.length && unit.selectedOptions[0].hidden && first !== null) unit.value = first;
+      }
+      syncTemplates();
+    }
+    function syncTemplates() {
+      var chosen = {M0: true};
+      form.querySelectorAll("input[data-template]:checked").forEach(function (b) { chosen[b.value] = true; });
+      form.querySelectorAll("[data-required-docs] li").forEach(function (li) { li.hidden = !chosen[li.getAttribute("data-template")]; });
+      var sts = form.querySelector("[data-sts]"), area = form.querySelector("input[name=kind]:checked");
+      if (sts) sts.hidden = !(chosen.M3 || (area && area.value === "STS_AREA"));
+      // the announcement adapts to the operation (v1.6): the double-banking block follows M9, each model's own
+      // questions follow its box; a required question only binds while its block is shown
+      var db = form.querySelector("[data-double-banking]");
+      if (db) db.hidden = !chosen.M9;
+      form.querySelectorAll("fieldset[data-intake]").forEach(function (fs) {
+        var on = !!chosen[fs.getAttribute("data-intake")];
+        fs.hidden = !on;
+        fs.querySelectorAll("[data-required]").forEach(function (f) { f.required = on; });
+      });
+      // the parties the operations chosen usually bring (port practice): listed beside the parties block
+      var hints = form.querySelector("[data-party-hints]");
+      if (hints) {
+        var any = false;
+        hints.querySelectorAll("li[data-template]").forEach(function (li) { var on = !!chosen[li.getAttribute("data-template")]; li.hidden = !on; any = any || on; });
+        hints.hidden = !any;
+      }
+    }
+    form.querySelectorAll("[data-add-party-role]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var box = form.querySelector("[data-parties]");
+        if (box && box.addRow) {
+          var row = box.addRow(b.getAttribute("data-add-party-role"), b.getAttribute("data-add-party-kind"));
+          b.disabled = true; b.textContent = "✓";
+          if (row && row.scrollIntoView) row.scrollIntoView({block: "nearest"});
+        }
+      });
     });
+    // a partner named by its call already has its vessel and its agency: the two other ways of naming it step back
+    [["#linked_call", ["#partner_vessel", "#partner_agency", "#partner_agency_name", "#partner_agency_email"]],
+     ["#db_partner_call", ["#db_partner_vessel", "#db_partner_agency", "#db_agency_name", "#db_agency_email"]]].forEach(function (pair) {
+      var byCall = form.querySelector(pair[0]);
+      if (!byCall) return;
+      function syncPartner() {
+        pair[1].forEach(function (selector) {
+          var field = form.querySelector(selector);
+          if (!field) return;
+          if (byCall.value) field.value = "";
+          field.disabled = !!byCall.value;
+        });
+      }
+      byCall.addEventListener("change", syncPartner);
+      syncPartner();
+    });
+    form.querySelectorAll("input[data-cargo-kind]").forEach(function (r) { r.addEventListener("change", syncCargo); });
+    form.querySelectorAll("input[data-template], input[name=kind]").forEach(function (b) { b.addEventListener("change", syncTemplates); });
+    var table = form.querySelector("table[data-custom-docs]"), add = form.querySelector("[data-add-custom]");
+    function wireCustom(row) {
+      var remove = row.querySelector("[data-remove-custom]");
+      if (remove) remove.addEventListener("click", function () {
+        var rows = table.querySelectorAll("[data-custom-row]");
+        if (rows.length > 1) row.remove(); else row.querySelectorAll("input").forEach(function (f) { f.value = f.type === "number" ? "24" : ""; });
+      });
+    }
+    if (table) table.querySelectorAll("[data-custom-row]").forEach(wireCustom);
+    if (add && table) add.addEventListener("click", function () {
+      var rows = table.querySelectorAll("[data-custom-row]"), clone = rows[rows.length - 1].cloneNode(true);
+      clone.querySelectorAll("input").forEach(function (f) { f.value = f.type === "number" ? "24" : ""; });
+      table.querySelector("tbody").appendChild(clone); wireCustom(clone); clone.querySelector("input").focus();
+    });
+    syncCargo();
   });
 })();

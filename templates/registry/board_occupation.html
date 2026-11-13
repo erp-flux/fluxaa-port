@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% load i18n %}
+{% block title %}{% trans "Berth occupation plan" %}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div><h1>{% trans "Berth occupation plan" %} — {{ port.name }}</h1>
+    <p>{% trans "Every call of the period per berth or area, as the terminals' occupation sheets read: vessel, operation, trader, product and quantity when the port shows them, ETA, ETB, ETD, and whether the operation is completed, ongoing or expected." %}</p></div>
+  <div class="actions"><a class="btn secondary" href="{% url 'registry:board' %}">{% trans "Placement conference" %}</a> <a class="btn secondary" href="?start={{ start|date:'Y-m-d' }}&end={{ end|date:'Y-m-d' }}&format=csv">{% trans "Download (CSV)" %}</a></div>
+</div>
+<form method="get" class="form inline-form" style="margin-bottom:12px">
+  <label for="start">{% trans "From" %}</label> <input type="date" id="start" name="start" value="{{ start|date:'Y-m-d' }}">
+  <label for="end">{% trans "To" %}</label> <input type="date" id="end" name="end" value="{{ end|date:'Y-m-d' }}">
+  <button class="btn small secondary">{% trans "Show" %}</button>
+</form>
+<section class="section">
+  {% if plan %}
+  <div class="tablewrap"><table class="grid conference">
+    <tr><th>{% trans "Berth / area" %}</th><th>#</th><th>{% trans "Vessel" %}</th><th>{% trans "Operation" %}</th><th>{% trans "Agent" %}</th>{% if show_cargo %}<th>{% trans "Trader" %}</th><th>{% trans "Product" %}</th><th>{% trans "Quantity" %}</th>{% endif %}<th>ETA</th><th>ETB</th><th>ETD</th><th>{% trans "State" %}</th></tr>
+    {% for r in plan %}
+    <tr class="occ-{{ r.state }}"><td><b>{{ r.area }}</b></td><td><span class="code">{{ r.call.reference }}</span></td>
+      <td>{% if r.link %}<a href="{% url 'registry:call_detail' r.call.pk %}"><b>{{ r.vessel }}</b></a>{% else %}<b>{{ r.vessel }}</b>{% endif %}</td>
+      <td>{% for code in r.operations %}<span class="code">{{ code }}</span> {% empty %}—{% endfor %}</td>
+      <td>{{ r.agency }}</td>
+      {% if show_cargo %}<td>{{ r.trader|default:"—" }}</td><td>{{ r.cargo|default:"—" }}</td><td class="num">{{ r.quantity|default:"—" }}</td>{% endif %}
+      <td><time>{{ r.eta|date:"d/m H:i" }}</time>{% if not r.actual_eta %} <span class="muted">est.</span>{% endif %}</td>
+      <td><time>{% if r.etb %}{{ r.etb|date:"d/m H:i" }}{% else %}—{% endif %}</time>{% if r.etb and not r.actual_etb %} <span class="muted">est.</span>{% endif %}</td>
+      <td><time>{% if r.etd %}{{ r.etd|date:"d/m H:i" }}{% else %}—{% endif %}</time>{% if r.etd and not r.actual_etd %} <span class="muted">est.</span>{% endif %}</td>
+      <td><span class="chip {% if r.state == 'completed' %}done{% elif r.state == 'ongoing' %}pending{% else %}na{% endif %}">{% if r.state == 'completed' %}{% trans "operation completed" %}{% elif r.state == 'ongoing' %}{% trans "ongoing operations" %}{% else %}{% trans "expected vessel" %}{% endif %}</span></td></tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="empty">{% trans "No call in this period." %}</p>{% endif %}
+</section>
+{% endblock %}

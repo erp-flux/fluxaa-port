@@ -72,6 +72,22 @@ def notify(call, roles, *, key: str, title_fr: str, title_en: str, url: str = ""
     return created
 
 
+def notify_port_admins(port, *, key: str, title_fr: str, title_en: str, url: str = "") -> int:
+    """A notification that concerns the port rather than one call — an organisation to complete, accounts to open:
+    one per functional administrator of the port (``User.is_port_admin``), once per event *key*."""
+    created = 0
+    for user in User.objects.filter(organization__port=port, is_port_admin=True, is_active=True, is_integration=False):
+        try:
+            with transaction.atomic():
+                note = Notification.objects.create(user=user, call=None, dedupe_key=key[:160], title_fr=title_fr[:300],
+                                                   title_en=title_en[:300], url=url, realtime=True)
+        except IntegrityError:
+            continue  # already told
+        created += 1
+        _send_email_now(note)
+    return created
+
+
 def _send_email_now(note: Notification) -> None:
     user = note.user
     lang = user.language or (user.port.default_language if user.port else "fr")

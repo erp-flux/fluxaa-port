@@ -4,9 +4,16 @@
     <h2>{% trans "Roles on this call" %}</h2>
     <p class="small muted">{% trans "Rights come from the role an organisation holds on the call, dated and revocable. Revoking a role removes the access at once and keeps everything the organisation entered." %}</p>
     <p class="small muted">{% trans "When several terminals or providers take part, the one designated for the shore side records the shore milestones and figure and countersigns for the shore." %}</p>
-    <div class="tablewrap"><table class="grid"><tr><th>{% trans "Organisation" %}</th><th>{% trans "Role" %}</th><th>{% trans "Since" %}</th><th>{% trans "State" %}</th><th></th></tr>
-      {% for p in all_parties %}<tr><td>{{ p.organization.name }}{% if p.is_default %} <span class="small muted">({% trans "port default" %})</span>{% endif %}{% if p.organization.kind %}<div class="small muted">{{ p.organization.kind_label }}</div>{% endif %}</td><td><span class="role">{{ p.role }}</span> {{ p.role|role_name }}{% if p.shore %} <span class="chip done">{% trans "speaks for the shore side" %}</span>{% endif %}{% if p.can_designate %}<form method="post" action="{% url 'registry:call_action' call.pk 'party_shore' %}" class="inline">{% csrf_token %}<input type="hidden" name="party_id" value="{{ p.pk }}"><input type="hidden" name="back" value="?tab=parties"><button class="linkbtn small">{% trans "Designate for the shore side" %}</button></form>{% endif %}</td><td><time>{{ p.valid_from|date:"d/m/Y H:i" }}</time></td>
+    <p class="small muted">{% trans "The principal agent — the agency that announced the call — gives each party it invites all of the file, part of it (the tabs listed) or reading only; the port's own parties keep their full access. A co-nominated agency acts within the access it was given." %}</p>
+    <div class="tablewrap"><table class="grid"><tr><th>{% trans "Organisation" %}</th><th>{% trans "Role" %}</th><th>{% trans "Since" %}</th><th>{% trans "State" %}</th><th>{% trans "Access to the file" %}</th><th></th></tr>
+      {% for p in all_parties %}<tr><td>{{ p.organization.name }}{% if p.is_default %} <span class="small muted">({% trans "port default" %})</span>{% endif %}{% if p.principal %} <span class="chip done">{% trans "principal agent" %}</span>{% endif %}{% if p.organization.kind %}<div class="small muted">{{ p.organization.kind_label }}</div>{% endif %}</td><td><span class="role">{{ p.role }}</span> {{ p.role|role_name }}{% if p.shore %} <span class="chip done">{% trans "speaks for the shore side" %}</span>{% endif %}{% if p.can_designate %}<form method="post" action="{% url 'registry:call_action' call.pk 'party_shore' %}" class="inline">{% csrf_token %}<input type="hidden" name="party_id" value="{{ p.pk }}"><input type="hidden" name="back" value="?tab=parties"><button class="linkbtn small">{% trans "Designate for the shore side" %}</button></form>{% endif %}</td><td><time>{{ p.valid_from|date:"d/m/Y H:i" }}</time></td>
         <td>{% if p.revoked_at %}<span class="chip na">{% trans "revoked" %} <time>{{ p.revoked_at|date:"d/m H:i" }}</time></span><div class="small muted">{{ p.revoke_reason }}</div>{% else %}<span class="chip done">{% trans "active" %}</span>{% endif %}</td>
+        <td class="access-cell">{% if p.is_default or p.principal %}<span class="small muted">{% trans "full" %}</span>{% else %}<span class="chip {% if p.access == 'FULL' %}done{% elif p.access == 'READ' %}na{% else %}pending{% endif %}" title="{{ p.get_access_display }}">{% if p.access == 'FULL' %}{% trans "Full access" %}{% elif p.access == 'READ' %}{% trans "Reading only" %}{% else %}{% trans "Partial access" %}{% endif %}</span>{% if p.scopes %}<div class="small muted">{{ p.scopes|join:", " }}</div>{% endif %}
+          {% if p.can_set_access %}<details class="action"><summary>{% trans "Change" %}</summary><div>
+            <form method="post" action="{% url 'registry:call_action' call.pk 'party_access' %}" class="form">{% csrf_token %}<input type="hidden" name="party_id" value="{{ p.pk }}"><input type="hidden" name="back" value="?tab=parties">
+              <div class="checks" role="radiogroup"><label><input type="radio" name="access" value="FULL" {% if p.access == 'FULL' %}checked{% endif %}> {% trans "Full access" %}</label><label><input type="radio" name="access" value="PARTIAL" {% if p.access == 'PARTIAL' %}checked{% endif %}> {% trans "Partial access — the tabs ticked" %}</label><label><input type="radio" name="access" value="READ" {% if p.access == 'READ' %}checked{% endif %}> {% trans "Reading only" %}</label></div>
+              <div class="checks">{% for code, label in scope_labels %}<label><input type="checkbox" name="scopes" value="{{ code }}" {% if code in p.scopes %}checked{% endif %}> {{ label }}</label>{% endfor %}</div>
+              <button class="btn small">{% trans "Set the access" %}</button></form></div></details>{% endif %}{% endif %}</td>
         <td class="actions">{% if p.can_revoke %}<details class="action"><summary>{% trans "Revoke" %}</summary><div><form method="post" action="{% url 'registry:call_action' call.pk 'party_revoke' %}" class="form">{% csrf_token %}<input type="hidden" name="party_id" value="{{ p.pk }}"><input type="hidden" name="back" value="?tab=parties"><input name="reason" required placeholder="{% trans 'Reason' %}" aria-label="{% trans 'Reason' %}"><button class="btn small danger">{% trans "Revoke the role" %}</button></form></div></details>{% endif %}</td></tr>{% endfor %}
     </table></div>
     {% if invitable and not call.is_terminal_state %}
@@ -23,12 +30,13 @@
           <div><label for="pemail">{% trans "E-mail" %}</label><input id="pemail" name="party_email" type="email"></div>
           <div><label for="pphone">{% trans "Phone" %}</label><input id="pphone" name="party_phone" maxlength="40"></div>
         </div>
+        {% if is_principal or is_cap %}<div><label for="paccess">{% trans "Access to the file" %}</label><select id="paccess" name="access">{% for value, label in access_presets %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>{% endif %}
         {% for role, suggestions in party_kinds.items %}<datalist id="kinds-{{ role }}">{% for code, fr, en in suggestions %}<option value="{% if LANGUAGE_CODE == 'en' %}{{ en }}{% else %}{{ fr }}{% endif %}"></option>{% endfor %}</datalist>{% endfor %}
         <button class="btn secondary">{% trans "Invite" %}</button></form></div></details>
     {% endif %}
   </section>
   <aside>
-    {% if "AGE" in actor.roles or "CAP" in actor.roles %}
+    {% if is_age or is_cap %}
     <section class="section">
       <h2>{% trans "Master's access" %}</h2>
       <p class="small">{% trans "The master has no account: hand over a link or a code limited to this call, valid until departure. Countersignatures and signatures are nominative." %}</p>
@@ -37,12 +45,14 @@
         {% trans "Link:" %} <span class="mono" style="word-break:break-all">{{ new_link.url }}</span><br>{% trans "Code:" %} <span class="mono" style="font-size:20px">{{ new_link.code }}</span>
         <div><img src="{{ new_link.qr }}" alt="{% trans 'QR code of the link' %}" width="180" height="180"></div></div>
       {% endif %}
-      {% if "AGE" in actor.roles and not call.is_terminal_state %}
+      {% if is_age and not call.is_terminal_state %}
       <form method="post" action="{% url 'registry:call_action' call.pk 'master_link' %}" class="form">{% csrf_token %}<input type="hidden" name="back" value="?tab=parties">
         <div><label for="mname">{% trans "Master's name" %}</label><input id="mname" name="master_name" required></div>
         <div class="row"><div><label for="mch">{% trans "Handed over by" %}</label><select id="mch" name="channel"><option value="EMAIL">{% trans "E-mail" %}</option><option value="QR">{% trans "QR code" %}</option><option value="PRINT">{% trans "Printed" %}</option><option value="SMS">SMS</option><option value="OTHER">{% trans "Other" %}</option></select></div>
           <div><label for="mpos">{% trans "Vessel" %}</label><select id="mpos" name="vessel_position"><option value="OWN">{% trans "This vessel" %}</option><option value="INNER">{% trans "Inner vessel (double banking)" %}</option></select></div></div>
-        <div><label for="mnote2">{% trans "Delivery note" %}</label><input id="mnote2" name="note"></div>
+        <div class="row"><div><label for="msend">{% trans "Master's e-mail (optional)" %}</label><input id="msend" name="send_to" type="email" placeholder="master@vessel.example"></div>
+          <div><label for="mnote2">{% trans "Delivery note" %}</label><input id="mnote2" name="note"></div></div>
+        <p class="hint">{% trans "With an e-mail address, the platform sends the master his access with the list of what the port expects from him (certificates, declarations…); the link and the code are shown to you once in any case." %}</p>
         <button class="btn secondary">{% trans "Issue the access" %}</button></form>
       {% endif %}
       {% if master_links %}<ul class="calllist" style="margin-top:12px">{% for l in master_links %}<li><div>{{ l.master_name }}<div class="small muted">{{ l.get_delivery_channel_display }} — {% trans "expires" %} <time>{{ l.expires_at|date:"d/m/Y H:i" }}</time>{% if l.last_used_at %} — {% trans "last used" %} <time>{{ l.last_used_at|date:"d/m H:i" }}</time>{% endif %}</div></div>

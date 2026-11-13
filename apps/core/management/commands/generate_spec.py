@@ -471,7 +471,8 @@ def gen_forms() -> str:
             elif section["kind"] == "checklist":
                 out.append(f"\n**Section (liste de contrôle) — {title}**\n\n")
                 out.append("Colonnes à cocher : " + " · ".join(f"{c[0]} / {c[1]}" for c in section["columns"]) + " ; colonne remarques.\n\n")
-                out.append(md_table(["Point de contrôle FR / EN"], [[f"{i[0]} / {i[1]}"] for i in section["items"]]))
+                out.append(md_table(["Point de contrôle FR / EN"], [[f"{i['fr']} / {i['en']}" if isinstance(i, dict) else f"{i[0]} / {i[1]}"]
+                                                                      for i in section["items"]]))
             elif section["kind"] == "text":
                 out.append(f"\n**Section (texte) — {title}**\n\n")
                 for p in section["paragraphs"]:
@@ -668,6 +669,8 @@ VOLATILE = [
     (re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(\+00:00|Z)?"), "<horodatage>"),
     (re.compile(r"\b[0-9a-f]{64}\b"), "<sha256>"),
     (re.compile(r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b"), "<uuid>"),
+    # durations counted up to "now" move with the clock, not with the code (billing basis of a call in progress)
+    (re.compile(r'"(hours_in_port|overrun_hours|remaining_h|overrun_h)": -?\d+(\.\d+)?'), r'"\1": <heures>'),
 ]
 
 

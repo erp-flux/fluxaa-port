@@ -5,10 +5,20 @@
   {% if refusal.missing %}
   <ul>
     {% for m in refusal.missing %}
-    <li><span class="code">{{ m.task }}</span> {{ m.title }} — <b>{{ m.roles }}</b> — {% blocktrans with action=m.action %}expected action: {{ action }}{% endblocktrans %}</li>
+    <li><span class="code">{{ m.task }}</span> {{ m.title }} — <b>{{ m.roles }}</b> — {% blocktrans with action=m.action %}expected action: {{ action }}{% endblocktrans %}
+      {% if m.responsible %}
+      <div class="small" style="margin-top:4px">{% trans "Who answers for it:" %}
+        {% for r in m.responsible %}<span class="chip {% if r.can_act %}done{% else %}hold{% endif %}" title="{{ r.how }}">{{ r.name }} ({{ r.role }}) — {{ r.how }}</span> {% endfor %}</div>
+      <div class="actions" style="margin-top:6px">
+        {% if m.can_act %}<a class="btn small" href="{{ m.hint.query }}">{% if m.hint.kind == "document" %}{% trans "Provide the document" %}{% elif m.hint.kind == "request" %}{% trans "Open the request" %}{% elif m.hint.kind == "milestone" %}{% trans "Record the milestone" %}{% else %}{% trans "Do it in the tasks" %}{% endif %}</a>{% endif %}
+        {% if m.needs_master_link and refusal.can_manage_parties %}<a class="btn small secondary" href="?tab=parties">{% trans "Hand the master his access" %}</a>{% endif %}
+        {% if m.can_remind and m.id and not m.needs_master_link %}<form method="post" action="{% url 'registry:call_action' call.pk 'remind' %}" class="inline">{% csrf_token %}<input type="hidden" name="task_id" value="{{ m.id }}"><input type="hidden" name="back" value="?tab=apercu"><button class="btn small quiet">{% trans "Remind the party" %}</button></form>{% endif %}
+      </div>
+      {% endif %}
+    </li>
     {% endfor %}
   </ul>
   {% endif %}
   {% for r in refusal.reasons %}<p>{{ r }}</p>{% endfor %}
-  <p class="small muted">{% trans "This refusal is recorded in the call journal, readable by the harbour master." %}</p>
+  <p class="small muted">{% trans "This refusal is recorded in the call journal, readable by the harbour master. Every party named above is told what is expected of it; the agency may file the master's certificates on his behalf." %}</p>
 </div>

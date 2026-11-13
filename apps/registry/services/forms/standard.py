@@ -4,16 +4,18 @@ forms, declaration of security, maritime declaration of health, advance waste no
 card, bunker delivery note. Pre-filled from the registry, completed and signed on paper, filed back as versions."""
 from __future__ import annotations
 
+from decimal import Decimal
+
 from ...models import PortCall
 from ..reports import interruptions, time_sheet
-from .core import F, Form, _m, _mt, _party, _register, _where, checklist, dt, fields, table, text
+from .core import F, Form, _m, _mt, _operation, _party, _register, _where, checklist, dt, fields, table, text
 
 
 def build_nor(call: PortCall) -> list[dict]:
     arrival = _m(call, "ARRIVAL")
     nor = _m(call, "NOR_TENDERED")
-    loading = "M2" in call.template_codes
-    op = "chargement / loading" if loading else "déchargement / discharge"
+    loading = any(code in call.template_codes for code in ("M2", "MB2"))
+    op = _operation(call)
     op_fr, op_en = ("chargement", "loading") if loading else ("déchargement", "discharge")
     return [
         fields(("Navire et escale", "Vessel and call"), [
@@ -49,113 +51,308 @@ def build_nor(call: PortCall) -> list[dict]:
     ]
 
 
+def _h(delta) -> str | None:
+    """Hours and minutes of a duration, as the time sheets write them (h:mm)."""
+    if delta is None:
+        return None
+    minutes = int(round(delta.total_seconds() / 60))
+    return f"{minutes // 60}:{minutes % 60:02d}"
+
+
+def _party_kind(call: PortCall, role: str, kinds: tuple[str, ...]) -> str | None:
+    """The organisation holding *role* whose kind is one of *kinds* (the trader, the supercargo…), else none."""
+    for party in call.parties.filter(role=role, revoked_at__isnull=True).select_related("organization"):
+        if party.organization.kind in kinds:
+            return party.organization.name
+    return None
+
+
+def _products(call: PortCall) -> list[str]:
+    seen = []
+    for name in [m.product for m in call.measurements.all()] + [call.product]:
+        if name and name not in seen:
+            seen.append(name)
+    return seen[:3] or [""]
+
+
+def _figure(call: PortCall, product: str, kind: str, party: str):
+    for m in call.measurements.filter(kind=kind).order_by("-created_at"):
+        if product and m.product and m.product != product:
+            continue
+        value = m.current_values().get(party)
+        if value is not None:
+            return value.value, m.unit
+    return None, None
+
+
 def build_time_sheet(call: PortCall) -> list[dict]:
+    """The vessel time sheet of the demurrage analysis, in the structure of the terminal time sheets (FLX-CDC-002
+    v1.4, EXG-Q-02): general information, standard activities from/to/elapsed, non-standard activities and
+    stoppages with the delay counted and its attribution, quantities and performance per product, time summary,
+    exclusions and remarks, four signatures. Every time comes from the contradictory registry."""
     sheet = time_sheet(call)
+    nor = _m(call, "NOR_TENDERED")
+    nor_received = None
+    if nor is not None:
+        received = nor.signatures.filter(role="TER", state="COUNTERSIGNED").order_by("at").first()
+        nor_received = dt(received.at) if received else None
+    arrival = _m(call, "ARRIVAL")
+    products = _products(call)
+    general = fields(("A · Informations générales", "A · General information"), [
+        F("Navire", "Vessel", call.vessel.name, source="Vessel.name"), F("Pavillon", "Flag", call.vessel.flag or None, source="Vessel.flag"),
+        F("Numéro OMI", "IMO number", call.vessel.imo, source="Vessel.imo"), F("Poste", "Berth", _where(call), source="PortCall.berth ou CallStage.berth_kind"),
+        F("Fin de traversée (E.O.S.P.)", "E.O. sea passage", dt(arrival.declared_at) if arrival else dt(call.ata), source="jalon ARRIVAL.declared_at, sinon PortCall.ata"),
+        F("NOR remise", "N.O.R. tendered", dt(nor.declared_at) if nor else dt(call.nor_at), source="jalon NOR_TENDERED.declared_at"),
+        F("NOR reçue", "N.O.R. received", nor_received, source="contresignature TER du jalon NOR_TENDERED (MilestoneSignature.at)"),
+        F("Négociant (trader)", "Trader", _party_kind(call, "COM", ("TRADER", "CHARTERER", "SHIPPER", "RECEIVER")) or _party(call, "COM"), source="CallParty COM (kind TRADER / CHARTERER / SHIPPER / RECEIVER)"),
+        F("Agent", "Agent", str(call.agency), source="PortCall.agency"), F("Inspecteur", "Surveyor", _party(call, "INS"), source="CallParty INS active"),
+        F("Subrécargue", "Supercargo", _party_kind(call, "COM", ("SUPERCARGO", "SUPERINTENDENT")), source="CallParty COM (kind SUPERCARGO / SUPERINTENDENT)"),
+        F("Déplacement (t)", "Displacement (t)"), F("Tirant d'eau à l'arrivée (m)", "Draft — arrival (m)"), F("Tirant d'eau au départ (m)", "Draft — departure (m)"),
+        F("Produit 1", "Product 1", products[0] or None, source="Measurement.product, sinon PortCall.product"),
+        F("Produit 2", "Product 2", products[1] if len(products) > 1 else None, source="Measurement.product"),
+        F("Produit 3", "Product 3", products[2] if len(products) > 2 else None, source="Measurement.product"),
+        F("Opération", "Operation", _operation(call), source="PortCall.template_codes"),
+        F("Port en lourd (t)", "Deadweight (t)", str(call.vessel.dwt) if call.vessel.dwt else None, source="Vessel.dwt"),
+        F("Temps de pompage prévu (h)", "Planned pump time (h)", str(call.planned_pump_hours) if call.planned_pump_hours is not None else None, source="PortCall.planned_pump_hours"),
+        F("Référence du lot", "Batch reference", call.batch_reference or None, source="PortCall.batch_reference"),
+    ])
+    activities = [
+        ("Pilote à bord (arrivée)", "Pilot on board (arrival)", "PILOT_ON_BOARD_ARR", "FIRST_LINE"),
+        ("Mouillage", "Anchored", "ANCHORED", "ANCHOR_AWEIGH"),
+        ("Amarrage", "Mooring", "FIRST_LINE", "ALL_FAST"),
+        ("Réunion de sécurité navire / terre", "Ship / shore safety meeting", "PRE_TRANSFER_MEETING", "SSSCL_SIGNED"),
+        ("Raccordement des bras ou flexibles", "Arm or hose connection", "ESD_TEST", "HOSES_CONNECTED"),
+        ("Chargement / déchargement / manutention", "Loading / unloading / cargo operations", ("TRANSFER_START", "STS_TRANSFER_START", "CARGO_OPS_START"), ("TRANSFER_END", "STS_TRANSFER_END", "CARGO_OPS_END")),
+        ("Débranchement", "Disconnecting", "LINES_DRAINED", "HOSES_DISCONNECTED"),
+        ("Documents à bord et signés", "Documents on board and signed", "DOCUMENTS_SIGNED", None),
+        ("Pilote à bord (départ)", "Pilot on board (departure)", "PILOT_ON_BOARD_DEP", "LAST_LINE"),
+        ("Désamarrage", "Unmooring", "LAST_LINE", "DEPARTED"),
+    ]
     rows = []
-    for code, fr, en in (("ARRIVAL", "Arrivée limite du port", "Arrival at port limit"), ("NOR_TENDERED", "NOR remise", "NOR tendered"),
-                         ("ANCHORED", "Mouillage", "Anchored"), ("ANCHOR_AWEIGH", "Appareillage du mouillage", "Anchor aweigh"),
-                         ("PILOT_ON_BOARD_ARR", "Pilote à bord", "Pilot on board"), ("FIRST_LINE", "Première amarre", "First line"),
-                         ("ALL_FAST", "Amarrage terminé (all fast)", "All fast"), ("STS_ALONGSIDE", "STS — à couple", "STS — alongside"),
-                         ("HOSES_CONNECTED", "Flexibles connectés", "Hoses connected"), ("TRANSFER_START", "Début du transfert", "Commenced cargo"),
-                         ("STS_TRANSFER_START", "Début du transfert STS", "STS transfer commenced"), ("TRANSFER_END", "Fin du transfert", "Completed cargo"),
-                         ("STS_TRANSFER_END", "Fin du transfert STS", "STS transfer completed"), ("HOSES_DISCONNECTED", "Flexibles déconnectés", "Hoses disconnected"),
-                         ("DOCUMENTS_SIGNED", "Documents signés", "Documents signed"), ("LAST_LINE", "Dernière amarre", "Last line"),
-                         ("DEPARTED", "Appareillé", "Departed")):
-        for m in call.milestones.filter(type__code=code, is_conflict=False).order_by("declared_at"):
-            rows.append([f"{fr} / {en}", dt(m.declared_at), m.emitter_label, ", ".join(
-                f"{s.role}: {s.get_state_display()}" for s in m.signatures.all()) or "—"])
-    stops = [[(row["cause"].label_fr + " / " + row["cause"].label_en) if row["cause"] else "—",
-              dt(row["start"].declared_at), dt(row["end"].declared_at) if row["end"] else None,
-              f"{row['duration_h']:.2f}" if row["duration_h"] is not None else None,
-              row["attribution"] or "—", "établie / established" if row["established"] else "contestée ou tacite / contested or tacit"]
-             for row in interruptions(call)]
+    for n, (fr, en, start_codes, end_codes) in enumerate(activities, start=1):
+        start_m = next((m for code in (start_codes if isinstance(start_codes, tuple) else (start_codes,)) if (m := _m(call, code))), None)
+        end_m = next((m for code in (end_codes if isinstance(end_codes, tuple) else (end_codes,)) if (m := _m(call, code))), None) if end_codes else None
+        elapsed = _h(end_m.declared_at - start_m.declared_at) if start_m and end_m and end_m.declared_at >= start_m.declared_at else None
+        remarks = []
+        for m in (start_m, end_m):
+            if m is not None:
+                states = ", ".join(f"{sg.role}: {sg.get_state_display()}" for sg in m.signatures.all())
+                remarks.append(f"{m.type.code} {m.emitter_label}" + (f" — {states}" if states else ""))
+        rows.append([str(n), dt(start_m.declared_at) if start_m else None, dt(end_m.declared_at) if end_m else None, elapsed,
+                     f"{fr} / {en}", " ; ".join(remarks) or None])
+    all_fast, last_line = _m(call, "ALL_FAST") or _m(call, "STS_ALONGSIDE"), _m(call, "LAST_LINE") or _m(call, "STS_SEPARATED")
+    alongside = (last_line.declared_at - all_fast.declared_at) if all_fast and last_line else None
+    rows.append(["", None, None, _h(alongside), "Temps total à quai / Total time alongside", "ALL_FAST → LAST_LINE"])
+    stops = interruptions(call)
+    attribution = {"SHIP": "navire / ship", "SHORE": "terre / shore", "THIRD": "tiers / third party", "WEATHER": "météo / weather"}
+    stop_rows = []
+    counted_total = Decimal("0")
+    counted_shore = Decimal("0")
+    for n, row in enumerate(stops, start=1):
+        duration = (row["end"].declared_at - row["start"].declared_at) if row["end"] else None
+        counted = _h(duration) if duration is not None and row["established"] else None
+        if duration is not None and row["established"]:
+            counted_total += Decimal(duration.total_seconds()) / Decimal("3600")
+            if row["attribution"] == "SHORE":
+                counted_shore += Decimal(duration.total_seconds()) / Decimal("3600")
+        description = (f"{row['cause'].label_fr} / {row['cause'].label_en}" if row["cause"] else "—")
+        if row["start"].cause_reason:
+            description += f" — {row['start'].cause_reason}"
+        description += f" ({row['start'].emitter_label}" + ("" if row["established"] else " ; contestée ou tacite / contested or tacit") + ")"
+        stop_rows.append([str(n), dt(row["start"].declared_at), dt(row["end"].declared_at) if row["end"] else None, _h(duration),
+                          counted, attribution.get(row["attribution"], row["attribution"] or "—"), description])
+    stop_rows.append(["", None, None, None, f"{counted_total:.2f} h", "", "Total des retards comptés / Total delays counted — "
+                      f"dont imputables à terre / of which attributable to shore : {counted_shore:.2f} h"])
+    t0, t1 = call.t0, call.t1
+    gross = (t1 - t0) if t0 and t1 else None
+    net_h = (Decimal(gross.total_seconds()) / Decimal("3600") - counted_total) if gross is not None else None
+    from ..measurements import pumping_summary
+
+    pumping = pumping_summary(call)
+    pressure = pumping["SHORE"]["average_pressure_bar"] or pumping["SHIP"]["average_pressure_bar"]
+    perf_rows = []
+    for product in products:
+        bl, unit = _figure(call, product, "BL", "SHIP")
+        if bl is None:
+            bl, unit = _figure(call, product, "BL", "SHORE")
+        ship, unit_s = _figure(call, product, "FINAL", "SHIP")
+        shore, unit_t = _figure(call, product, "FINAL", "SHORE")
+        quantity = shore if shore is not None else ship
+        average = (quantity / net_h).quantize(Decimal("0.1")) if quantity is not None and net_h and net_h > 0 else None
+        required = (quantity / call.planned_pump_hours).quantize(Decimal("0.1")) if quantity is not None and call.planned_pump_hours else None
+        perf_rows.append([product or "—", f"{bl} {unit}" if bl is not None else None, f"{ship} {unit_s}" if ship is not None else None,
+                          f"{shore} {unit_t}" if shore is not None else None,
+                          f"{average} {unit_t or unit_s or ''}/h".strip() if average is not None else None,
+                          f"{required} {unit_t or unit_s or ''}/h".strip() if required is not None else None,
+                          f"{pressure} bar" if pressure is not None else None])
     return [
-        fields(("Escale", "Call"), [
-            F("Navire", "Vessel", f"{call.vessel.name} — IMO {call.vessel.imo}", source="Vessel.name, Vessel.imo"), F("Voyage", "Voyage", call.voyage_number or None, source="PortCall.voyage_number"),
-            F("Port / poste", "Port / berth", f"{call.port.name} — {_where(call)}", source="Port.name, poste ou zone de l'étape en cours"), F("Produit", "Product", call.product or None, source="PortCall.product"),
-            F("Quantité déclarée", "Declared quantity", f"{call.quantity} {call.quantity_unit}" if call.quantity else None, source="PortCall.quantity, PortCall.quantity_unit"),
-            F("Agence", "Agency", str(call.agency), source="PortCall.agency (Organization.name)"),
+        general,
+        table(("B · Activités standard", "B · Standard activities"),
+              [("N°", "No."), ("Du", "From"), ("Au", "To"), ("Durée", "Elapsed"), ("Opération", "Operation"), ("Observations", "Comments / remarks")],
+              rows, source="jalons du registre (declared_at, emitter_label) et contresignatures ; durée = au − du"),
+        table(("C · Activités non standard et arrêts", "C · Non-standard activities and stoppages"),
+              [("N°", "No."), ("Du", "From"), ("Au", "To"), ("Durée", "Elapsed"), ("Retard compté", "Delay counted"), ("Imputable à", "Attributable to"), ("Description", "Description")],
+              stop_rows, blank_rows=2,
+              source="reports.interruptions : jalons INTERRUPTION_START/END, InterruptionCause.attributable_to ; retard compté = durée des interruptions à cause établie contradictoirement",
+              note=("Le retard compté est pré-rempli pour les interruptions dont la cause est établie contradictoirement ; une interruption contestée ou tacite est laissée à l'appréciation des signataires.",
+                    "The delay counted is pre-filled for the stoppages whose cause is established contradictorily; a contested or tacit stoppage is left to the signatories.")),
+        table(("D · Quantités et performance", "D · Quantities and performance"),
+              [("Produit", "Product"), ("Quantité B/L", "B/L quantity"), ("Quantité bord", "Ship quantity"), ("Quantité terre", "Shore quantity"),
+               ("Débit moyen", "Average rate"), ("Débit requis", "Required rate"), ("Pression moyenne", "Average pressure")],
+              perf_rows, source="Measurement BL / FINAL (valeurs bord et terre), débit moyen = quantité terre ÷ temps net, débit requis = quantité ÷ temps de pompage prévu, pression = journal de pompage"),
+        fields(("E · Récapitulatif des temps", "E · Time summary"), [
+            F("Début de l'opération", "Operation started", dt(t0), source="PortCall.t0"), F("Fin de l'opération", "Operation completed", dt(t1), source="PortCall.t1"),
+            F("Temps total à quai", "Total time alongside", _h(alongside), source="ALL_FAST → LAST_LINE"),
+            F("Total des retards comptés", "Total delays counted", f"{counted_total:.2f} h", source="section C"),
+            F("Temps net d'opération", "Total net operating time", f"{net_h:.2f} h" if net_h is not None else None, source="(T1 − T0) − retards comptés"),
+            F("Temps de pompage prévu (h)", "Planned pump time (h)", str(call.planned_pump_hours) if call.planned_pump_hours is not None else None, source="PortCall.planned_pump_hours"),
+            F("Attente en rade", "Waiting at anchorage", f"{sheet['waiting_h']:.2f} h" if sheet.get("waiting_h") is not None else None, source="reports.time_sheet : ATB − ATA"),
+            F("Validité de l'annonce (facturation)", "Validity of the announcement (billing)",
+              f"{call.validity_days} j — du {call.created_at:%d/%m/%Y} au {call.valid_until:%d/%m/%Y %H:%M} UTC" if call.valid_until else None,
+              source="PortCall.validity_days, created_at, valid_until"),
+            F("Dépassement de la validité (h)", "Overrun of the validity (h)", str(call.billing_basis()["overrun_hours"]) if call.billing_basis()["overrun_hours"] else None, source="PortCall.billing_basis()"),
+            F("Temps de planche utilisé — selon charte-partie", "Laytime used — per charter-party"),
+        ], note=("Le décompte du temps de planche et des surestaries suit la charte-partie et les BIMCO Laytime Definitions for Charter Parties 2013 ; la plateforme fournit les heures contradictoires, jamais le décompte.",
+                 "Laytime and demurrage follow the charter-party and the BIMCO Laytime Definitions for Charter Parties 2013; the platform supplies the contradictory times, never the count.")),
+        fields(("F · Exclusions, commentaires et remarques", "F · Exclusions, comments and remarks"), [
+            F("Ce time sheet n'inclut pas", "This time sheet does not include", wide=True), F("Commentaires et remarques", "Comments and remarks", wide=True),
         ]),
-        table(("Chronologie", "Chronology"), [("Événement", "Event"), ("Heure (UTC)", "Time (UTC)"), ("Émetteur", "Recorded by"),
-                                              ("Contresignatures", "Countersignatures")], rows, blank_rows=2,
-              source="Milestone (types de la chronologie, declared_at, emitter_label) et MilestoneSignature (role, state)"),
-        table(("Interruptions", "Stoppages"), [("Cause", "Cause"), ("Début", "From"), ("Fin", "To"), ("Durée (h)", "Duration (h)"),
-                                               ("Imputation", "Attribution"), ("État", "State")], stops, blank_rows=1,
-              source="reports.interruptions : jalons INTERRUPTION_START/END, InterruptionCause, contresignatures"),
-        fields(("Totaux", "Totals"), [
-            F("Attente en rade (h)", "Waiting at anchorage (h)", f"{sheet['waiting_h']:.2f}" if sheet.get("waiting_h") is not None else None, source="reports.time_sheet : ATB − ATA"),
-            F("Durée brute de transfert (h)", "Gross transfer time (h)", f"{sheet['transfer_gross_h']:.2f}" if sheet.get("transfer_gross_h") is not None else None, source="reports.time_sheet : T1 − T0"),
-            F("Temps morts (h)", "Stoppages (h)", f"{sheet['stops_h']:.2f}" if sheet.get("stops_h") is not None else None, source="reports.time_sheet : somme des interruptions"),
-            F("Durée nette de transfert (h)", "Net transfer time (h)", f"{sheet['transfer_net_h']:.2f}" if sheet.get("transfer_net_h") is not None else None, source="reports.time_sheet : brut − temps morts"),
-            F("Temps de planche utilisé (h) — selon charte-partie", "Laytime used (h) — per charter-party"),
-            F("Surestaries / dispatch", "Demurrage / despatch"),
-        ], note=("Les heures viennent du registre contradictoire ; le décompte du temps de planche suit la charte-partie et les BIMCO Laytime Definitions for Charter Parties 2013.",
-                 "Times come from the contradictory registry; laytime is computed under the charter-party and the BIMCO Laytime Definitions for Charter Parties 2013.")),
     ]
 
 
-def build_ssscl(call: PortCall) -> list[dict]:
-    ship, shore, both = [("Navire", "Ship")], [("Terre", "Shore")], [("Navire", "Ship"), ("Terre", "Shore")]
-    return [
+def build_pumping_log(call: PortCall) -> list[dict]:
+    """The pumping log of the call as the terminal logs print it (EXG-Q-01): one header per sheet (ship, shore),
+    the hourly readings of both sides beside each other, the deviation in m³ and in %, the completion."""
+    from ..measurements import compare_sides, pumping_summary
+
+    sections = []
+    summary = pumping_summary(call)
+    for side, fr, en in (("SHORE", "Terre — bac récepteur / livreur", "Shore — receiving / delivering tank"), ("SHIP", "Bord — citernes", "Ship — cargo tanks")):
+        for sheet in summary[side]["sheets"]:
+            sections.append(fields((f"Feuille {fr}", f"Sheet {en}"), [
+                F("Citerne / bac", "Tank", sheet.tank or None, source="PumpingLogSheet.tank"), F("Produit", "Product", sheet.product or None, source="PumpingLogSheet.product"),
+                F("Niveau de départ (mm)", "Start dip (mm)", str(sheet.start_level_mm) if sheet.start_level_mm is not None else None, source="PumpingLogSheet.start_level_mm"),
+                F("Niveau d'arrêt prévu (mm)", "Expected stop dip (mm)", str(sheet.expected_stop_level_mm) if sheet.expected_stop_level_mm is not None else None, source="PumpingLogSheet.expected_stop_level_mm"),
+                F("Quantité par mètre (m³/m)", "Quantity per metre (m³/m)", str(sheet.m3_per_metre) if sheet.m3_per_metre is not None else None, source="PumpingLogSheet.m3_per_metre"),
+                F("Densité (t/m³) / VCF", "Density (t/m³) / VCF", " / ".join(str(v) for v in (sheet.density, sheet.vcf) if v is not None) or None, source="PumpingLogSheet.density, vcf"),
+                F("Tonnes par mètre", "Tons per metre", f"{sheet.tons_per_metre:.3f}" if sheet.tons_per_metre is not None else None, source="m³/m × densité × VCF"),
+                F("Quantité prévue (m³ / t)", "Planned quantity (m³ / t)", " / ".join(str(v) for v in (sheet.planned_quantity_m3, sheet.planned_quantity_mt) if v is not None) or None, source="PumpingLogSheet.planned_quantity_m3, planned_quantity_mt"),
+                F("Débit / pression attendus", "Expected rate / pressure", " / ".join(f"{v} {u}" for v, u in ((sheet.expected_rate_m3h, "m³/h"), (sheet.expected_pressure_bar, "bar")) if v is not None) or None, source="PumpingLogSheet.expected_rate_m3h, expected_pressure_bar"),
+                F("Début / fin estimés", "Estimated start / completion", " → ".join(dt(v) for v in (sheet.estimated_start, sheet.estimated_completion) if v) or None, source="PumpingLogSheet.estimated_start, estimated_completion"),
+                F("Niveau d'arrêt réel (mm) / volume final (m³)", "Actual stop dip (mm) / final volume (m³)", " / ".join(str(v) for v in (sheet.actual_stop_level_mm, sheet.final_volume_m3) if v is not None) or None, source="PumpingLogSheet.actual_stop_level_mm, final_volume_m3"),
+                F("Ouverte par", "Opened by", sheet.opened_label, source="PumpingLogSheet.opened_label"),
+            ]))
+    rows = []
+    for row in compare_sides(call):
+        shore, ship = row["shore"], row["ship"]
+        rows.append([
+            f"{row['at']:%d/%m %H:%M}",
+            str(shore.manifold_pressure_bar) if shore is not None and shore.manifold_pressure_bar is not None else None,
+            str(shore.level_mm) if shore is not None and shore.level_mm is not None else None,
+            str(shore.hourly_m3) if shore is not None and shore.hourly_m3 is not None else None,
+            str(shore.cumulative_m3) if shore is not None and shore.cumulative_m3 is not None else None,
+            str(shore.cumulative_mt) if shore is not None and shore.cumulative_mt is not None else None,
+            str(shore.flow_rate_m3h) if shore is not None and shore.flow_rate_m3h is not None else None,
+            str(ship.hourly_m3) if ship is not None and ship.hourly_m3 is not None else None,
+            str(ship.cumulative_m3) if ship is not None and ship.cumulative_m3 is not None else None,
+            str(row["hourly_deviation"]) if row["hourly_deviation"] is not None else None,
+            (f"{row['hourly_pct']:+.3f} %" if row["hourly_pct"] is not None else None),
+            (f"{row['cumulative_pct']:+.3f} %" if row["cumulative_pct"] is not None else None) + (" !" if row["exceeds"] else "") if row["cumulative_pct"] is not None or row["exceeds"] else None,
+            " ; ".join(x.note for x in (shore, ship) if x is not None and x.note) or None,
+        ])
+    tolerance = call.port.quantity_tolerance_pct
+    sections.append(table(("Relevés horaires — bord et terre", "Hourly readings — ship and shore"), [
+        ("Heure", "Time"), ("Pression terre (bar)", "Shore pressure (bar)"), ("Niveau terre (mm)", "Shore dip (mm)"), ("Reçu / livré terre (m³)", "Shore moved (m³)"),
+        ("Cumul terre (m³)", "Shore cumulated (m³)"), ("Cumul terre (t)", "Shore cumulated (t)"), ("Débit terre (m³/h)", "Shore rate (m³/h)"),
+        ("Livré / reçu bord (m³)", "Ship moved (m³)"), ("Cumul bord (m³)", "Ship cumulated (m³)"), ("Écart (m³)", "Deviation (m³)"),
+        ("Écart horaire (%)", "Hourly deviation (%)"), ("Écart cumulé (%)", "Cumulated deviation (%)"), ("Observations", "Remarks")],
+        rows, blank_rows=2 if not rows else 0, source="PumpingLogEntry des deux côtés appariés par heure (measurements.compare_sides) ; écart = terre − bord",
+        note=(f"Arrêter le transfert pour investigation si l'écart dépasse {tolerance} % (pratique des terminaux, tolérance du port) ; la plateforme signale, ne tranche pas.",
+              f"Stop the transfer for investigation if the deviation exceeds {tolerance}% (terminal practice, the port's tolerance); the platform flags, never decides.")))
+    sections.append(fields(("Totaux", "Totals"), [
+        F("Cumul terre (m³ / t)", "Shore cumulated (m³ / t)", " / ".join(str(v) for v in (summary["SHORE"]["cumulative_m3"], summary["SHORE"]["cumulative_mt"]) if v is not None) or None, source="dernier relevé terre"),
+        F("Cumul bord (m³ / t)", "Ship cumulated (m³ / t)", " / ".join(str(v) for v in (summary["SHIP"]["cumulative_m3"], summary["SHIP"]["cumulative_mt"]) if v is not None) or None, source="dernier relevé bord"),
+        F("Pression moyenne terre / bord (bar)", "Average pressure shore / ship (bar)", " / ".join(str(v) for v in (summary["SHORE"]["average_pressure_bar"], summary["SHIP"]["average_pressure_bar"]) if v is not None) or None, source="moyenne des relevés"),
+        F("Débit moyen terre / bord (m³/h)", "Average rate shore / ship (m³/h)", " / ".join(str(v) for v in (summary["SHORE"]["average_rate_m3h"], summary["SHIP"]["average_rate_m3h"]) if v is not None) or None, source="moyenne des relevés"),
+    ]))
+    return sections
+
+
+MARK = {"YES": "✔", "NO": "✘", "NA": "n/a", "": "—"}
+
+
+def build_ssscl(call: PortCall, standard: str = "SSSCL") -> list[dict]:
+    """The safety checklist of the call — ISGOTT for liquid bulk, BLU Code for dry bulk, the cargo operations
+    list for the others (v1.5) — pre-filled with the ticks, values and remarks of the on-line checklist of the
+    call when there is one (EXG-Q-10), blank boxes otherwise."""
+    from ... import checklists
+    from ..checklist import current
+
+    record = current(call)
+    if record is not None and record.standard != standard:
+        record = None  # a list of another standard (the call changed kind): blank boxes
+    answers = record.current_answers() if record is not None else {}
+    sections = [
         fields(("Identification", "Identification"), [
             F("Navire", "Vessel", f"{call.vessel.name} — IMO {call.vessel.imo}", source="Vessel.name, Vessel.imo"), F("Poste", "Berth", _where(call), source="PortCall.berth ou CallStage.berth_kind de l'étape en cours"),
-            F("Produit", "Product", call.product or None, source="PortCall.product"), F("Opération", "Operation", "chargement / loading" if "M2" in call.template_codes else "déchargement / discharge", source="PortCall.template_codes"),
+            F("Produit", "Product", call.product or None, source="PortCall.product"), F("Opération", "Operation", _operation(call), source="PortCall.template_codes"),
             F("Date et heure d'arrivée au poste (ATB)", "Date and time of berthing (ATB)", dt(call.atb), source="PortCall.atb"),
             F("Terminal", "Terminal", _party(call, "TER"), source="CallParty TER active (Organization.name)"),
+            F("Liste de contrôle en ligne", "On-line checklist", (f"v{record.version} — {record.get_status_display()}" + (f", signée le {dt(record.signed_at)}" if record.signed_at else "")) if record else None, source="SafetyChecklist.version, status, signed_at"),
+            F("Intervalle des vérifications répétées (h)", "Interval of the repetitive checks (h)", str(record.repeat_interval_h) if record and record.repeat_interval_h is not None else None, source="SafetyChecklist.repeat_interval_h"),
         ]),
-        checklist(("Partie 1A — Navire : vérifications avant l'arrivée", "Part 1A — Tanker: checks pre-arrival"), [
-            ("Système de gaz inerte en service, teneur en O₂ des citernes dans les limites", "Inert gas system operational, tank O₂ within limits"),
-            ("Dispositifs de pression/dépression et dégagement des citernes vérifiés", "Pressure/vacuum devices and tank venting checked"),
-            ("Plan de chargement ou de déchargement et de ballastage établi et à bord", "Loading/discharge and ballast plan prepared and on board"),
-            ("Équipage informé des limites du poste (vent, houle, courant, tirant d'eau)", "Crew briefed on the berth limits (wind, swell, current, draft)"),
-        ], columns=ship),
-        checklist(("Partie 1B — Terminal : vérifications avant l'arrivée", "Part 1B — Terminal: checks pre-arrival"), [
-            ("Poste, défenses, bras ou flexibles et moyens d'accès prêts et contrôlés", "Berth, fenders, arms or hoses and means of access ready and checked"),
-            ("Bacs, lignes et vannes alignés conformément au plan ; capacité disponible", "Shore tanks, lines and valves lined up per plan; capacity available"),
-            ("Prévisions météo et marée compatibles avec les limites du poste", "Weather and tide forecasts within the berth limits"),
-            ("Personnel de permanence désigné et informé", "Duty personnel assigned and briefed"),
-        ], columns=shore),
-        checklist(("Partie 2 — Navire : vérifications après l'amarrage", "Part 2 — Tanker: checks after mooring"), [
-            ("Amarres tenues et surveillées ; remorque de secours prête", "Moorings tended; emergency towing-off pennants ready"),
-            ("Moyens d'accès sûrs ; dalots fermés ; plateaux de rétention vidés", "Safe means of access; scuppers plugged; drip trays empty"),
-            ("Ouvertures de citernes fermées ; dégagement conforme au plan", "Tank openings closed; venting per plan"),
-            ("Matériel incendie et antipollution prêt ; sources d'ignition contrôlées", "Fire-fighting and spill response equipment ready; ignition sources controlled"),
-        ], columns=ship),
-        checklist(("Partie 3 — Terminal : vérifications après l'amarrage", "Part 3 — Terminal: checks after mooring"), [
-            ("Défenses en place ; accès et éclairage conformes", "Fenders in place; access and lighting compliant"),
-            ("Bras ou flexibles adaptés au collecteur, supportés, dans leur enveloppe de mouvement", "Arms or hoses suited to the manifold, supported, within their operating envelope"),
-            ("Matériel incendie et antipollution du terminal prêt", "Terminal fire-fighting and spill response equipment ready"),
-            ("Dispositif d'arrêt d'urgence (ESD) du terminal armé", "Terminal emergency shutdown (ESD) armed"),
-        ], columns=shore),
-        checklist(("Partie 4 — Navire et terminal : vérifications avant le transfert", "Part 4 — Tanker and terminal: pre-transfer checks"), [
-            ("Système de communication convenu et testé ; signaux d'arrêt d'urgence convenus", "Agreed communication system tested; emergency stop signals agreed"),
-            ("Procédure d'arrêt d'urgence convenue, essai consigné", "Emergency shutdown procedure agreed and tested"),
-            ("Collecteurs, flexibles ou bras raccordés et étanches ; joints isolants / mise à la masse conformes", "Manifolds, hoses or arms connected and tight; insulating flange / bonding compliant"),
-            ("Alignement des vannes bord et terre vérifié ; gaz inerte et pression des citernes surveillés", "Ship and shore valve line-up checked; inert gas and tank pressure monitored"),
-            ("Effectif suffisant et veille assurée des deux côtés pendant tout le transfert", "Sufficient personnel and watch on both sides throughout the transfer"),
-            ("Interdiction de fumer, portes et hublots fermés, appareils électriques portatifs contrôlés", "Smoking prohibited, doors and ports closed, portable electrical equipment controlled"),
-        ], columns=both),
-        fields(("Partie 5A — Accords avant le transfert", "Part 5A — Pre-transfer agreements"), [
-            F("Débit initial / maximal / de fin (m³/h)", "Initial / maximum / topping-off rate (m³/h)"),
-            F("Pression maximale au collecteur (bar)", "Maximum manifold pressure (bar)"),
-            F("Température maximale (°C)", "Maximum temperature (°C)"), F("Temps de fermeture des vannes (s)", "Valve closure time (s)"),
-            F("Séquence des citernes et des bacs ; échantillonnage et jaugeage", "Tank and shore tank sequence; sampling and gauging", wide=True),
-            F("Limites d'interruption (vent, houle, foudre, visibilité)", "Stop limits (wind, swell, lightning, visibility)", wide=True),
-            F("Canal VHF principal / de secours ; langue", "Primary / backup VHF channel; language"),
-            F("Intervalle des vérifications répétées (h)", "Interval of repetitive checks (h)"),
-        ]),
-        checklist(("Partie 6 — Vérifications répétées pendant et après le transfert", "Part 6 — Repetitive checks during and after transfer"), [
-            ("Amarres, flexibles ou bras, pression et débit vérifiés", "Moorings, hoses/arms, pressure and rate checked"),
-            ("Communication et veille maintenues ; conditions météo dans les limites", "Communication and watch maintained; weather within limits"),
-            ("Ballastage conforme au plan ; tirant d'eau, assiette et francs-bords surveillés", "Ballast per plan; draft, trim and freeboard monitored"),
-            ("Après transfert : lignes vidangées, collecteurs obturés, quantités constatées", "After transfer: lines drained, manifolds blanked, quantities agreed"),
-        ], columns=[("Heure", "Time"), ("Navire", "Ship"), ("Terre", "Shore")]),
-        text(("Déclaration", "Declaration"), [
-            ("Nous, soussignés, avons vérifié ensemble, point par point, les éléments de cette liste, et nous nous sommes assurés que les réponses sont, à notre connaissance, exactes. Nous avons convenu de répéter les vérifications de la partie 6 à l'intervalle indiqué.",
-             "We, the undersigned, have checked the items of this list together, item by item, and have satisfied ourselves that the answers are, to the best of our knowledge, correct. We have agreed to repeat the part 6 checks at the stated interval."),
-        ], note=("Les parties suivent la structure de la liste de contrôle navire/terre de l'ISGOTT, 6e édition ; les points sont formulés par la plateforme, le terminal applique l'édition sous licence dont il dispose.",
-                 "The parts follow the structure of the ISGOTT 6th edition ship/shore safety checklist; the items are worded by the platform, the terminal applies its licensed edition.")),
     ]
+    items = record.items if record is not None else checklists.catalogue(standard)
+    columns = {"SHIP": [("Navire", "Ship")], "SHORE": [("Terre", "Shore")], "BOTH": [("Navire", "Ship"), ("Terre", "Shore")]}
+    for part, fr, en in checklists.parts(standard):
+        part_items = [i for i in items if i["part"] == part]
+        if not part_items:
+            continue
+        if all(i["kind"] == "value" for i in part_items):
+            sections.append(fields((fr, en), [
+                F(i["fr"], i["en"], next((answers[(i["code"], s)].value for s in ("SHIP", "SHORE") if (i["code"], s) in answers and answers[(i["code"], s)].value), None),
+                  wide=len(i["fr"]) > 40, source=f"SafetyCheckAnswer.value (point {i['code']})") for i in part_items]))
+            continue
+        side = part_items[0]["side"]
+        rows = []
+        for i in part_items:
+            marks, remarks = [], []
+            for s in checklists.sides_of(i):
+                a = answers.get((i["code"], s))
+                marks.append(MARK.get(a.state, "—") if a is not None and record is not None else "☐")
+                if a is not None and a.remark:
+                    remarks.append(f"{'navire' if s == 'SHIP' else 'terre'} : {a.remark}")
+            label_fr = f"{i['code']} — {i['fr']}" + (" (R)" if i.get("repetitive") else "")
+            rows.append({"fr": label_fr, "en": i["en"], "marks": marks, "remark": " ; ".join(remarks)})
+        sections.append(checklist((fr, en), rows, columns=columns[side],
+                                  note=(("(R) : point répété pendant les opérations à l'intervalle convenu", "(R): repeated during the operations at the agreed interval") if any(i.get("repetitive") for i in part_items) else None)))
+    if record is not None:
+        reps = list(record.answers.filter(repetition__gte=1).order_by("answered_at"))
+        if reps:
+            sections.append(table(("Vérifications répétées enregistrées", "Repetitive checks recorded"),
+                                  [("Heure (UTC)", "Time (UTC)"), ("Point", "Item"), ("Côté", "Side"), ("Réponse", "Answer"), ("Par", "By"), ("Remarque", "Remark")],
+                                  [[dt(a.answered_at), a.item_code, "navire / ship" if a.side == "SHIP" else "terre / shore", MARK.get(a.state, "—"), a.author_label, a.remark or None] for a in reps],
+                                  source="SafetyCheckAnswer (repetition ≥ 1)"))
+        signatures = list(record.signatures.order_by("signed_at"))
+        if signatures:
+            sections.append(table(("Signatures électroniques", "Electronic signatures"),
+                                  [("Côté", "Side"), ("Signataire", "Signed by"), ("Heure (UTC)", "Time (UTC)"), ("Sceau", "Seal")],
+                                  [["navire / ship" if sg.side == "SHIP" else "terre / shore", sg.signer_label, dt(sg.signed_at), sg.seal[:16] + "…"] for sg in signatures],
+                                  source="SafetyChecklistSignature"))
+    sections.append(text(("Déclaration", "Declaration"), [
+        ("Nous, soussignés, avons vérifié ensemble, point par point, les éléments de cette liste, et nous nous sommes assurés que les réponses sont, à notre connaissance, exactes. Nous avons convenu de répéter les vérifications marquées (R) à l'intervalle indiqué.",
+         "We, the undersigned, have checked the items of this list together, item by item, and have satisfied ourselves that the answers are, to the best of our knowledge, correct. We have agreed to repeat the checks marked (R) at the stated interval."),
+    ], note=(f"Les parties suivent la structure de : {checklists.basis(standard)[0]} ; les points sont formulés par la plateforme, le terminal applique l'édition dont il dispose.",
+             f"The parts follow the structure of: {checklists.basis(standard)[1]}; the items are worded by the platform, the terminal applies its own edition.")))
+    return sections
+
+
+def build_blu_checklist(call: PortCall) -> list[dict]:
+    return build_ssscl(call, "BLU")
+
+
+def build_cargo_checklist(call: PortCall) -> list[dict]:
+    return build_ssscl(call, "CARGO")
 
 
 def build_pre_transfer(call: PortCall) -> list[dict]:
@@ -481,29 +678,46 @@ _register(Form("NOR", "NOR", ("Notice de disponibilité", "Notice of readiness")
                build_nor,
                family="NAV", answers=("M0:23",), purpose=("La notice de disponibilité remise par le capitaine aux destinataires de la charte-partie ; l'accusé de réception du terminal et de l'affréteur.", "The master's notice of readiness to the charter-party recipients; the terminal's and charterer's acknowledgement.")))
 _register(Form("TIME_SHEET", "TIME_SHEET", ("Time sheet", "Time sheet"),
-               ("Chronologie du registre — BIMCO Laytime Definitions for Charter Parties 2013", "Registry chronology — BIMCO Laytime Definitions for Charter Parties 2013"),
-               frozenset({"AGE"}), [("AGE", ("Agence", "Agency")), ("NAV", ("Capitaine", "Master")), ("TER", ("Terminal", "Terminal"))], build_time_sheet, landscape=True,
-               family="AGE", answers=("M0:37",), purpose=("La chronologie contradictoire de l'escale et ses interruptions, base du décompte du temps de planche.", "The contradictory chronology of the call and its stoppages, the basis of the laytime count.")))
+               ("Structure des time sheets des terminaux (analyse des surestaries) — BIMCO Laytime Definitions for Charter Parties 2013", "Structure of the terminal vessel time sheets (demurrage analysis) — BIMCO Laytime Definitions for Charter Parties 2013"),
+               frozenset({"AGE", "TER", "NAV"}), [("NAV", ("Pour le navire", "For ship")), ("INS", ("Pour l'inspecteur", "For surveyor")), ("AGE", ("Pour l'agent", "For agent")), ("TER", ("Pour le terminal", "For shore"))],
+               build_time_sheet, landscape=True,
+               family="AGE", answers=("M0:37",), purpose=("Le time sheet de l'escale lu par toutes les parties : activités standard, arrêts et retards comptés, quantités et performance, récapitulatif des temps.", "The call's time sheet read by every party: standard activities, stoppages and delays counted, quantities and performance, time summary.")))
+_register(Form("PUMPING_LOG", "PUMPING_LOG", ("Journal de pompage", "Pumping log"),
+               ("Structure des journaux de pompage des terminaux ; ISGOTT, 6e édition (surveillance du transfert)", "Structure of the terminal pumping logs; ISGOTT, 6th edition (monitoring of the transfer)"),
+               frozenset({"TER", "NAV"}), [("TER", ("Pour le terminal", "For shore")), ("NAV", ("Pour le navire", "For ship")), ("INS", ("Pour l'inspecteur", "For surveyor"))],
+               build_pumping_log, landscape=True,
+               family="TER", cargo_kinds=frozenset({"LIQUID"}), answers=("M1:1.11", "M2:2.11"), purpose=("Le journal de pompage tenu par le navire et par le terminal, relevé par relevé, avec l'écart terre − bord et le seuil d'arrêt pour investigation.", "The pumping log kept by the ship and by the terminal, reading by reading, with the shore − ship deviation and the stop-for-investigation threshold.")))
 _register(Form("SSSCL", "SSSCL", ("Liste de contrôle navire / terre", "Ship/shore safety checklist"),
                ("Structure de l'ISGOTT, 6e édition (OCIMF / ICS / IAPH), chapitre 25", "Structure of ISGOTT, 6th edition (OCIMF / ICS / IAPH), chapter 25"),
                frozenset({"TER", "NAV"}), [("NAV", ("Pour le navire", "For the ship")), ("TER", ("Pour le terminal", "For the terminal"))], build_ssscl,
-               family="TER", answers=("M0:28",), purpose=("La liste de contrôle navire/terre signée conjointement avant le transfert et répétée pendant.", "The ship/shore safety checklist signed jointly before the transfer and repeated during it.")))
+               family="TER", answers=("M0:28",), cargo_kinds=frozenset({"LIQUID"}),
+               purpose=("La liste de contrôle navire/terre signée conjointement avant le transfert et répétée pendant.", "The ship/shore safety checklist signed jointly before the transfer and repeated during it.")))
+_register(Form("BLU_CHECKLIST", "BLU_CHECKLIST", ("Liste de contrôle navire / terre — vrac sec", "Ship/shore safety checklist — dry bulk"),
+               ("Code BLU de l'OMI (résolution A.862(20)), appendice 3 ; Code IMSBC", "IMO BLU Code (resolution A.862(20)), appendix 3; IMSBC Code"),
+               frozenset({"TER", "NAV"}), [("NAV", ("Pour le navire", "For the ship")), ("TER", ("Pour le terminal", "For the terminal"))], build_blu_checklist,
+               family="TER", answers=("M0:28",), cargo_kinds=frozenset({"DRY"}),
+               purpose=("La liste de contrôle navire/terre du Code BLU, signée avant le chargement ou le déchargement d'un vraquier et répétée pendant.", "The BLU Code ship/shore safety checklist, signed before loading or unloading a bulk carrier and repeated during it.")))
+_register(Form("CARGO_SAFETY_CHECKLIST", "CARGO_SAFETY_CHECKLIST", ("Liste de contrôle sécurité des opérations de manutention", "Cargo operations safety checklist"),
+               ("Recueil de directives pratiques du BIT « Sécurité et santé dans les ports » ; pratique des terminaux à conteneurs, divers et rouliers", "ILO code of practice “Safety and health in ports”; container, general cargo and ro-ro terminal practice"),
+               frozenset({"TER", "NAV"}), [("NAV", ("Pour le navire", "For the ship")), ("TER", ("Pour le terminal", "For the terminal"))], build_cargo_checklist,
+               family="TER", answers=("M0:28",), cargo_kinds=frozenset({"CONTAINER", "GENERAL", "RORO", "OTHER"}),
+               purpose=("La liste de contrôle de sécurité des opérations de manutention, signée par le navire et le terminal avant les opérations et répétée pendant.", "The cargo operations safety checklist, signed by the ship and the terminal before the operations and repeated during them.")))
 _register(Form("PRE_TRANSFER", "PRE_TRANSFER_MINUTES", ("Accord de transfert — réunion pré-transfert", "Transfer agreement — pre-transfer meeting"),
                ("ISGOTT, 6e édition, réunion pré-transfert et accords écrits", "ISGOTT, 6th edition, pre-transfer meeting and written agreements"),
                frozenset({"TER", "NAV"}), [("TER", ("Terminal", "Terminal")), ("NAV", ("Navire", "Ship")), ("INS", ("Inspecteur", "Surveyor"))], build_pre_transfer,
-               family="TER", answers=("M0:27",), purpose=("Le compte rendu de la réunion pré-transfert : paramètres, communication, urgence, accord écrit.", "The minutes of the pre-transfer meeting: parameters, communication, emergency, written agreement.")))
+               family="TER", cargo_kinds=frozenset({"LIQUID"}), answers=("M0:27",), purpose=("Le compte rendu de la réunion pré-transfert : paramètres, communication, urgence, accord écrit.", "The minutes of the pre-transfer meeting: parameters, communication, emergency, written agreement.")))
 _register(Form("ULLAGE", "ULLAGE_REPORT", ("Rapport de jaugeage", "Ullage / sounding report"),
                ("API MPMS chapitre 17.1 et 17.2 (inspection des cargaisons maritimes) ; EI HM 28 ; tables ASTM D1250", "API MPMS chapters 17.1 and 17.2 (marine cargo inspection); EI HM 28; ASTM D1250 tables"),
                frozenset({"INS", "NAV", "TER"}), [("INS", ("Inspecteur", "Surveyor")), ("NAV", ("Officier de quart / chef de cargaison", "Chief officer")), ("TER", ("Terminal", "Terminal"))], build_ullage, landscape=True,
-               family="INS", answers=("M1:1.05", "M1:1.15", "M2:2.05", "M2:2.14", "M3:3.14"), purpose=("Le relevé de jaugeage des citernes, avec les quantités bord, terre et inspecteur du registre.", "The tank gauging report, with the ship, shore and surveyor quantities of the registry.")))
+               family="INS", cargo_kinds=frozenset({"LIQUID"}), answers=("M1:1.05", "M1:1.15", "M2:2.05", "M2:2.14", "M3:3.14"), purpose=("Le relevé de jaugeage des citernes, avec les quantités bord, terre et inspecteur du registre.", "The tank gauging report, with the ship, shore and surveyor quantities of the registry.")))
 _register(Form("HOSES", "HOSE_RECORD", ("Relevé de connexion et de déconnexion", "Hose / arm connection and disconnection record"),
                ("ISGOTT, 6e édition (flexibles et bras de chargement) ; OCIMF Guide to Manufacturing and Purchasing Hoses for Offshore Moorings", "ISGOTT, 6th edition (hoses and loading arms); OCIMF hose guidelines"),
                frozenset({"TER", "NAV"}), [("TER", ("Terminal", "Terminal")), ("NAV", ("Navire", "Ship"))], build_hose_record,
-               family="TER", answers=("M1:1.09", "M1:1.13", "MA2:A2.04"), purpose=("Le relevé des connexions et déconnexions des flexibles ou bras, avec les essais.", "The record of hose or arm connections and disconnections, with the tests.")))
+               family="TER", cargo_kinds=frozenset({"LIQUID"}), answers=("M1:1.09", "M1:1.13", "MA2:A2.04"), purpose=("Le relevé des connexions et déconnexions des flexibles ou bras, avec les essais.", "The record of hose or arm connections and disconnections, with the tests.")))
 _register(Form("PROTEST", "PROTEST", ("Lettre de protestation", "Letter of protest"),
                ("Usage maritime — réserve de droits, sans reconnaissance de responsabilité", "Maritime practice — reservation of rights without admission of liability"),
                frozenset({"AGE", "NAV", "TER", "INS", "PRE"}), [("AGE", ("Expéditeur", "Issuer")), ("TER", ("Destinataire — reçu", "Recipient — received"))], build_protest,
-               family="AGE", answers=("M1:1.19", "M4:4.09"), purpose=("La lettre de protestation d'une partie, avec réserve de droits et accusé de réception.", "A party's letter of protest, with reservation of rights and acknowledgement.")))
+               family="AGE", answers=("M1:1.19", "M4:4.09", "MB1:B1.17", "MB2:B2.19", "MG1:G1.14", "MR1:R1.12"), purpose=("La lettre de protestation d'une partie, avec réserve de droits et accusé de réception.", "A party's letter of protest, with reservation of rights and acknowledgement.")))
 _register(Form("FAL", "FAL_FORMS", ("Formulaires FAL — déclaration générale et liste d'équipage", "FAL forms — general declaration and crew list"),
                ("Convention FAL de l'OMI, formulaires 1 et 5 (modèles 2024)", "IMO FAL Convention, forms 1 and 5 (2024 models)"),
                frozenset({"AGE", "NAV"}), [("NAV", ("Capitaine ou agent autorisé", "Master or authorized agent"))], build_fal,

@@ -87,15 +87,18 @@ class CallStatus(models.TextChoices):
     ARCHIVED = "ARCHIVED", _("Archived")
     REJECTED = "REJECTED", _("Rejected")
     CANCELLED = "CANCELLED", _("Cancelled")
+    # The announcement's validity ran out before the vessel berthed (FLX-CDC-002 v1.5, EXG-R-02): the call is
+    # obsolete and a new announcement is made
+    EXPIRED = "EXPIRED", _("Obsolete (validity expired)")
 
 
 # Life-cycle graph of a call (EF-1.2). Any transition outside this graph is refused.
 CALL_TRANSITIONS: dict[str, set[str]] = {
-    CallStatus.DRAFT: {CallStatus.DECLARED, CallStatus.CANCELLED},
-    CallStatus.DECLARED: {CallStatus.ACCEPTED, CallStatus.REJECTED, CallStatus.CANCELLED},
-    CallStatus.ACCEPTED: {CallStatus.PLANNED, CallStatus.CANCELLED},
-    CallStatus.PLANNED: {CallStatus.APPROACHING, CallStatus.CANCELLED},
-    CallStatus.APPROACHING: {CallStatus.AT_BERTH, CallStatus.IN_OPERATION, CallStatus.DEPARTED},
+    CallStatus.DRAFT: {CallStatus.DECLARED, CallStatus.CANCELLED, CallStatus.EXPIRED},
+    CallStatus.DECLARED: {CallStatus.ACCEPTED, CallStatus.REJECTED, CallStatus.CANCELLED, CallStatus.EXPIRED},
+    CallStatus.ACCEPTED: {CallStatus.PLANNED, CallStatus.CANCELLED, CallStatus.EXPIRED},
+    CallStatus.PLANNED: {CallStatus.APPROACHING, CallStatus.CANCELLED, CallStatus.EXPIRED},
+    CallStatus.APPROACHING: {CallStatus.AT_BERTH, CallStatus.IN_OPERATION, CallStatus.DEPARTED, CallStatus.EXPIRED},
     CallStatus.AT_BERTH: {CallStatus.IN_OPERATION, CallStatus.SHIFTING, CallStatus.DEPARTED},
     CallStatus.IN_OPERATION: {CallStatus.OPS_COMPLETE, CallStatus.SHIFTING},
     CallStatus.OPS_COMPLETE: {CallStatus.SHIFTING, CallStatus.DEPARTED},
@@ -106,7 +109,11 @@ CALL_TRANSITIONS: dict[str, set[str]] = {
     CallStatus.ARCHIVED: set(),
     CallStatus.REJECTED: set(),
     CallStatus.CANCELLED: set(),
+    CallStatus.EXPIRED: set(),
 }
+# Statuses in which an announcement whose validity ran out becomes obsolete: before the vessel is alongside. A
+# vessel already berthed or working is never cut off: its overrun is signalled and counted (billing).
+EXPIRABLE_STATUSES = [CallStatus.DRAFT, CallStatus.DECLARED, CallStatus.ACCEPTED, CallStatus.PLANNED, CallStatus.APPROACHING]
 # Operational chain along which a recorded milestone may move a call forward
 OPERATIONAL_CHAIN = [
     CallStatus.PLANNED,
@@ -260,6 +267,48 @@ def _check_roles(value, field):
         raise ValidationError({field: _("Unknown roles: %(r)s") % {"r": ", ".join(unknown)}})
 
 
+class CargoKind(models.TextChoices):
+    """What the vessel carries (FLX-CDC-002 v1.5, EXG-R-08): the platform is open to every cargo — the kind
+    chooses the operation templates, the quantity units, the measurement methods and the safety checklist."""
+
+    LIQUID = "LIQUID", _("Liquid bulk (petroleum, chemicals, vegetable oils, gas)")
+    DRY = "DRY", _("Dry bulk (minerals, grain, clinker, fertiliser, coal…)")
+    CONTAINER = "CONTAINER", _("Containers")
+    GENERAL = "GENERAL", _("General cargo, breakbulk, project cargo, scrap")
+    RORO = "RORO", _("Ro-ro: vehicles and rolling equipment")
+    OTHER = "OTHER", _("Other (passengers, naval, fishing, research, no cargo)")
+
+
+# Units of a declared quantity, by kind of cargo
+QUANTITY_UNITS = [
+    ("MT", "MT"), ("M3", "m³ @15°C"), ("BBL", "bbl @60°F"),
+    ("TEU", "TEU"), ("BOX", _("boxes (containers)")), ("MOVES", _("moves (container)")),
+    ("UNIT", _("units (vehicles, packages, pieces)")), ("M3B", _("m³ (bulk volume)")), ("PAX", _("passengers")),
+]
+UNITS_BY_CARGO = {
+    CargoKind.LIQUID: ["MT", "M3", "BBL"], CargoKind.DRY: ["MT", "M3B"], CargoKind.CONTAINER: ["TEU", "BOX", "MOVES", "MT"],
+    CargoKind.GENERAL: ["MT", "UNIT", "M3B"], CargoKind.RORO: ["UNIT", "MT"], CargoKind.OTHER: ["MT", "UNIT", "PAX"],
+}
+
+
+class VesselKind(models.TextChoices):
+    TANKER_CRUDE = "TANKER_CRUDE", _("Crude oil tanker")
+    TANKER_PRODUCT = "TANKER_PRODUCT", _("Product tanker")
+    TANKER_CHEM = "TANKER_CHEM", _("Chemical tanker")
+    GAS = "GAS", _("Gas carrier (LPG / LNG)")
+    BULK = "BULK", _("Bulk carrier")
+    CONTAINER = "CONTAINER", _("Container ship")
+    GENERAL = "GENERAL", _("General cargo / multipurpose")
+    RORO = "RORO", _("Ro-ro / vehicle carrier")
+    REEFER = "REEFER", _("Reefer")
+    PASSENGER = "PASSENGER", _("Passenger / cruise")
+    OSV = "OSV", _("Offshore supply / service")
+    TUG = "TUG", _("Tug / barge / workboat")
+    NAVAL = "NAVAL", _("Naval / government vessel")
+    FISHING = "FISHING", _("Fishing vessel")
+    OTHER = "OTHER", _("Other")
+
+
 class Vessel(models.Model):
     """Vessel particulars ("fiche navire"), per port. Created and maintained by the agency."""
 
@@ -267,7 +316,8 @@ class Vessel(models.Model):
     imo = models.CharField(_("IMO number"), max_length=7)
     name = models.CharField(_("name"), max_length=120)
     flag = models.CharField(_("flag"), max_length=60, blank=True)
-    vessel_type = models.CharField(_("type"), max_length=60, blank=True, help_text=_("Crude, product, chemical, LPG…"))
+    vessel_kind = models.CharField(_("kind of vessel"), max_length=16, choices=VesselKind.choices, default=VesselKind.TANKER_PRODUCT)
+    vessel_type = models.CharField(_("type (detail)"), max_length=60, blank=True, help_text=_("Crude, product, chemical, LPG, geared bulk carrier, PCTC…"))
     call_sign = models.CharField(_("call sign"), max_length=20, blank=True)
     mmsi = models.CharField(_("MMSI"), max_length=9, blank=True)
     dwt = models.PositiveIntegerField(_("DWT"), null=True, blank=True)
@@ -275,6 +325,11 @@ class Vessel(models.Model):
     beam_m = models.DecimalField(_("beam (m)"), max_digits=5, decimal_places=2, null=True, blank=True)
     draft_m = models.DecimalField(_("summer draft (m)"), max_digits=5, decimal_places=2, null=True, blank=True)
     built_year = models.PositiveSmallIntegerField(_("year built"), null=True, blank=True)
+    # particulars compared with the berth limits by the vetting checklist (EXG-R-10)
+    displacement_t = models.PositiveIntegerField(_("displacement (t)"), null=True, blank=True)
+    manifold_height_m = models.DecimalField(_("manifold height above waterline (m)"), max_digits=5, decimal_places=2, null=True, blank=True)
+    air_draft_m = models.DecimalField(_("air draft (m)"), max_digits=5, decimal_places=2, null=True, blank=True)
+    crane_swl_t = models.DecimalField(_("crane SWL (t)"), max_digits=5, decimal_places=1, null=True, blank=True)
     owner_name = models.CharField(_("registered owner"), max_length=160, blank=True)
     manager_name = models.CharField(_("manager / operator"), max_length=160, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -324,10 +379,24 @@ class CallTemplate(models.Model):
     berth_kinds = models.JSONField(
         _("applicable berth types"), default=list, blank=True, help_text=_("Empty = all types.")
     )
+    cargo_kinds = models.JSONField(
+        _("applicable kinds of cargo"), default=list, blank=True,
+        help_text=_("Empty = every kind. The operation models of liquid bulk, dry bulk, containers… are offered by the kind of cargo of the call."),
+    )
     requires_linked_call = models.BooleanField(
         _("links two calls"), default=False, help_text=_("STS and double banking connect two vessels.")
     )
     never_alone = models.BooleanField(_("cannot be used alone"), default=False, help_text=_("M9 grafts onto an operation."))
+    # What the announcement asks for when this model is chosen (FLX-CDC-002 v1.6, EXG-R-11): the model's own
+    # questions — grade and quantity of bunkers, hot work, number of holds, purpose and duration of a double
+    # banking… — in the grammar of the request forms. The answers are kept on the call (operation_details), shown on
+    # its overview and pre-fill the requests the model's tasks will raise (same keys).
+    intake_schema = models.JSONField(
+        _("questions asked at the announcement"), default=list, blank=True,
+        help_text=_('List of {"key", "label_fr", "label_en", "type", "required", "options", "help_fr", "help_en"} — '
+                    'the same grammar as the form of a request type; a key shared with the form of a request raised '
+                    "by this model's tasks pre-fills that request."),
+    )
     is_active = models.BooleanField(_("active"), default=True)
     order = models.PositiveSmallIntegerField(default=0)
 
@@ -339,6 +408,11 @@ class CallTemplate(models.Model):
 
     def __str__(self) -> str:
         return f"{self.code} — {self.name}"
+
+    def clean(self):
+        for field in self.intake_schema or []:
+            if not isinstance(field, dict) or not field.get("key") or not field.get("type"):
+                raise ValidationError({"intake_schema": _("Each field needs at least a key and a type.")})
 
     @property
     def name(self) -> str:
@@ -427,6 +501,14 @@ class TemplateTask(models.Model):
     berth_kinds = models.JSONField(
         _("only for these operating areas"), default=list, blank=True,
         help_text=_("Operation × berth type: empty = every area; e.g. [\"JETTY\", \"SPM\"] for ship/shore interface tasks."),
+    )
+    # A green light (FLX-CDC-002 v1.5, EXG-R-03): a go-ahead given by a party — harbour master, naval base,
+    # terminal, principal… — shown on the call's green-light panel, withdrawable with a reason
+    green_light = models.BooleanField(_("green light"), default=False,
+                                      help_text=_("Shown on the green-light panel of the call; the party may withdraw it with a reason."))
+    cargo_kinds = models.JSONField(
+        _("only for these kinds of cargo"), default=list, blank=True,
+        help_text=_("Empty = every kind; e.g. [\"LIQUID\"] for a tanker-only task of the common base."),
     )
     order = models.PositiveIntegerField(default=0)
 
@@ -664,6 +746,14 @@ class DocumentType(models.Model):
     issuer_roles = models.JSONField(_("issuing roles"), default=list, blank=True)
     signer_roles = models.JSONField(_("required signatories"), default=list, blank=True)
     audience_roles = models.JSONField(_("additional readers (N2)"), default=list, blank=True)
+    # readers limited to the issuer and the list above: the coordinating roles (agency, harbour master, port
+    # management) and the owner are NOT added by the N2 rule — a laboratory's quality certificate is read by the
+    # terminal, the trader, the vessel, the surveyor and the port only (FLX-CDC-002 v1.4, EXG-Q-06)
+    readers_exact = models.BooleanField(
+        _("readers limited to the list above"), default=False,
+        help_text=_("When set, only the issuer and the readers listed above see the document: the agency, the "
+                    "harbour master, the port management and the owner are not added automatically."),
+    )
     retention_years = models.PositiveSmallIntegerField(_("retention (years)"), default=10)
     generated = models.BooleanField(_("generated from the registry"), default=False)
     is_bill_of_lading = models.BooleanField(_("bill of lading (locked)"), default=False)
@@ -682,6 +772,47 @@ class DocumentType(models.Model):
     @property
     def label(self) -> str:
         return pick(self.label_fr, self.label_en)
+
+
+class ReportAccess(models.Model):
+    """Who reads each live report and board of the port — decided at parametrage, never in code (FLX-CDC-002
+    v1.4, EXG-Q-08): the pumping log, the tank measurements once validated, the ship/shore safety checklist and
+    the port call board. The documents (time sheet, statement of facts, certificates) have their readers on
+    their document type."""
+
+    class Report(models.TextChoices):
+        PUMPING_LOG = "PUMPING_LOG", _("Pumping log (ship and shore readings, deviation)")
+        MEASUREMENTS = "MEASUREMENTS", _("Measurements and validated tank readings")
+        SAFETY_CHECKLIST = "SAFETY_CHECKLIST", _("Ship/shore safety checklist (reading)")
+        CALL_BOARD = "CALL_BOARD", _("Port call board (expected, alongside, departed)")
+
+    port = models.ForeignKey(Port, on_delete=models.PROTECT, related_name="report_access")
+    code = models.CharField(_("report"), max_length=20, choices=Report.choices)
+    reader_roles = models.JSONField(_("reading roles"), default=list, blank=True)
+    note = models.CharField(_("note"), max_length=300, blank=True)
+
+    class Meta:
+        ordering = ["port", "code"]
+        constraints = [models.UniqueConstraint(fields=["port", "code"], name="uniq_report_access_per_port")]
+        verbose_name = _("report access")
+        verbose_name_plural = _("report access")
+
+    def __str__(self) -> str:
+        return f"{self.get_code_display()} — {', '.join(self.reader_roles)}"
+
+    def clean(self):
+        _check_roles(self.reader_roles, "reader_roles")
+
+
+# Readers of each report when the port has not decided otherwise (ReportAccess rows are created at bootstrap)
+DEFAULT_REPORT_READERS: dict[str, list[str]] = {
+    # the harbour master, the surveyor, the superintendent and the trader (owner / charterer side), the port
+    # management, the agency that coordinates the call — and the two parties that keep it
+    "PUMPING_LOG": ["NAV", "TER", "CAP", "INS", "COM", "DIR", "AGE"],
+    "MEASUREMENTS": ["NAV", "TER", "CAP", "INS", "COM", "DIR", "AGE"],
+    "SAFETY_CHECKLIST": ["NAV", "TER", "CAP", "APO", "INS", "AGE", "SUR", "DIR"],
+    "CALL_BOARD": ["AGE", "TER", "CAP", "APO", "SVC", "ADM", "SUR", "INS", "COM", "PRE", "DIR"],
+}
 
 
 class PortDefaultParty(models.Model):
@@ -703,8 +834,13 @@ class PortDefaultParty(models.Model):
 # ======================================================================================
 # The call
 # ======================================================================================
+class StsRole(models.TextChoices):
+    DONOR = "DONOR", _("Delivers the cargo (discharging vessel)")
+    RECEIVER = "RECEIVER", _("Receives the cargo (receiving vessel)")
+
+
 class PortCall(NoDeleteModel):
-    """A tanker call ("escale"). Created by the agency only (EF-1.1); reference immutable."""
+    """A vessel's call ("escale"), whatever its cargo. Created by the agency only (EF-1.1); reference immutable."""
 
     port = models.ForeignKey(Port, on_delete=models.PROTECT, related_name="calls")
     reference = models.CharField(_("reference"), max_length=30, unique=True, editable=False)
@@ -715,13 +851,16 @@ class PortCall(NoDeleteModel):
     requested_berth_kind = models.CharField(_("operating area"), max_length=12, choices=Berth.Kind.choices)
     requested_berth = models.ForeignKey(Berth, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
     berth = models.ForeignKey(Berth, on_delete=models.PROTECT, null=True, blank=True, related_name="calls")
-    product = models.CharField(_("product"), max_length=120, blank=True)
+    cargo_kind = models.CharField(_("kind of cargo"), max_length=10, choices=CargoKind.choices, default=CargoKind.LIQUID)
+    product = models.CharField(_("product / nature of the cargo"), max_length=120, blank=True)
     quantity = models.DecimalField(_("declared quantity"), max_digits=14, decimal_places=3, null=True, blank=True)
-    quantity_unit = models.CharField(
-        _("unit"), max_length=8, default="MT", choices=[("MT", "MT"), ("M3", "m³ @15°C"), ("BBL", "bbl @60°F")]
-    )
+    quantity_unit = models.CharField(_("unit"), max_length=8, default="MT", choices=QUANTITY_UNITS)
     last_port = models.CharField(_("last port"), max_length=80, blank=True)
     next_port = models.CharField(_("next port"), max_length=80, blank=True)
+    # Performance basis of the time sheet (FLX-CDC-002 v1.4, EXG-Q-02): the pumping time the charter-party or the
+    # terminal allows, and the cargo batch the terminal nominates
+    planned_pump_hours = models.DecimalField(_("planned pumping time (h)"), max_digits=6, decimal_places=2, null=True, blank=True)
+    batch_reference = models.CharField(_("batch reference"), max_length=60, blank=True)
     # Estimates (agency) — every relative deadline is recomputed when they change (EF-5.4)
     eta = models.DateTimeField(_("ETA"))
     etb = models.DateTimeField(_("ETB"), null=True, blank=True)
@@ -740,6 +879,19 @@ class PortCall(NoDeleteModel):
         max_length=12, blank=True,
         choices=[("STS", _("STS partner")), ("INNER", _("Inner vessel (double banking)")), ("OUTER", _("Outer vessel"))],
     )
+    # In a ship-to-ship transfer each vessel has its own call, its own agency and its own team (EXG-R-05): this
+    # says which of the two this vessel is
+    sts_role = models.CharField(_("role in the STS transfer"), max_length=8, choices=StsRole.choices, blank=True)
+    # What the agency declared at the announcement for each operation model chosen (v1.6, EXG-R-11): the answers
+    # to the model's own questions, keyed by template code — {"M4": {"grade": "VLSFO", "quantity_mt": 450}, …}
+    operation_details = models.JSONField(_("information declared for each operation"), default=dict, blank=True)
+    # Validity of the announcement (EXG-R-02): fixed at creation, kept for billing; the call is obsolete after it
+    # unless the vessel is already alongside
+    validity_days = models.PositiveSmallIntegerField(_("validity of the announcement (days)"), default=15)
+    valid_until = models.DateTimeField(_("announcement valid until"), null=True, blank=True)
+    expired_at = models.DateTimeField(_("became obsolete at"), null=True, blank=True)
+    renewed_from = models.ForeignKey("self", on_delete=models.PROTECT, null=True, blank=True, related_name="renewals",
+                                     verbose_name=_("announced again from"))
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
     declared_at = models.DateTimeField(null=True, blank=True)
@@ -788,7 +940,34 @@ class PortCall(NoDeleteModel):
 
     @property
     def is_terminal_state(self) -> bool:
-        return self.status in {CallStatus.CLOSED, CallStatus.ARCHIVED, CallStatus.REJECTED, CallStatus.CANCELLED}
+        return self.status in {CallStatus.CLOSED, CallStatus.ARCHIVED, CallStatus.REJECTED, CallStatus.CANCELLED,
+                               CallStatus.EXPIRED}
+
+    @property
+    def is_sts(self) -> bool:
+        return self.link_kind == "STS" or bool(self.sts_role)
+
+    @property
+    def validity_remaining(self) -> timedelta | None:
+        """Time left before the announcement runs out (negative once overrun); None when no validity was fixed."""
+        if self.valid_until is None:
+            return None
+        return self.valid_until - timezone.now()
+
+    @property
+    def validity_overrun(self) -> bool:
+        return self.valid_until is not None and timezone.now() > self.valid_until and not self.is_terminal_state
+
+    def billing_basis(self) -> dict:
+        """What the port bills on (EXG-R-02): the validity fixed at the announcement, the time actually spent in
+        the port and any overrun of the validity."""
+        end = self.atd or self.closed_at or self.expired_at or timezone.now()
+        in_port = (end - self.ata) if self.ata else None
+        overrun = (end - self.valid_until) if self.valid_until and end > self.valid_until else None
+        return {"validity_days": self.validity_days, "valid_from": self.created_at, "valid_until": self.valid_until,
+                "arrived_at": self.ata, "departed_at": self.atd, "closed_at": self.closed_at, "expired_at": self.expired_at,
+                "hours_in_port": round(in_port.total_seconds() / 3600, 1) if in_port else None,
+                "overrun_hours": round(overrun.total_seconds() / 3600, 1) if overrun else None}
 
     @property
     def template_codes(self) -> list[str]:
@@ -865,6 +1044,18 @@ class CallParty(NoDeleteModel):
     is_default = models.BooleanField(default=False)
     # TER or PRE party designated to speak for the shore side when several organisations hold that role on the call
     shore_side = models.BooleanField(default=False)
+    # Controlled access given by the principal agent (FLX-CDC-002 v1.5, EXG-R-04): the whole file, a part of it
+    # (the tabs listed in *scopes*, with the right to act in them) or reading only
+    class Access(models.TextChoices):
+        FULL = "FULL", _("Full access (every tab, acts within its role)")
+        PARTIAL = "PARTIAL", _("Partial access (the tabs listed, acts within them)")
+        READ = "READ", _("Reading only (every tab, no act)")
+
+    access = models.CharField(_("access to the file"), max_length=7, choices=Access.choices, default=Access.FULL)
+    scopes = models.JSONField(_("tabs of a partial access"), default=list, blank=True,
+                              help_text=_("Tab codes, e.g. [\"taches\", \"documents\"]."))
+    access_set_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    access_set_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -888,6 +1079,11 @@ class CallParty(NoDeleteModel):
             and self.valid_from <= when
             and (self.valid_until is None or when < self.valid_until)
         )
+
+    @property
+    def is_principal(self) -> bool:
+        """The principal agent: the agency that created the call answers for the file and grants the others their access."""
+        return self.role == "AGE" and self.organization_id == self.call.agency_id
 
 
 def _new_token() -> str:
@@ -991,6 +1187,9 @@ class Task(NoDeleteModel):
     continuous = models.BooleanField(default=False)
     not_applicable_allowed = models.BooleanField(default=True)
     is_ad_hoc = models.BooleanField(_("ad hoc task"), default=False)
+    green_light = models.BooleanField(default=False)
+    # a document the agency asked for at the announcement, beyond the templates (EXG-R-06)
+    requested_at_creation = models.BooleanField(default=False)
     order = models.PositiveIntegerField(default=0)
 
     due_at = models.DateTimeField(null=True, blank=True)
@@ -1333,12 +1532,17 @@ class Measurement(NoDeleteModel):
         OBQ = "OBQ", _("On-board quantity (OBQ)")
         ROB = "ROB", _("Remaining on board (ROB)")
         BL = "BL", _("Bill of lading figure")
+        # dry bulk, general cargo and containers (FLX-CDC-002 v1.5, EXG-R-08)
+        DRAFT_INITIAL = "DRAFT_I", _("Draft survey — initial")
+        DRAFT_FINAL = "DRAFT_F", _("Draft survey — final")
+        SCALE = "SCALE", _("Shore scale / weighbridge / belt scale")
+        TALLY = "TALLY", _("Tally / count (units, boxes, TEU)")
         OTHER = "OTHER", _("Other")
 
     call = models.ForeignKey(PortCall, on_delete=models.PROTECT, related_name="measurements")
     kind = models.CharField(max_length=8, choices=Kind.choices)
     product = models.CharField(max_length=120, blank=True)
-    unit = models.CharField(max_length=8, default="MT", choices=[("MT", "MT"), ("M3", "m³ @15°C"), ("BBL", "bbl @60°F")])
+    unit = models.CharField(max_length=8, default="MT", choices=QUANTITY_UNITS)
     tolerance_pct = models.DecimalField(max_digits=5, decimal_places=3, default=Decimal("0.300"))
     created_role = models.CharField(max_length=3)
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
@@ -1410,19 +1614,172 @@ class MeasurementValue(AppendOnlyModel):
         ordering = ["entered_at"]
 
 
+class TankReading(AppendOnlyModel):
+    """One tank of one side of a measurement (FLX-CDC-002 v1.4, EXG-Q-05): the ship's cargo tanks are read by the
+    ship, the terminal's shore tanks by the terminal. A reading is written once; a correction is a new reading
+    that supersedes it. It is shown to the other parties only once the surveyor has validated it (TankReadingReview);
+    until then the side that entered it and the surveyor see it."""
+
+    measurement = models.ForeignKey(Measurement, on_delete=models.PROTECT, related_name="tank_readings")
+    side = models.CharField(max_length=5, choices=[("SHIP", _("Ship tank")), ("SHORE", _("Shore tank"))])
+    tank = models.CharField(_("tank"), max_length=40)
+    level_mm = models.DecimalField(_("ullage / innage (mm)"), max_digits=8, decimal_places=1, null=True, blank=True)
+    temperature_c = models.DecimalField(_("temperature (°C)"), max_digits=6, decimal_places=2, null=True, blank=True)
+    free_water_mm = models.DecimalField(_("free water (mm)"), max_digits=8, decimal_places=1, null=True, blank=True)
+    density = models.DecimalField(_("density @15 °C"), max_digits=7, decimal_places=4, null=True, blank=True)
+    tov_m3 = models.DecimalField(_("TOV (m³)"), max_digits=12, decimal_places=3, null=True, blank=True)
+    gov_m3 = models.DecimalField(_("GOV (m³)"), max_digits=12, decimal_places=3, null=True, blank=True)
+    vcf = models.DecimalField(_("VCF"), max_digits=7, decimal_places=5, null=True, blank=True)
+    gsv_m3 = models.DecimalField(_("GSV (m³ @15 °C)"), max_digits=12, decimal_places=3, null=True, blank=True)
+    weight_mt = models.DecimalField(_("weight (t)"), max_digits=12, decimal_places=3, null=True, blank=True)
+    entered_role = models.CharField(max_length=3)
+    entered_org = models.ForeignKey(Organization, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    master = models.ForeignKey(MasterAccessLink, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    entered_label = models.CharField(max_length=200)
+    declared_at = models.DateTimeField(default=timezone.now)
+    entered_at = models.DateTimeField(default=timezone.now)
+    supersedes = models.ForeignKey("self", on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    note = models.CharField(max_length=300, blank=True)
+    client_uuid = models.UUIDField(null=True, blank=True, unique=True)
+    seal = models.CharField(max_length=64)
+
+    class Meta:
+        ordering = ["entered_at", "id"]
+        indexes = [models.Index(fields=["measurement", "side"])]
+        verbose_name = _("tank reading")
+        verbose_name_plural = _("tank readings")
+
+    def __str__(self) -> str:
+        return f"{self.measurement} — {self.get_side_display()} {self.tank}"
+
+    def latest_review(self):
+        return self.reviews.order_by("-reviewed_at", "-id").first()
+
+    @property
+    def state(self) -> str:
+        review = self.latest_review()
+        return review.state if review else TankReadingReview.State.PENDING
+
+    @property
+    def is_validated(self) -> bool:
+        return self.state == TankReadingReview.State.VALIDATED
+
+    @property
+    def quantity(self):
+        """The figure a tank contributes to its side's total: the weight, else the GSV, else the GOV / TOV."""
+        for value in (self.weight_mt, self.gsv_m3, self.gov_m3, self.tov_m3):
+            if value is not None:
+                return value
+        return None
+
+
+class TankReadingReview(AppendOnlyModel):
+    """The surveyor's validation (or rejection, with a reason) of a tank reading: written once; the latest review
+    of a reading is its state."""
+
+    class State(models.TextChoices):
+        PENDING = "PENDING", _("Awaiting the surveyor")
+        VALIDATED = "VALIDATED", _("Validated by the surveyor")
+        REJECTED = "REJECTED", _("Rejected by the surveyor")
+
+    reading = models.ForeignKey(TankReading, on_delete=models.PROTECT, related_name="reviews")
+    state = models.CharField(max_length=9, choices=State.choices)
+    role = models.CharField(max_length=3, default="INS")
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    master = models.ForeignKey(MasterAccessLink, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    reviewer_label = models.CharField(max_length=200)
+    reviewed_at = models.DateTimeField(default=timezone.now)
+    note = models.CharField(max_length=300, blank=True)
+    seal = models.CharField(max_length=64)
+
+    class Meta:
+        ordering = ["reviewed_at", "id"]
+
+
+class PumpingLogSheet(NoDeleteModel):
+    """The header of one side's pumping log (FLX-CDC-002 v1.4, EXG-Q-01; structure of the terminal pumping logs
+    of the industry): the tank concerned, the product, the calibration of the tank (m³ per metre), density and
+    VCF, the planned quantity, the expected rate and pressure, the start and expected stop levels, the estimated
+    times. The ship opens its own sheet, the terminal its own: the platform compares the two sides reading by
+    reading and never designates a reference figure."""
+
+    class Side(models.TextChoices):
+        SHIP = "SHIP", _("Ship (delivered / received on board)")
+        SHORE = "SHORE", _("Shore (received / delivered by the terminal)")
+
+    call = models.ForeignKey(PortCall, on_delete=models.PROTECT, related_name="pumping_sheets")
+    side = models.CharField(max_length=5, choices=Side.choices)
+    tank = models.CharField(_("tank"), max_length=40, blank=True, help_text=_("Shore tank or ship tank(s) concerned."))
+    product = models.CharField(_("product"), max_length=120, blank=True)
+    start_level_mm = models.DecimalField(_("start dip / ullage (mm)"), max_digits=8, decimal_places=1, null=True, blank=True)
+    expected_stop_level_mm = models.DecimalField(_("expected stop dip / ullage (mm)"), max_digits=8, decimal_places=1, null=True, blank=True)
+    m3_per_metre = models.DecimalField(_("tank calibration (m³ per metre)"), max_digits=10, decimal_places=3, null=True, blank=True)
+    density = models.DecimalField(_("density (t/m³)"), max_digits=7, decimal_places=4, null=True, blank=True)
+    vcf = models.DecimalField(_("VCF"), max_digits=7, decimal_places=5, null=True, blank=True)
+    planned_quantity_m3 = models.DecimalField(_("planned quantity (m³)"), max_digits=12, decimal_places=3, null=True, blank=True)
+    planned_quantity_mt = models.DecimalField(_("planned quantity (t)"), max_digits=12, decimal_places=3, null=True, blank=True)
+    expected_rate_m3h = models.DecimalField(_("expected rate (m³/h)"), max_digits=9, decimal_places=2, null=True, blank=True)
+    expected_pressure_bar = models.DecimalField(_("expected pressure (bar)"), max_digits=7, decimal_places=2, null=True, blank=True)
+    estimated_start = models.DateTimeField(_("estimated start"), null=True, blank=True)
+    estimated_completion = models.DateTimeField(_("estimated completion"), null=True, blank=True)
+    # completion, entered by the same side when the transfer ends
+    actual_stop_level_mm = models.DecimalField(_("actual stop dip / ullage (mm)"), max_digits=8, decimal_places=1, null=True, blank=True)
+    final_volume_m3 = models.DecimalField(_("final volume (m³)"), max_digits=12, decimal_places=3, null=True, blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    opened_role = models.CharField(max_length=3)
+    opened_org = models.ForeignKey(Organization, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    opened_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    opened_master = models.ForeignKey(MasterAccessLink, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    opened_label = models.CharField(max_length=200)
+    opened_at = models.DateTimeField(default=timezone.now)
+    note = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        ordering = ["call", "side", "opened_at"]
+        verbose_name = _("pumping log sheet")
+        verbose_name_plural = _("pumping log sheets")
+
+    def __str__(self) -> str:
+        return f"{self.call.reference} — {self.get_side_display()} {self.tank}".strip()
+
+    @property
+    def tons_per_metre(self):
+        """Tonnes per metre of level: m³/m × density × VCF (the terminal log's own formula)."""
+        if self.m3_per_metre is None or self.density is None:
+            return None
+        return self.m3_per_metre * self.density * (self.vcf if self.vcf is not None else Decimal("1"))
+
+    def tons(self, m3):
+        """Observed cubic metres converted to tonnes with the sheet's density and VCF, when both are known."""
+        if m3 is None or self.density is None:
+            return None
+        return m3 * self.density * (self.vcf if self.vcf is not None else Decimal("1"))
+
+
 class PumpingLogEntry(AppendOnlyModel):
-    """Manual in V1; the same table accepts an automatic feed in V2 without schema change (EF-8.3)."""
+    """One reading of the pumping log, by the ship or by the terminal (FLX-CDC-002 v1.4, EXG-Q-01). Manual in V1;
+    the same table accepts an automatic feed without schema change (EF-8.3). Besides the manifold pressure, the
+    rate and the temperature, a reading carries the tank level and the quantities of the terminal pumping logs:
+    the quantity moved since the previous reading, the cumulated quantity, in m³ and in tonnes. What the platform
+    computes from the sheet (calibration, density, VCF) is stored with the reading so that the record is frozen."""
 
     call = models.ForeignKey(PortCall, on_delete=models.PROTECT, related_name="pumping_log")
+    sheet = models.ForeignKey(PumpingLogSheet, on_delete=models.PROTECT, null=True, blank=True, related_name="entries")
     declared_at = models.DateTimeField()
     recorded_at = models.DateTimeField(default=timezone.now)
     role = models.CharField(max_length=3)
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
     master = models.ForeignKey(MasterAccessLink, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
     entered_label = models.CharField(max_length=200)
+    tank = models.CharField(_("tank"), max_length=40, blank=True)
     manifold_pressure_bar = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)
     flow_rate_m3h = models.DecimalField(max_digits=9, decimal_places=2, null=True, blank=True)
     temperature_c = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    level_mm = models.DecimalField(_("tank dip / ullage (mm)"), max_digits=8, decimal_places=1, null=True, blank=True)
+    hourly_m3 = models.DecimalField(_("moved since the previous reading (m³)"), max_digits=12, decimal_places=3, null=True, blank=True)
+    cumulative_m3 = models.DecimalField(_("cumulated (m³)"), max_digits=12, decimal_places=3, null=True, blank=True)
+    cumulative_mt = models.DecimalField(_("cumulated (t)"), max_digits=12, decimal_places=3, null=True, blank=True)
     note = models.CharField(max_length=300, blank=True)
     source = models.CharField(max_length=10, default="MANUAL", choices=[("MANUAL", _("Manual")), ("AUTOMATIC", _("Automatic"))])
     device_id = models.CharField(max_length=80, blank=True)
@@ -1431,6 +1788,112 @@ class PumpingLogEntry(AppendOnlyModel):
 
     class Meta:
         ordering = ["declared_at"]
+
+    @property
+    def side(self) -> str:
+        """The side that keeps the reading: the master's entries are the ship's, the terminal's the shore's."""
+        if self.sheet_id is not None and self.sheet is not None:
+            return self.sheet.side
+        return "SHIP" if self.role == "NAV" else "SHORE"
+
+
+# ======================================================================================
+# Ship/shore safety checklist (ISGOTT structure), completed on line by both sides
+# ======================================================================================
+class SafetyChecklist(NoDeleteModel):
+    """The ship/shore safety checklist of a call (FLX-CDC-002 v1.4, EXG-Q-10): the items, in the platform's own
+    words after the ISGOTT structure, are frozen in the record when it is opened; the ship ticks its items, the
+    terminal its own, the joint items need both; the agreements of the pre-transfer conference are written in;
+    the repetitive checks are re-ticked at the agreed interval. Each tick is an append-only answer; the two
+    signatures close the list, complete task M0:28 and record the SSSCL_SIGNED milestone."""
+
+    class Status(models.TextChoices):
+        OPEN = "OPEN", _("Being completed")
+        SIGNED = "SIGNED", _("Signed by both sides")
+        CANCELLED = "CANCELLED", _("Cancelled")
+
+    call = models.ForeignKey(PortCall, on_delete=models.PROTECT, related_name="safety_checklists")
+    stage = models.ForeignKey(CallStage, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    version = models.PositiveSmallIntegerField(default=1)
+    # the standard the list follows (v1.5): ISGOTT for liquid bulk, the BLU Code for dry bulk, the platform's cargo
+    # operations checklist for containers, general cargo, ro-ro and other calls
+    standard = models.CharField(_("standard"), max_length=12, default="SSSCL",
+                                choices=[("SSSCL", "ISGOTT — SSSCL"), ("BLU", _("BLU Code — dry bulk")),
+                                         ("CARGO", _("Cargo operations (containers, general cargo, ro-ro)"))])
+    items = models.JSONField(_("items"), default=list, blank=True)
+    repeat_interval_h = models.DecimalField(_("interval of the repetitive checks (h)"), max_digits=4, decimal_places=1,
+                                            null=True, blank=True)
+    status = models.CharField(max_length=9, choices=Status.choices, default=Status.OPEN)
+    opened_role = models.CharField(max_length=3)
+    opened_by = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    opened_master = models.ForeignKey(MasterAccessLink, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    opened_label = models.CharField(max_length=200)
+    opened_at = models.DateTimeField(default=timezone.now)
+    signed_at = models.DateTimeField(null=True, blank=True)
+    cancel_reason = models.CharField(max_length=300, blank=True)
+    document = models.ForeignKey(Document, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+
+    class Meta:
+        ordering = ["call", "version"]
+        constraints = [models.UniqueConstraint(fields=["call", "version"], name="uniq_safety_checklist_version")]
+        verbose_name = _("ship/shore safety checklist")
+        verbose_name_plural = _("ship/shore safety checklists")
+
+    def __str__(self) -> str:
+        return f"{self.call.reference} — {self.standard} v{self.version}"
+
+    def current_answers(self) -> dict[tuple[str, str], "SafetyCheckAnswer"]:
+        """The latest answer per (item, side)."""
+        latest: dict[tuple[str, str], SafetyCheckAnswer] = {}
+        for answer in self.answers.order_by("answered_at", "id"):
+            latest[(answer.item_code, answer.side)] = answer
+        return latest
+
+    def signed_sides(self) -> set[str]:
+        return set(self.signatures.values_list("side", flat=True))
+
+
+class SafetyCheckAnswer(AppendOnlyModel):
+    """One tick (yes / no / not applicable), an agreed value or a remark on one item, by one side."""
+
+    class State(models.TextChoices):
+        YES = "YES", _("Yes — checked")
+        NO = "NO", _("No")
+        NA = "NA", _("Not applicable")
+
+    checklist = models.ForeignKey(SafetyChecklist, on_delete=models.PROTECT, related_name="answers")
+    item_code = models.CharField(max_length=12)
+    side = models.CharField(max_length=5, choices=[("SHIP", _("Ship")), ("SHORE", _("Shore"))])
+    state = models.CharField(max_length=3, choices=State.choices, blank=True)
+    value = models.CharField(_("agreed value"), max_length=300, blank=True)
+    remark = models.CharField(max_length=300, blank=True)
+    repetition = models.PositiveSmallIntegerField(default=0, help_text=_("0 for the initial check, then 1, 2… for the repeated checks"))
+    role = models.CharField(max_length=3)
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    master = models.ForeignKey(MasterAccessLink, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    author_label = models.CharField(max_length=200)
+    answered_at = models.DateTimeField(default=timezone.now)
+    seal = models.CharField(max_length=64)
+
+    class Meta:
+        ordering = ["answered_at", "id"]
+        indexes = [models.Index(fields=["checklist", "item_code"])]
+
+
+class SafetyChecklistSignature(AppendOnlyModel):
+    checklist = models.ForeignKey(SafetyChecklist, on_delete=models.PROTECT, related_name="signatures")
+    side = models.CharField(max_length=5, choices=[("SHIP", _("Ship")), ("SHORE", _("Shore"))])
+    role = models.CharField(max_length=3)
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    master = models.ForeignKey(MasterAccessLink, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    signer_label = models.CharField(max_length=200)
+    signed_at = models.DateTimeField(default=timezone.now)
+    comment = models.CharField(max_length=300, blank=True)
+    seal = models.CharField(max_length=64)
+
+    class Meta:
+        ordering = ["signed_at"]
+        constraints = [models.UniqueConstraint(fields=["checklist", "side"], name="uniq_checklist_signature_side")]
 
 
 # ======================================================================================

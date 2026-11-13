@@ -1,7 +1,7 @@
-{% load i18n fluxaa %}{# Open list of parties: one row per party — role, registered organisation or a new one. Context: rows (list of dicts: role, org, name, kind, email, phone), invitable (role codes), orgs (Organization queryset), kinds (role → [(code, fr, en)]) #}
+{% load i18n fluxaa %}{# Open list of parties: one row per party — role, registered organisation or a new one, and the access the principal agent gives it (v1.5). Context: rows (list of dicts: role, org, name, kind, email, phone, access), invitable (role codes), orgs (Organization queryset), kinds (role → [(code, fr, en)]), access_presets ([(value, label)]) #}
 <div data-parties>
   <div class="tablewrap"><table class="grid parties">
-    <thead><tr><th>{% trans "Role" %}</th><th>{% trans "Registered organisation" %}</th><th>{% trans "New organisation: name" %}</th><th>{% trans "Kind (suggested or free)" %}</th><th>{% trans "E-mail" %}</th><th>{% trans "Phone" %}</th><th></th></tr></thead>
+    <thead><tr><th>{% trans "Role" %}</th><th>{% trans "Registered organisation" %}</th><th>{% trans "New organisation: name" %}</th><th>{% trans "Kind (suggested or free)" %}</th><th>{% trans "E-mail" %}</th><th>{% trans "Phone" %}</th><th>{% trans "Access to the file" %}</th><th></th></tr></thead>
     <tbody>
     {% for row in rows %}
     <tr data-party-row>
@@ -15,6 +15,7 @@
       <td><input data-new name="party_kind" data-party-kind value="{{ row.kind }}" maxlength="80" list="kinds-{{ row.role|default:'PRE' }}" aria-label="{% trans 'Kind of party' %}" placeholder="{% trans 'e.g. laboratory, bunker supplier…' %}"></td>
       <td><input data-new name="party_email" type="email" value="{{ row.email }}" aria-label="{% trans 'E-mail' %}" placeholder="contact@…"></td>
       <td><input data-new name="party_phone" value="{{ row.phone }}" maxlength="40" aria-label="{% trans 'Phone' %}"></td>
+      <td><select name="party_access" aria-label="{% trans 'Access to the file' %}">{% for value, label in access_presets %}<option value="{{ value }}" {% if row.access == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></td>
       <td><button type="button" class="linkbtn small" data-remove aria-label="{% trans 'Remove this party' %}">✕</button></td>
     </tr>
     {% endfor %}

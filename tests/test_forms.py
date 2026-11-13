@@ -52,8 +52,8 @@ def test_every_form_shares_the_same_structure_and_is_prefilled_from_the_registry
 def test_forms_are_offered_by_role_and_by_operation(world):
     call = make_call(world)  # discharge at the quay, no STS, no bunkering
     codes = {f.code for f in forms.available(call, act(world, call, "TER"))}
-    assert {"SSSCL", "PRE_TRANSFER", "ULLAGE", "HOSES", "PROTEST"} <= codes
-    assert "NOR" not in codes and "TIME_SHEET" not in codes and "STS" not in codes and "BDN" not in codes
+    assert {"SSSCL", "PRE_TRANSFER", "ULLAGE", "HOSES", "PROTEST", "PUMPING_LOG", "TIME_SHEET"} <= codes  # 1.4: the terminal too
+    assert "NOR" not in codes and "STS" not in codes and "BDN" not in codes
     assert {f.code for f in forms.available(call, act(world, call, "AGE"))} >= {"NOR", "TIME_SHEET", "FAL", "WASTE", "PROTEST"}
     assert {f.code for f in forms.available(call, act(world, call, "SUR"))} == {"DOS"}
     assert {f.code for f in forms.available(call, master(world, call))} >= {"NOR", "SSSCL", "FAL", "DOS", "MDH", "PILOT_CARD"}
@@ -150,7 +150,7 @@ def test_every_party_issues_the_documents_the_call_asks_of_it(world):
     # outside document (certificates, authorizations of the State, plans)
     answered = {ref for f in forms.FORMS.values() for ref in f.answers}
     outside = {"M0:02", "M0:03", "M1:1.01", "M2:2.01", "M3:3.02", "M4:4.02", "M5:5.01", "M6:6.03", "M6:6.09", "M7:7.01",
-               "M7:7.03", "M7:7.07", "M7:7.12", "M0:13", "M0:36"}
+               "M7:7.03", "M7:7.07", "M7:7.12", "M0:13", "M0:36", "MB2:B2.02"}
     for tpl in catalog.TEMPLATES:
         for _sec, t in tpl["tasks"]:
             if t["nature"] == "F":

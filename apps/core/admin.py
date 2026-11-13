@@ -97,6 +97,7 @@ class PortAdmin(admin.ModelAdmin):
                                                  "escalation_after_minutes", "quantity_tolerance_pct",
                                                  "ais_divergence_minutes", "digest_hour_local")}),
         (_("Master access"), {"fields": ("master_link_grace_hours", "master_link_max_days")}),
+        (_("Announcements and call board (v1.5)"), {"fields": ("default_validity_days", "max_validity_days", "board_shows_cargo")}),
         (_("Retention and security"), {"fields": ("retention_years", "security_authority_email")}),
         (_("Port waters — AIS board"), {
             "description": _("The box drawn on the AIS board (the four limits, decimal degrees) and, if wished, a chart "
@@ -293,5 +294,13 @@ class UserAdmin(BaseUserAdmin):
 
 @admin.register(Berth)
 class BerthAdmin(PortScopedAdmin):
-    list_display = ("code", "name_fr", "name_en", "kind", "max_loa_m", "max_draft_m", "has_vapour_recovery", "is_active")
+    list_display = ("code", "name_fr", "name_en", "kind", "max_loa_m", "max_draft_m", "max_dwt", "cargo_kinds", "has_vapour_recovery", "is_active")
     list_filter = ("kind", "is_active")
+    fieldsets = (
+        (None, {"fields": ("code", ("name_fr", "name_en"), "kind", "cargo_kinds", "is_active", "notes")}),
+        (_("Acceptance limits — compared with the vessel's particulars by the vetting grid (v1.5)"), {
+            "fields": (("max_loa_m", "max_beam_m", "max_draft_m"), ("max_dwt", "max_displacement_t"),
+                       ("max_manifold_height_m", "max_air_draft_m", "min_ukc_m"), ("max_vessel_age_years", "min_crane_swl_t"))}),
+        (_("Operating conditions"), {"fields": ("weather_limits", "has_vapour_recovery")}),
+        (_("Position on the AIS board"), {"fields": (("latitude", "longitude"), "radius_m")}),
+    )

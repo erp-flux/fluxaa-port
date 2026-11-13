@@ -73,7 +73,7 @@ def build_doc_instructions(call: PortCall) -> list[dict]:
 _register(Form("DOC_INSTRUCTIONS", "DOC_INSTRUCTIONS", ("Instruction documentaire du mandant (connaissement)", "Principal's documentary instructions (bill of lading)"),
                ("Pratique du commerce des hydrocarbures ; Règles de La Haye-Visby", "Oil trade practice; Hague-Visby Rules"),
                frozenset({"COM"}), [("COM", ("Mandant", "Principal")), ("AGE", ("Agence — reçu", "Agency — received"))],
-               build_doc_instructions, family="COM", templates=frozenset({"M2"}), answers=("M2:2.16",),
+               build_doc_instructions, family="COM", templates=frozenset({"M2", "MB2"}), answers=("M2:2.16", "MB2:B2.16"),
                purpose=("L'instruction écrite du mandant pour l'émission du connaissement et des documents de cargaison.", "The principal's written instructions for the issue of the bill of lading and cargo documents.")))
 
 

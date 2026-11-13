@@ -59,5 +59,19 @@
       </form>
     </section>
     {% endif %}
+    {% if is_age or is_cap %}{% if not call.is_terminal_state %}
+    <section class="section">
+      <h2>{% trans "Documents expected" %}</h2>
+      {% if expected_tasks %}<ul class="small">{% for t in expected_tasks %}<li><span class="code">{{ t.number }}</span> {{ t.title }} — <span class="role">{{ t.role }}</span> <span class="chip {{ t.status|task_status_class }}">{{ t.get_status_display }}</span></li>{% endfor %}</ul>
+      {% else %}<p class="small muted">{% trans "No document asked for beyond the templates." %}</p>{% endif %}
+      <details class="action"><summary>{% trans "Ask for other documents" %}</summary><div>
+        <form method="post" action="{% url 'registry:call_action' call.pk 'documents_request' %}" class="form" data-announce>{% csrf_token %}<input type="hidden" name="back" value="?tab=documents">
+          <div class="checks" style="max-height:200px;overflow:auto">{% for t in optional_doc_types %}<label><input type="checkbox" name="expected_documents" value="{{ t.code }}"> {{ t.label }} <span class="small muted">({{ t.issuer_roles|join:", " }})</span></label>{% endfor %}</div>
+          <div class="tablewrap"><table class="grid" data-custom-docs><thead><tr><th>{% trans "Other document" %}</th><th>{% trans "Provided by" %}</th><th>{% trans "Hours before ETA" %}</th><th></th></tr></thead>
+            <tbody><tr data-custom-row><td><input name="custom_doc_label" maxlength="200" aria-label="{% trans 'Document' %}"></td><td><select name="custom_doc_role" aria-label="{% trans 'Provided by' %}">{% for r in doc_roles %}<option value="{{ r }}">{{ r }} — {{ r|role_name }}</option>{% endfor %}</select></td><td><input name="custom_doc_hours" type="number" min="0" value="24" style="width:80px" aria-label="{% trans 'Hours before ETA' %}"></td><td><button type="button" class="linkbtn small" data-remove-custom aria-label="{% trans 'Remove' %}">✕</button></td></tr></tbody></table></div>
+          <div class="actions" style="margin-top:6px"><button type="button" class="btn quiet small" data-add-custom>+ {% trans "Add a document" %}</button> <button class="btn small secondary">{% trans "Ask for these documents" %}</button></div>
+        </form></div></details>
+    </section>
+    {% endif %}{% endif %}
   </aside>
 </div>

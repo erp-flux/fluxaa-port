@@ -62,16 +62,8 @@
       <form method="post" action="{% url 'registry:call_action' call.pk 'request_create' %}" class="form" style="margin-top:12px">{% csrf_token %}
         <input type="hidden" name="type" value="{{ selected_type.code }}">
         {% if selected_type.description_fr %}<p class="small muted">{% if LANGUAGE_CODE == 'en' %}{{ selected_type.description_en }}{% else %}{{ selected_type.description_fr }}{% endif %}</p>{% endif %}
-        {% for f in form_fields %}
-        <div>{% if f.type == "boolean" %}<label class="checks"><span><input type="checkbox" name="{{ f.key }}"> {{ f.label }}</span></label>
-          {% else %}<label for="f_{{ f.key }}">{{ f.label }}{% if f.required %} *{% endif %}</label>
-          {% if f.type == "textarea" %}<textarea id="f_{{ f.key }}" name="{{ f.key }}" {% if f.required %}required{% endif %}></textarea>
-          {% elif f.type == "select" %}<select id="f_{{ f.key }}" name="{{ f.key }}" {% if f.required %}required{% endif %}><option value="">—</option>{% for v, l in f.choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select>
-          {% elif f.type == "datetime" %}<input type="datetime-local" id="f_{{ f.key }}" name="{{ f.key }}" {% if f.required %}required{% endif %}>
-          {% elif f.type == "number" or f.type == "integer" %}<input type="number" step="any" id="f_{{ f.key }}" name="{{ f.key }}" {% if f.required %}required{% endif %}>
-          {% else %}<input id="f_{{ f.key }}" name="{{ f.key }}" {% if f.required %}required{% endif %}>{% endif %}{% endif %}
-        </div>
-        {% endfor %}
+        {% if prefilled %}<p class="small"><span class="prefill-tag">{% trans "pre-filled from the announcement — check before submitting" %}</span></p>{% endif %}
+        {% include "registry/_schema_fields.html" with fields=form_fields prefix="" idprefix="f_" %}
         {% if providers %}<div><label for="f_provider">{% trans "Provider who carries out the service" %} *</label><select id="f_provider" name="provider" required><option value="">—</option>{% for o in providers %}<option value="{{ o.pk }}">{{ o.name }}</option>{% endfor %}</select></div>{% endif %}
         <button class="btn">{% trans "Submit the request" %}</button>
       </form>

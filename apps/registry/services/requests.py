@@ -297,6 +297,13 @@ def decide_request(req: ServiceRequest, actor, decision: str, *, reason: str = "
 
                     record_system_milestone(call, mtype, actor, declared_at=now, emitter_role=role,
                                             note=authorization.number)
+            if (rtype.hold_point == "DOUBLE_BANKING" or rtype.code == "STS_ZONE") and call.linked_call_id:
+                # the other vessel named at the announcement belongs to another agency: the harbour master's
+                # authorization (double banking, or the STS area and window) confirms the link — and makes it
+                # reciprocal when the other vessel has no partner yet (v1.6, EXG-R-11)
+                from .calls import complete_reciprocal_link
+
+                complete_reciprocal_link(call, actor)
         elif decision == RequestStatus.REFUSED and rtype.refusal_status:
             _set_status(call, rtype.refusal_status, actor, reason=rtype.label_fr)
         if decision != RequestStatus.INFO_REQUIRED:

@@ -27,7 +27,9 @@ ORGS = [
     ("security", "Sûreté portuaire et marine nationale (démo)", "Port Security and Navy (demo)", ["SUR"], ["SUR"], "PORT_SECURITY"),
     ("marine", "Services nautiques (démo)", "Marine Services (demo)", ["SVC"], ["SVC"], "PILOTAGE"),
     ("agency", "Agence maritime (démo)", "Shipping Agency (demo)", ["AGE"], [], "SHIPPING_AGENT"),
+    ("agency2", "Consignataire associé (démo)", "Associate Shipping Agent (demo)", ["AGE"], [], "SHIPPING_AGENT"),  # co-nominated agency (1.5)
     ("terminal", "Terminal pétrolier (démo)", "Oil Terminal (demo)", ["TER"], [], "OIL_TERMINAL"),
+    ("cargo_terminal", "Terminal conteneurs et vrac (démo)", "Container and Bulk Terminal (demo)", ["TER"], [], "TERMINAL"),  # every cargo (1.5)
     ("surveyor", "Surveyor et laboratoire (démo)", "Surveyor & Laboratory (demo)", ["INS"], [], "CARGO_SURVEYOR"),
     ("owner", "Armateur / affréteur (démo)", "Owner / Charterer (demo)", ["COM"], [], "CHARTERER"),
     ("waste", "Prestataire déchets (démo)", "Waste Contractor (demo)", ["PRE"], [], "WASTE_CONTRACTOR"),
@@ -49,16 +51,48 @@ USERS = [
     ("sur", "security", ["SUR"], "Officier de sûreté", "Security officer"),
     ("svc", "marine", ["SVC"], "Pilote", "Pilot"),
     ("age", "agency", ["AGE"], "Agent maritime", "Ship agent"),
+    ("age2", "agency2", ["AGE"], "Agent maritime associé", "Associate ship agent"),
     ("ter", "terminal", ["TER"], "Opérateur terminal", "Terminal operator"),
+    ("ter2", "cargo_terminal", ["TER"], "Chef d'exploitation terminal", "Terminal operations manager"),
     ("ins", "surveyor", ["INS"], "Expert surveyor", "Surveyor"),
     ("com", "owner", ["COM"], "Opérations affréteur", "Charterer operations"),
     ("pre", "waste", ["PRE"], "Prestataire déchets", "Waste contractor"),
     ("sts", "sts", ["PRE"], "Superviseur STS (POAC)", "STS superintendent (POAC)"),
 ]
-VESSELS = [("9999993", "MT ATLANTIC DEMO", "Liberia", "Product tanker", 45000, "636099993"),
-           ("9999981", "MT GULF DEMO", "Marshall Islands", "Product tanker", 38000, "538099981"),
-           ("9999979", "MT HARMATTAN DEMO", "Panama", "Crude tanker", 105000, "352099979"),
-           ("9999967", "MT SAVANNAH DEMO", "Malta", "Product tanker", 50000, "229099967")]
+VESSELS = [("9999993", "MT ATLANTIC DEMO", "Liberia", "Product tanker", 45000, "636099993", "TANKER_PRODUCT"),
+           ("9999981", "MT GULF DEMO", "Marshall Islands", "Product tanker", 38000, "538099981", "TANKER_PRODUCT"),
+           ("9999979", "MT HARMATTAN DEMO", "Panama", "Crude tanker", 105000, "352099979", "TANKER_CRUDE"),
+           ("9999967", "MT SAVANNAH DEMO", "Malta", "Product tanker", 50000, "229099967", "TANKER_PRODUCT"),
+           # every kind of cargo since 1.5: a bulk carrier, a container ship, a car carrier, a general cargo ship
+           ("9311012", "MV CLINKER DEMO", "Panama", "Geared bulk carrier", 56000, "352311012", "BULK"),
+           ("9074743", "MSC LOME DEMO", "Liberia", "Container ship", 90000, "636074743", "CONTAINER"),
+           ("9074755", "GRANDE DEMO", "Italy", "Pure car and truck carrier", 30000, "247074755", "RORO"),
+           ("9074767", "MV SAHEL DEMO", "Togo", "General cargo", 12000, "671074767", "GENERAL"),
+           # the other vessel belongs to another agency (1.6): a coastal tanker announced alongside the vessel at the
+           # jetty, a second daughter vessel coming to the mother vessel at the STS area
+           ("9999955", "MT LAGUNE DEMO", "Togo", "Coastal product tanker", 6500, "671099955", "TANKER_PRODUCT"),
+           ("9999943", "MT KARA DEMO", "Liberia", "Product tanker", 47000, "636099943", "TANKER_PRODUCT")]
+# Particulars of the demo vessels, for the vetting grid (1.5): LOA, beam, summer draft, year built, displacement,
+# manifold height above the waterline, air draft, crane SWL — illustrative figures
+PARTICULARS = {
+    "9999993": (183.0, 32.2, 12.2, 2012, 58000, 14.5, 44.0, None),
+    "9999981": (176.0, 31.0, 11.6, 2009, 49000, 13.8, 42.0, None),
+    "9999979": (244.0, 42.0, 15.0, 2006, 125000, 18.5, 52.0, None),
+    "9999967": (183.0, 32.2, 12.8, 2015, 63000, 15.0, 45.0, None),
+    "9311012": (190.0, 32.3, 12.9, 2011, 68000, None, 46.0, 30.0),
+    "9074743": (300.0, 48.2, 14.5, 2014, 125000, None, 60.0, None),
+    "9074755": (199.9, 32.3, 9.5, 2010, 38000, None, 48.0, None),
+    "9074767": (120.0, 20.0, 7.4, 1998, 15000, None, 32.0, 25.0),
+    "9999955": (105.0, 16.8, 6.6, 2014, 9200, 6.0, 28.0, None),
+    "9999943": (183.0, 32.2, 12.4, 2013, 60000, 14.6, 44.5, None),
+}
+# Acceptance limits of the demo berths (1.5): illustrative figures, read by the vetting grid against the vessel's data —
+# a port enters its own in the settings (berths)
+BERTH_LIMITS = {  # kind → (max LOA, max draft, max DWT, max beam, max displacement, max manifold height, min UKC, max age, min crane SWL, max air draft)
+    "JETTY": (250.0, 13.0, 80000, 45.0, 110000, 19.0, 1.0, 25, None, None),
+    "STS_AREA": (340.0, 22.0, 320000, 60.0, 360000, None, 2.0, 25, None, None),
+    "ANCHORAGE": (None, 18.0, None, None, None, None, 1.5, None, None, None),
+}
 # Demo AIS picture: where each vessel is heard, relative to the berths of the port (offsets in degrees)
 DEMO_POSITIONS = [  # imo, berth code, dlat, dlon, speed, course, heading, nav status
     ("9999993", "JETTY", 0.0, 0.0, 0.0, 0.0, 95, 5),
@@ -169,20 +203,33 @@ class Command(BaseCommand):
                     secret = user.get_mfa_secret()
             lines.append(f"  {','.join(roles):<4} {email:<38} {('TOTP ' + secret) if secret else ''}")
         vessels = []
-        for imo, name, flag, vtype, dwt, mmsi in VESSELS:
+        for imo, name, flag, vtype, dwt, mmsi, kind in VESSELS:
             vessel, _ = Vessel.objects.get_or_create(port=port, imo=imo, defaults={"name": name, "flag": flag,
                                                                                 "vessel_type": vtype, "dwt": dwt,
-                                                                                "mmsi": mmsi})
+                                                                                "mmsi": mmsi, "vessel_kind": kind})
             if not vessel.mmsi:
                 vessel.mmsi = mmsi
                 vessel.save(update_fields=["mmsi"])
+            if imo in PARTICULARS and vessel.loa_m is None:
+                (vessel.loa_m, vessel.beam_m, vessel.draft_m, vessel.built_year, vessel.displacement_t,
+                 vessel.manifold_height_m, vessel.air_draft_m, vessel.crane_swl_t) = PARTICULARS[imo]
+                vessel.save(update_fields=["loa_m", "beam_m", "draft_m", "built_year", "displacement_t",
+                                           "manifold_height_m", "air_draft_m", "crane_swl_t"])
             vessels.append(vessel)
+        for berth in port.berths.all():
+            limits = BERTH_LIMITS.get(berth.kind)
+            if limits and berth.max_draft_m is None:
+                (berth.max_loa_m, berth.max_draft_m, berth.max_dwt, berth.max_beam_m, berth.max_displacement_t,
+                 berth.max_manifold_height_m, berth.min_ukc_m, berth.max_vessel_age_years, berth.min_crane_swl_t,
+                 berth.max_air_draft_m) = limits
+                berth.save()
         self._positions(port, vessels)
         if not options["no_calls"]:
             with translation.override(port.default_language or "fr"):
                 self._calls(port, orgs, vessels)
                 if options["history"]:
                     self._history(port, orgs, vessels, options["history"])
+                self._other_agencies(port, orgs, vessels)  # after the history: the calls above keep their numbers
         self.stdout.write(self.style.SUCCESS(f"Demo data loaded in {port}."))
         self.stdout.write(f"Password for every demo user: {password}")
         self.stdout.write("Users (TOTP secrets to add in an authenticator app — deciding roles and port administrator):")
@@ -253,7 +300,11 @@ class Command(BaseCommand):
         # Call A — discharge at the jetty, in operation
         a = call_svc.create_call(agency_user, vessel=vessels[0], eta=now - timedelta(hours=20), requested_berth_kind="JETTY",
                                  operations=["M1"], parties=parties, etb=now - timedelta(hours=12),
-                                 etd=now + timedelta(hours=30), product="Gasoil 10 ppm", quantity=32000, voyage_number="DEMO-01")
+                                 etd=now + timedelta(hours=30), product="Gasoil 10 ppm", quantity=32000, voyage_number="DEMO-01",
+                                 planned_pump_hours="27.5", batch_reference="LFW-GO-2026-11",
+                                 # what the announcement asked for the discharge (v1.6)
+                                 operation_details={"M1": {"max_rate_m3h": 1200, "max_manifold_pressure_bar": 7, "manifold_connections": "2 × 12\" ANSI 150",
+                                                           "inert_gas": "YES", "vapour_return": "NO", "stripping_rob": "≤ 25 m³"}})
         from apps.registry.services.documents import upload_document
 
         upload_document(a, actor(a, "agency"), "Q88", demo_file("q88-atlantic-demo.pdf", "Q88 - MT ATLANTIC DEMO", [
@@ -273,6 +324,11 @@ class Command(BaseCommand):
             "last_cargoes": "ULSD / ULSD / Jet A-1", "vetting_result": L("Accepted", "Accepté")})
         req_svc.decide_request(vet, actor(a, "cap"), RequestStatus.APPROVED, valid_until=now + timedelta(days=30))
         req_svc.decide_request(a.requests.get(type__code="GREEN_LIGHT"), actor(a, "cap"), RequestStatus.APPROVED)
+        # the other green lights of the call (1.5): the naval base, the terminal and the principal give theirs
+        for number, key, note in (("09b", "security", L("Vessel cleared on the watch list", "Navire contrôlé sur la liste de veille")),
+                                  ("09c", "terminal", L("Tanks and lines ready", "Bacs et lignes prêts")),
+                                  ("09d", "owner", L("Cargo released, instruction to discharge given", "Cargaison libérée, instruction de décharger donnée"))):
+            task_svc.complete_task(a.tasks.get(template_code="M0", number=number), actor(a, key), note=note)
         berth = req_svc.create_request(a, actor(a, "agency"), "BERTH", {"window_from": (now - timedelta(hours=12)).isoformat(),
                                                                           "arrival_draft": 11.4})
         req_svc.decide_request(berth, actor(a, "apo"), RequestStatus.APPROVED, berth=jetty, valid_from=now - timedelta(hours=12),
@@ -293,10 +349,30 @@ class Command(BaseCommand):
         ms_svc.record_milestone(a, svc, "ALL_FAST", now - timedelta(hours=11, minutes=50))
         ms_svc.record_milestone(a, nav, "GANGWAY", now - timedelta(hours=11, minutes=40))
         ter = actor(a, "terminal")
-        for code in ("M0:27", "M0:28"):
-            t = a.tasks.get(template_code="M0", number=code.split(":")[1])
-            task_svc.sign_task(t, ter)
-            task_svc.sign_task(t, nav)
+        t = a.tasks.get(template_code="M0", number="27")
+        task_svc.sign_task(t, ter)
+        task_svc.sign_task(t, nav)
+        # the ship/shore safety checklist completed on line by both sides, then signed (task M0:28, 1.4)
+        from apps.registry.services import checklist as cl_svc
+
+        checklist = cl_svc.open_checklist(a, ter, repeat_interval_h="4")
+        agreements = {"5A.1": "600 / 1 200 / 300 m³/h", "5A.2": "7 bar", "5A.3": "40 °C", "5A.4": "30 s / 45 s",
+                      "5A.5": L("Ship 1P→6S; shore T-11 then T-12; sampling at manifold, gauging by surveyor",
+                                "Bord 1P→6S ; terre T-11 puis T-12 ; échantillonnage au collecteur, jaugeage par l'inspecteur"),
+                      "5A.6": L("Wind 25 kn, swell 1.5 m, lightning within 5 nm, visibility 1 nm", "Vent 25 nd, houle 1,5 m, foudre à moins de 5 nm, visibilité 1 nm"),
+                      "5A.7": L("VHF 12 / 16; English", "VHF 12 / 16 ; anglais"), "5A.8": "4"}
+        for item in checklist.items:
+            for who, side in ((nav, "SHIP"), (ter, "SHORE")):
+                if side not in (["SHIP", "SHORE"] if item["side"] == "BOTH" else [item["side"]]):
+                    continue
+                if item["kind"] == "value":
+                    if side == "SHORE":
+                        cl_svc.answer(checklist, who, item_code=item["code"], value=agreements.get(item["code"], "—"))
+                else:
+                    cl_svc.answer(checklist, who, item_code=item["code"], state="NA" if item["code"] == "2.10" and side == "SHIP" else "YES",
+                                  remark=L("engine on 2 h notice as agreed", "machine à 2 h de préavis comme convenu") if item["code"] == "2.10" and side == "SHIP" else "")
+        cl_svc.sign(checklist, nav)
+        cl_svc.sign(checklist, ter)
         ms_svc.record_milestone(a, ter, "ESD_TEST", now - timedelta(hours=10, minutes=30))
         done(a, ["M0:31", "M1:1.04", "M1:1.06", "M1:1.07"])
         ms_svc.record_milestone(a, actor(a, "surveyor"), "INITIAL_GAUGING", now - timedelta(hours=10))
@@ -305,11 +381,31 @@ class Command(BaseCommand):
         ms_svc.record_milestone(a, ter, "FULL_RATE", now - timedelta(hours=8, minutes=30))
         stop = ms_svc.record_milestone(a, ter, "INTERRUPTION_START", now - timedelta(hours=5), cause_code="SHORE_TANK_SWITCH")
         ms_svc.record_milestone(a, ter, "INTERRUPTION_END", now - timedelta(hours=4, minutes=20), related=stop)
-        from apps.registry.services.measurements import add_pumping_entry, add_value, create_measurement
+        from apps.registry.services.measurements import (
+            add_pumping_entry,
+            add_tank_reading,
+            add_value,
+            create_measurement,
+            open_pumping_sheet,
+            review_tank_reading,
+        )
 
-        for hours, pressure, rate in ((8, 6.2, 1150), (6, 6.4, 1210), (3, 6.1, 1180), (1, 6.0, 1175)):
-            add_pumping_entry(a, ter, declared_at=now - timedelta(hours=hours), manifold_pressure_bar=pressure,
-                              flow_rate_m3h=rate, temperature_c=31)
+        # the pumping log of both sides (1.4): the terminal's sheet for its receiving tank, the ship's for its tanks;
+        # hourly readings paired by the platform, one hour outside the 0.3 % tolerance (the alert of the terminal logs)
+        shore_sheet = open_pumping_sheet(a, ter, tank="T-12", start_level_mm="1325", expected_stop_level_mm="19800",
+                                         m3_per_metre="1684", density="0.8412", vcf="0.9824", planned_quantity_m3="32046",
+                                         expected_rate_m3h="1200", expected_pressure_bar="6.5",
+                                         estimated_start=now - timedelta(hours=9), estimated_completion=now + timedelta(hours=18))
+        ship_sheet = open_pumping_sheet(a, nav, tank="1P–6S", density="0.8412", vcf="0.9824", planned_quantity_m3="32046",
+                                        expected_rate_m3h="1200")
+        shore_levels = [(8, 2420, 6.2), (7, 3110, 6.3), (6, 3805, 6.4), (5, 4180, 6.0), (4, 4515, 6.1), (3, 5230, 6.1), (2, 5925, 6.1), (1, 6625, 6.0)]
+        ship_moved = [(8, "1844"), (7, "1162"), (6, "1170"), (5, "631"), (4, "564"), (3, "1198"), (2, "1171"), (1, "1178")]
+        for (hours, level, pressure), (_h, moved) in zip(shore_levels, ship_moved):
+            add_pumping_entry(a, ter, declared_at=now - timedelta(hours=hours), sheet=shore_sheet, level_mm=str(level),
+                              manifold_pressure_bar=pressure, temperature_c=31,
+                              note=L("start of discharge", "début du déchargement") if hours == 8 else (L("tank switch T-11 → T-12", "changement de bac T-11 → T-12") if hours == 5 else ""))
+            add_pumping_entry(a, nav, declared_at=now - timedelta(hours=hours, minutes=5), sheet=ship_sheet, hourly_m3=moved,
+                              manifold_pressure_bar=pressure + 0.4, temperature_c=30)
         # countersignatures: most milestones agreed, the interruption contested by the master
         cap = actor(a, "cap")
         signs = {"ARRIVAL": [cap], "NOR_TENDERED": [ter], "PILOT_ON_BOARD_ARR": [nav], "ALL_FAST": [nav, ter],
@@ -341,6 +437,25 @@ class Command(BaseCommand):
         initial = create_measurement(a, actor(a, "surveyor"), "INITIAL")
         add_value(initial, nav, "SHIP", "32046.310", temperature="29.5", density="0.8412")
         add_value(initial, actor(a, "surveyor"), "SURVEYOR", "32039.870", temperature="29.4", density="0.8410")
+        # tank by tank (1.4): the ship reads its cargo tanks, the terminal its shore tank; the surveyor validates — one
+        # reading is left pending, one was rejected and corrected
+        ins = actor(a, "surveyor")
+        tanks = {"1P": ("412", "5342.1", "0.98241"), "1S": ("418", "5338.4", "0.98241"), "2P": ("405", "5410.0", "0.98238"),
+                 "2S": ("409", "5401.6", "0.98238"), "3P": ("455", "5280.3", "0.98235"), "3S": ("452", "5274.2", "0.98235")}
+        for tank, (ullage, gov, vcf) in tanks.items():
+            reading = add_tank_reading(initial, nav, tank=tank, level_mm=ullage, temperature_c="29.5", gov_m3=gov, vcf=vcf,
+                                       density="0.8412", declared_at=now - timedelta(hours=10, minutes=20))
+            if tank == "2P":
+                review_tank_reading(reading, ins, validate=False, note=L("temperature inconsistent with the adjacent tanks — re-read",
+                                                                          "température incohérente avec les citernes voisines — à relire"))
+                add_tank_reading(initial, nav, tank=tank, level_mm=ullage, temperature_c="29.6", gov_m3=gov, vcf=vcf, density="0.8412",
+                                 declared_at=now - timedelta(hours=9, minutes=50), supersedes=reading,
+                                 note=L("re-read with the surveyor", "relu avec l'inspecteur"))
+            elif tank != "3S":
+                review_tank_reading(reading, ins, validate=True)
+        shore = add_tank_reading(initial, ter, tank="T-12", level_mm="1325", temperature_c="30.1", gov_m3="2231.3", vcf="0.98230",
+                                 density="0.8412", declared_at=now - timedelta(hours=10, minutes=10))
+        review_tank_reading(shore, ins, validate=True)
         # correspondence attached to the call
         from apps.registry.services.correspondence import create_thread, post_message
 
@@ -365,7 +480,9 @@ class Command(BaseCommand):
         # Call B — loading, accepted, waiting for its berth
         b = call_svc.create_call(agency_user, vessel=vessels[1], eta=now + timedelta(hours=26), requested_berth_kind="JETTY",
                                  operations=["M2"], parties=parties, etb=now + timedelta(hours=34),
-                                 etd=now + timedelta(hours=60), product="Jet A-1", quantity=18000, voyage_number="DEMO-02")
+                                 etd=now + timedelta(hours=60), product="Jet A-1", quantity=18000, voyage_number="DEMO-02",
+                                 operation_details={"M2": {"max_rate_m3h": 900, "tank_condition": "LAST_CARGO", "last_cargoes": "Jet A-1, Jet A-1, gasoil",
+                                                           "inert_gas": "YES", "bl_quantity_basis": "SHORE"}})
         upload_document(b, actor(b, "agency"), "Q88", demo_file("q88-gulf-demo.pdf", "Q88 - MT GULF DEMO", [
             "IMO 9999981 - Marshall Islands - Product tanker - DWT 38 000"]))
         link_b, _token, _code = call_svc.issue_master_link(b, actor(b, "agency"), master_name="Capt. Demo")
@@ -380,6 +497,8 @@ class Command(BaseCommand):
         req_svc.decide_request(vet, actor(b, "cap"), RequestStatus.APPROVED_WITH_CONDITIONS,
                                conditions=L("Daylight berthing only", "Accostage de jour uniquement"), valid_until=now + timedelta(days=30))
         req_svc.decide_request(b.requests.get(type__code="GREEN_LIGHT"), actor(b, "cap"), RequestStatus.APPROVED)
+        task_svc.complete_task(b.tasks.get(template_code="M0", number="09b"), actor(b, "security"))
+        task_svc.complete_task(b.tasks.get(template_code="M0", number="09c"), actor(b, "terminal"))  # the principal's is awaited
         req_svc.create_request(b, actor(b, "agency"), "BERTH", {"window_from": (now + timedelta(hours=34)).isoformat(),
                                                                  "arrival_draft": 9.8})
 
@@ -389,11 +508,15 @@ class Command(BaseCommand):
                        (orgs["terminal"], "TER")]
         c = call_svc.create_call(agency_user, vessel=vessels[2], eta=now + timedelta(days=3), requested_berth_kind="STS_AREA",
                                  operations=["M3"], parties=sts_parties, etd=now + timedelta(days=5),
-                                 product="Crude oil", quantity=90000, voyage_number="DEMO-03")
+                                 product="Crude oil", quantity=90000, voyage_number="DEMO-03", sts_role="DONOR",
+                                 operation_details={"M3": {"window_from": (now + timedelta(days=3, hours=6)).isoformat(),
+                                                           "window_to": (now + timedelta(days=4, hours=18)).isoformat(),
+                                                           "poac": "Capt. K. Mensah — STS Services Demo", "equipment_by": "PROVIDER",
+                                                           "transfer_mode": "ANCHOR", "compatibility_done": "YES"}})
         d = call_svc.create_call(agency_user, vessel=vessels[3], eta=now + timedelta(days=3, hours=4),
                                  requested_berth_kind="STS_AREA", operations=["M3"], parties=sts_parties,
-                                 etd=now + timedelta(days=5), product="Crude oil", quantity=90000, voyage_number="DEMO-04",
-                                 linked_call=c, link_kind="STS")
+                                 etd=now + timedelta(days=5), product="Crude oil", quantity=60000, voyage_number="DEMO-04",
+                                 linked_call=c, link_kind="STS", sts_role="RECEIVER")
         for call in (c, d):
             call.refresh_from_db()
             done(call, ["M0:02", "M0:03", "M0:05"])
@@ -408,6 +531,135 @@ class Command(BaseCommand):
         _link, token, code = call_svc.issue_party_link(c, actor(c, "agency"), party=lab_party, holder_name="", channel="QR",
                                                       note="demo")
         self.party_access = (c.reference, orgs["lab"].name, token, code)
+        self.named_calls = (a, c)
+        self._other_cargoes(port, orgs, vessels, agency_user, now, actor, done, L)
+
+    def _other_agencies(self, port, orgs, vessels):
+        """Version 1.6 — the other vessel of a double banking or of a ship-to-ship transfer is not always the same
+        agency's. The associate agent announces a coastal tanker alongside the vessel discharging at the jetty
+        (lightering at the berth), and a second daughter vessel coming to the mother vessel at the STS area. Both
+        name a call of the first agency from the port's board: the links wait for the harbour master, whose
+        decisions are pending — the double banking is held by its hold point until the inner vessel consents."""
+        from apps.registry.models import RequestType
+        from apps.registry.services import intake as intake_svc
+        from apps.registry.services.tasks import system_complete
+
+        named = getattr(self, "named_calls", None)
+        user2 = User.objects.filter(organization=orgs["agency2"]).first()
+        if named is None or user2 is None or len(vessels) < 10:
+            return
+        a, c = named
+        english = port.default_language == "en"
+        now = timezone.now()
+        sys = system_actor(port)
+
+        def declare(call):
+            for number in ("02", "03", "05"):
+                for t in call.tasks.filter(template_code="M0", number=number, status="PENDING"):
+                    system_complete(t, sys, evidence="demo", note="demo data", allow_joint=True)
+            call_svc.declare_call(call, actor_for_call(call, user=user2, strong_auth=True))
+
+        # I — double banking: the coastal tanker comes alongside the vessel at the jetty to load part of her cargo
+        a.refresh_from_db()
+        i = call_svc.create_call(
+            user2, vessel=vessels[8], eta=now + timedelta(hours=6), requested_berth_kind="JETTY", operations=["M2"],
+            modules=["M9"], requested_berth=a.berth or a.requested_berth, etb=now + timedelta(hours=8),
+            etd=now + timedelta(hours=22), product="Gasoil 10 ppm", quantity=5000, voyage_number="DEMO-17", validity_days=7,
+            planned_pump_hours=10, parties=[(orgs["terminal"], "TER"), (orgs["surveyor"], "INS")],
+            db_partner={"call": a, "position": "OUTER"},
+            operation_details={
+                "M9": {"purpose": "LIGHTERING", "duration_h": 12, "fenders_by": "TERMINAL",
+                       "loading_condition": ("Outer vessel in ballast alongside, loaded 5,000 t at separation; inner vessel discharging, draught 11.2 m to 9.8 m"
+                                             if english else
+                                             "Navire extérieur sur lest à l'accostage, chargé 5 000 t à la séparation ; navire intérieur en déchargement, tirant d'eau 11,2 m à 9,8 m")},
+                "M2": {"max_rate_m3h": 500, "max_manifold_pressure_bar": 6, "manifold_connections": "2 × 8\" ANSI 150",
+                       "tank_condition": "LAST_CARGO", "last_cargoes": "Gasoil / Gasoil / Jet A-1", "inert_gas": "NO"},
+            })
+        declare(i)
+        rtype = RequestType.objects.filter(port=port, code="DOUBLE_BANKING", is_active=True).first()
+        if rtype is not None:
+            data = {k: str(v) for k, v in intake_svc.prefill_for_request(i, rtype).items() if v not in (None, "")}
+            req_svc.create_request(i, actor_for_call(i, user=user2, strong_auth=True), "DOUBLE_BANKING", data)
+
+        # J — a second daughter vessel, of the associate agent, names the mother vessel at the STS area
+        c.refresh_from_db()
+        window_from, window_to = now + timedelta(days=4, hours=20), now + timedelta(days=5, hours=20)
+        j = call_svc.create_call(
+            user2, vessel=vessels[9], eta=now + timedelta(days=4, hours=12), requested_berth_kind="STS_AREA", operations=["M3"],
+            etd=now + timedelta(days=6), product="Crude oil", quantity=30000, voyage_number="DEMO-18", validity_days=12,
+            parties=[(orgs["sts"], "PRE"), (orgs["surveyor"], "INS")], linked_call=c, link_kind="STS",
+            operation_details={"M3": {"window_from": window_from.isoformat(), "window_to": window_to.isoformat(),
+                                      "poac": "Capt. K. Mensah — STS Services Demo", "equipment_by": "PROVIDER",
+                                      "transfer_mode": "ANCHOR", "compatibility_done": "TBC"}})
+        declare(j)
+        rtype = RequestType.objects.filter(port=port, code="STS_ZONE", is_active=True).first()
+        if rtype is not None:
+            data = {k: str(v) for k, v in intake_svc.prefill_for_request(j, rtype).items() if v not in (None, "")}
+            req_svc.create_request(j, actor_for_call(j, user=user2, strong_auth=True), "STS_ZONE", data)
+
+    def _other_cargoes(self, port, orgs, vessels, agency_user, now, actor, done, L):
+        """Version 1.5 — the port is open to every cargo: a bulk carrier of clinker with a co-nominated agency given a
+        partial access, a container ship, a car carrier expected, and a general-cargo announcement that ran out
+        of validity and must be announced again."""
+        cargo_parties = [(orgs["cargo_terminal"], "TER"), (orgs["surveyor"], "INS"), (orgs["receiver"], "COM")]
+        # E — dry bulk discharge of clinker, declared and accepted; the associate agent follows the tasks and the
+        # documents only (EXG-R-04); the shipper's documents are asked for at the announcement (EXG-R-06)
+        e = call_svc.create_call(agency_user, vessel=vessels[4], eta=now + timedelta(hours=40), requested_berth_kind="JETTY",
+                                 operations=["MB1"], parties=cargo_parties + [(orgs["agency2"], "AGE", "PARTIAL", ["taches", "documents"])],
+                                 etb=now + timedelta(hours=48), etd=now + timedelta(days=5), product="Clinker", quantity=38242,
+                                 quantity_unit="MT", voyage_number="DEMO-05", cargo_kind="DRY", validity_days=10,
+                                 expected_documents=["INSURANCE"],
+                                 custom_documents=[{"label": L("Certificate of origin", "Certificat d'origine"), "role": "COM", "hours_before_eta": 48}],
+                                 operation_details={"MB1": {"holds": 5, "geared": "YES", "imsbc_group": "C", "discharge_rate_tpd": 8000,
+                                                            "stevedore": L("Lomé Stevedoring Demo", "Manutention de Lomé (démo)"), "dust_or_odour": "YES"}})
+        from apps.registry.services.documents import upload_document
+
+        upload_document(e, actor(e, "agency"), "Q88", demo_file("particulars-clinker-demo.pdf", "Ship's particulars - MV CLINKER DEMO", [
+            "IMO 9311012 - Panama - Geared bulk carrier, 4 cranes x 30 t - DWT 56 000 - 5 holds"]))
+        link_e, _t, _c = call_svc.issue_master_link(e, actor(e, "agency"), master_name="Capt. Bulk Demo")
+        upload_document(e, actor_for_call(e, master=link_e), "CERTIFICATES", demo_file(
+            "certificates-clinker-demo.pdf", "Certificates - MV CLINKER DEMO", ["All valid beyond the planned departure date"]))
+        upload_document(e, actor(e, "agency"), "CARGO_MANIFEST", demo_file("manifest-clinker-demo.pdf", "Cargo manifest - MV CLINKER DEMO", [
+            "Clinker in bulk - 38 242 MT - 5 holds - consignee: Receiver / Importer (demo)"]))
+        done(e, ["M0:05"])
+        call_svc.declare_call(e, actor(e, "agency"))
+        vet = req_svc.create_request(e, actor(e, "cargo_terminal"), "VESSEL_ACCEPTANCE", {
+            "product": "Clinker", "inspection": L("Class survey in date, PSC Lomé 2026 — no deficiency", "Visite de classe à jour, PSC Lomé 2026 — aucune déficience"),
+            "last_cargoes": "Clinker / Gypsum / Coal", "vetting_result": L("Accepted", "Accepté")})
+        req_svc.decide_request(vet, actor(e, "cap"), RequestStatus.APPROVED, valid_until=now + timedelta(days=30))
+        req_svc.decide_request(e.requests.get(type__code="GREEN_LIGHT"), actor(e, "cap"), RequestStatus.APPROVED)
+        task_svc.complete_task(e.tasks.get(template_code="M0", number="09b"), actor(e, "security"))
+        # F — container ship, expected: moves, bay plan and dangerous goods asked of the agent
+        f = call_svc.create_call(agency_user, vessel=vessels[5], eta=now + timedelta(days=2), requested_berth_kind="JETTY",
+                                 operations=["MC1"], parties=[(orgs["cargo_terminal"], "TER"), (orgs["surveyor"], "INS")],
+                                 etb=now + timedelta(days=2, hours=3), etd=now + timedelta(days=3), product="Tcs/Tcs",
+                                 quantity=1501, quantity_unit="MOVES", voyage_number="DEMO-06", cargo_kind="CONTAINER",
+                                 planned_pump_hours="24",
+                                 operation_details={"MC1": {"moves_discharge": 820, "moves_load": 640, "restows": 41, "reefers": 36, "dg_units": 12,
+                                                            "oog_units": 3, "gearless": "YES"}})
+        upload_document(f, actor(f, "agency"), "Q88", demo_file("particulars-msc-demo.pdf", "Ship's particulars - MSC LOME DEMO", [
+            "IMO 9074743 - Liberia - Container ship 8 000 TEU - DWT 90 000"]))
+        link_f, _t, _c = call_svc.issue_master_link(f, actor(f, "agency"), master_name="Capt. Box Demo")
+        upload_document(f, actor_for_call(f, master=link_f), "CERTIFICATES", demo_file(
+            "certificates-msc-demo.pdf", "Certificates - MSC LOME DEMO", ["All valid beyond the planned departure date"]))
+        done(f, ["M0:05"])
+        call_svc.declare_call(f, actor(f, "agency"))
+        # G — car carrier expected in a week, still a draft: the agent is told what the declaration waits for
+        call_svc.create_call(agency_user, vessel=vessels[6], eta=now + timedelta(days=7), requested_berth_kind="JETTY",
+                             operations=["MR1"], parties=[(orgs["cargo_terminal"], "TER"), (orgs["surveyor"], "INS")],
+                             etd=now + timedelta(days=8), product=L("Vehicles", "Véhicules"), quantity=1850, quantity_unit="UNIT",
+                             voyage_number="DEMO-07", cargo_kind="RORO",
+                             operation_details={"MR1": {"units": 1850, "high_heavy": 120, "ramp": "STERN", "ramp_load_t": 150, "vehicle_customs": "YES"}})
+        # H — a general-cargo announcement whose validity ran out before the vessel came: obsolete, to be announced again
+        h = call_svc.create_call(agency_user, vessel=vessels[7], eta=now - timedelta(days=2), requested_berth_kind="JETTY",
+                                 operations=["MG1"], parties=[(orgs["cargo_terminal"], "TER")], etd=now - timedelta(days=1),
+                                 product=L("Bagged rice", "Riz en sacs"), quantity=11200, quantity_unit="MT", voyage_number="DEMO-08",
+                                 cargo_kind="GENERAL", validity_days=3)
+        done(h, ["M0:02", "M0:03", "M0:05"])
+        call_svc.declare_call(h, actor(h, "agency"))
+        type(h).objects.filter(pk=h.pk).update(valid_until=now - timedelta(hours=6))
+        h.refresh_from_db()
+        call_svc.expire_call(h)
 
     # ------------------------------------------------------------------------------------ past calls
     def _history(self, port, orgs, vessels, count: int):
@@ -442,7 +694,10 @@ class Command(BaseCommand):
         causes = ["SHORE_TANK_SWITCH", "SHIP_BALLAST", "WEATHER_LIMITS", "SHORE_PUMP", "SHIP_STRIPPING", "SURVEYOR"]
         for i in range(count):
             op, product, quantity = products[i % len(products)]
-            vessel = vessels[i % len(vessels)]
+            # the history replays calls of the four tankers of the first agency (the two vessels of the associate
+            # agent, added in 1.6, have no past in the port)
+            tankers = [v for v in vessels[:8] if v.vessel_kind.startswith("TANKER")] or vessels
+            vessel = tankers[i % len(tankers)]
             eta = now - timedelta(days=int(365 * (i + 0.5) / count) + rnd.randint(0, 6), hours=rnd.randint(0, 23))
             waiting = timedelta(hours=rnd.choice([3, 5, 8, 14, 22, 31]))
             transfer = timedelta(hours=rnd.choice([16, 20, 24, 30, 36]))
@@ -457,7 +712,7 @@ class Command(BaseCommand):
             call = call_svc.create_call(agency_user, vessel=vessel, eta=eta, requested_berth_kind="JETTY", operations=[op],
                                         parties=parties, etb=t_fast, etd=t_dep, product=product, quantity=quantity,
                                         voyage_number=f"DEMO-H{i + 1:02d}")
-            done(call, ["M0:02", "M0:03", "M0:05"])
+            done(call, ["M0:02", "M0:03", "M0:05", "M0:09b", "M0:09c", "M0:09d"])  # the green lights of 1.5 given in the replay
             call_svc.declare_call(call, actor(call, "agency"))
             link, _token, _code = call_svc.issue_master_link(call, actor(call, "agency"), master_name="Capt. Demo",
                                                              expires_at=now + timedelta(days=1))

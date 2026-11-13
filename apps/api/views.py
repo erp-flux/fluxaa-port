@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from django.db import transaction
 from django.http import FileResponse, HttpResponse
 from django.utils.dateparse import parse_datetime
 from drf_spectacular.types import OpenApiTypes
@@ -21,15 +22,20 @@ from apps.registry.models import (
     Milestone,
     MilestoneType,
     PortCall,
+    PumpingLogSheet,
     ServiceRequest,
+    TankReading,
     Task,
     Thread,
     Vessel,
 )
+from apps.registry.services import board as board_svc
 from apps.registry.services import calls as call_svc
-from apps.registry.services import correspondence, disputes, exports, journal, reports, rights
+from apps.registry.services import checklist as checklist_svc
+from apps.registry.services import correspondence, disputes, exports, journal, preparation, reports, rights
 from apps.registry.services import documents as doc_svc
 from apps.registry.services import forms as form_svc
+from apps.registry.services import intake as intake_svc
 from apps.registry.services import measurements as meas_svc
 from apps.registry.services import milestones as ms_svc
 from apps.registry.services import requests as req_svc
@@ -66,9 +72,18 @@ class CallAPIView(APIView):
     permission_classes = [IsAuthenticated]
     # reading a call's records through the API is written to the access journal, as on screen (ENF-3.4)
     audit_kind = ""
+    # the part of the file the view belongs to: a partial access reads and acts in its tabs only, a reading access
+    # never acts (FLX-CDC-002 v1.5, EXG-R-04); "" = the overview, read by everyone with a role
+    scope = ""
 
     def resolve(self, request, reference):
         call, actor = call_and_actor(request, reference)
+        if self.scope:
+            allowed = rights.allowed_tabs(actor, call)
+            if allowed is not None and self.scope not in allowed:
+                raise NotVisible()
+        if request.method != "GET":
+            rights.require_act(actor, call, self.scope or "apercu")
         if request.method == "GET" and self.audit_kind:
             journal.audit(port=call.port, call=call, user=actor.user, master=actor.master, action="view", obj=call,
                           object_kind=self.audit_kind, detail="api", request=request._request)
@@ -112,6 +127,7 @@ class CallListView(APIView):
         return Response({"results": results})
 
     @extend_schema(request=JSON, responses=JSON, summary="Create a call (shipping agency only)")
+    @transaction.atomic  # a refused creation registers nothing on the way (a new organisation, the other vessel's call)
     def post(self, request):
         data = request.data
         actor = port_actor(request.user)
@@ -128,9 +144,36 @@ class CallListView(APIView):
                 org = call_svc.register_organization(actor, name=str(item.get("name", "")), role=str(item.get("role", "")),
                                                      kind=str(item.get("kind", "")), email=str(item.get("email", "")),
                                                      phone=str(item.get("phone", "")))
-            parties.append((org, item.get("role")))
+            parties.append((org, item.get("role"), item.get("access", "FULL"), item.get("scopes", [])))
         berth = Berth.objects.filter(port=actor.port, code=data.get("requested_berth")).first() if data.get("requested_berth") else None
         linked = PortCall.objects.filter(port=actor.port, reference=data.get("linked_call")).first() if data.get("linked_call") else None
+
+        def partner_agency(item):
+            # the other vessel's agency: a registered agency (agency_id) or one the port does not know yet, named
+            # on the spot (agency_name, agency_email?, agency_phone? — v1.6); neither: the announcing agency itself
+            chosen = Organization.objects.filter(port=actor.port, pk=item.get("agency_id")).first() if item.get("agency_id") else None
+            if item.get("agency_id") and chosen is None:
+                raise RuleViolation("Unknown agency_id for the other vessel.")
+            return call_svc.partner_agency(actor, organization=chosen, name=str(item.get("agency_name", "")),
+                                           email=str(item.get("agency_email", "")), phone=str(item.get("agency_phone", "")))
+
+        sts_partner = None
+        if data.get("sts_partner"):  # {"vessel_imo", "agency_id"? | "agency_name"?, "role"?}: the partner vessel's own call (v1.5)
+            item = data["sts_partner"]
+            partner_vessel = Vessel.objects.filter(port=actor.port, imo=str(item.get("vessel_imo", ""))).first()
+            if partner_vessel is None:
+                raise RuleViolation("Unknown partner vessel: register it first (POST /api/v1/vessels/).")
+            sts_partner = {"vessel": partner_vessel, "agency": partner_agency(item), "role": item.get("role", "")}
+        db_partner = None
+        if data.get("double_banking"):  # {"position", "call_reference"} or {"position", "vessel_imo", "agency_id"? | "agency_name"?} (v1.6)
+            item = data["double_banking"]
+            db_call = PortCall.objects.filter(port=actor.port, reference=str(item.get("call_reference", ""))).first() if item.get("call_reference") else None
+            db_vessel = Vessel.objects.filter(port=actor.port, imo=str(item.get("vessel_imo", ""))).first() if item.get("vessel_imo") else None
+            if db_call is None and db_vessel is None:
+                raise RuleViolation("double_banking names the other vessel: call_reference, or vessel_imo (registered first).")
+            db_partner = {"call": db_call, "vessel": db_vessel, "agency": partner_agency(item) if db_call is None else None,
+                          "position": item.get("position", "OUTER")}
+        codes = ["M0", *data.get("operations", []), *data.get("modules", [])]
         call = call_svc.create_call(
             request.user, vessel=vessel, eta=when(data.get("eta"), "eta"), requested_berth_kind=data.get("operating_area"),
             operations=data.get("operations", []), modules=data.get("modules", []), requested_berth=berth,
@@ -139,6 +182,12 @@ class CallListView(APIView):
             quantity_unit=data.get("quantity_unit", "MT"), voyage_number=data.get("voyage", ""),
             last_port=data.get("last_port", ""), next_port=data.get("next_port", ""), parties=parties,
             linked_call=linked, link_kind=data.get("link_kind", ""),
+            planned_pump_hours=data.get("planned_pump_hours") or None, batch_reference=data.get("batch_reference", ""),
+            cargo_kind=data.get("cargo_kind", "LIQUID"), validity_days=data.get("validity_days"),
+            sts_role=data.get("sts_role", ""), sts_partner=sts_partner,
+            expected_documents=data.get("expected_documents", []), custom_documents=data.get("custom_documents", []),
+            operation_details=intake_svc.parse_intake_mapping(actor.port, codes, data.get("operation_details")),
+            db_partner=db_partner,
         )
         return Response(rep.call_detail(call, call_and_actor(request, call.reference)[1]), status=201)
 
@@ -174,7 +223,7 @@ class CallDetailView(CallAPIView):
 
 
 class CallActionView(CallAPIView):
-    @extend_schema(request=JSON, responses=JSON, summary="Life-cycle action: declare | estimates | cancel | close-request | close | archive | statement-of-facts | invite")
+    @extend_schema(request=JSON, responses=JSON, summary="Life-cycle action: declare | estimates | cancel | close-request | close | archive | statement-of-facts | invite | remind | renew | party-access | green-light-withdraw | documents-request")
     def post(self, request, reference, action):
         call, actor = self.resolve(request, reference)
         data = request.data
@@ -194,6 +243,12 @@ class CallActionView(CallAPIView):
         elif action == "statement-of-facts":
             doc = reports.issue_statement_of_facts(call, actor)
             return Response(rep.document_dict(doc), status=201)
+        elif action == "remind":  # the agency or the harbour master reminds the party of a pending task (EXG-Q-09)
+            task = Task.objects.filter(call=call, pk=pk_of(data.get("task_id"))).first()
+            if task is None or not rights.task_visible(actor, task):
+                raise NotVisible()
+            reached = preparation.remind(call, actor, task)
+            return Response({"task": task.code, "reached": reached})
         elif action == "invite":  # the open list of the parties: a registered organisation, or a new one by name
             if data.get("organization_id"):
                 org = Organization.objects.filter(port=call.port, pk=pk_of(data.get("organization_id"))).first()
@@ -203,15 +258,41 @@ class CallActionView(CallAPIView):
                 org = call_svc.register_organization(actor, name=str(data.get("name", "")), role=str(data.get("role", "")),
                                                      kind=str(data.get("kind", "")), email=str(data.get("email", "")),
                                                      phone=str(data.get("phone", "")))
-            call_svc.add_party(call, actor, org, str(data.get("role", "")))
+            call_svc.add_party(call, actor, org, str(data.get("role", "")), access=str(data.get("access", "FULL")),
+                               scopes=data.get("scopes", []))
+        elif action == "renew":  # an obsolete, cancelled or rejected announcement is made again (v1.5, EXG-R-02)
+            new = call_svc.renew_call(call, actor)
+            return Response(rep.call_detail(new, call_and_actor(request, new.reference)[1]), status=201)
+        elif action == "party-access":  # the principal agent gives a party all or part of the file (EXG-R-04)
+            party = call.parties.filter(pk=pk_of(data.get("party_id")), revoked_at__isnull=True).first()
+            if party is None:
+                raise NotVisible()
+            call_svc.set_party_access(call, actor, party, str(data.get("access", "FULL")), data.get("scopes", []))
+        elif action == "green-light-withdraw":  # a green light given is withdrawn with a reason (EXG-R-03)
+            task = Task.objects.filter(call=call, pk=pk_of(data.get("task_id"))).first()
+            if task is None or not rights.task_visible(actor, task):
+                raise NotVisible()
+            task_svc.withdraw_green_light(task, actor, str(data.get("reason", "")))
+        elif action == "documents-request":  # documents asked for beyond the templates (EXG-R-06)
+            created = task_svc.request_documents(call, actor, document_types=list(data.get("expected_documents", [])),
+                                                 custom=list(data.get("custom_documents", [])))
+            return Response({"tasks": [rep.task_dict(t) for t in created]}, status=201)
         else:
             raise NotVisible()
         call.refresh_from_db()
         return Response(rep.call_detail(call, actor))
 
 
+class GreenLightView(CallAPIView):
+    @extend_schema(responses=JSON, summary="The green-light panel of the call: each party's go-ahead, its state, who gave it, when")
+    def get(self, request, reference):
+        call, actor = self.resolve(request, reference)
+        return Response({"results": [rep.green_light_dict(row) for row in task_svc.green_lights(call)]})
+
+
 # ============================================================================ tasks
 class TaskListView(CallAPIView):
+    scope = "taches"
     audit_kind = "tasks"
 
     @extend_schema(responses=JSON, summary="Tasks visible to your roles (EF-5.7)")
@@ -222,6 +303,7 @@ class TaskListView(CallAPIView):
 
 
 class TaskActionView(CallAPIView):
+    scope = "taches"
     @extend_schema(request=JSON, responses=JSON, summary="complete | sign | countersign | not-applicable")
     def post(self, request, reference, task_id, action):
         call, actor = self.resolve(request, reference)
@@ -246,6 +328,7 @@ class TaskActionView(CallAPIView):
 
 # ============================================================================ milestones
 class MilestoneListView(CallAPIView):
+    scope = "jalons"
     audit_kind = "milestones"
 
     @extend_schema(responses=JSON, summary="Milestones (contradictory timeline)")
@@ -273,6 +356,7 @@ class MilestoneListView(CallAPIView):
 
 
 class MilestoneCountersignView(CallAPIView):
+    scope = "jalons"
     @extend_schema(request=JSON, responses=JSON, summary="Countersign or contest a milestone")
     def post(self, request, reference, milestone_id):
         call, actor = self.resolve(request, reference)
@@ -286,6 +370,7 @@ class MilestoneCountersignView(CallAPIView):
 
 # ============================================================================ requests
 class RequestListView(CallAPIView):
+    scope = "demandes"
     audit_kind = "requests"
 
     @extend_schema(responses=JSON, summary="Requests and authorizations visible to you")
@@ -303,6 +388,7 @@ class RequestListView(CallAPIView):
 
 
 class RequestActionView(CallAPIView):
+    scope = "demandes"
     @extend_schema(operation_id="requests_action", request=JSON, responses=JSON,
                    summary="submit | review | decide (2FA: X-MFA-Code) | schedule | execute | cancel")
     def post(self, request, reference, request_id, action):
@@ -373,6 +459,7 @@ def _stage_json(row: dict) -> dict:
 
 
 class FormListView(CallAPIView):
+    scope = "documents"
     audit_kind = "forms"
 
     @extend_schema(operation_id="forms_list", responses=JSON,
@@ -383,6 +470,7 @@ class FormListView(CallAPIView):
 
 
 class FormView(CallAPIView):
+    scope = "documents"
     @extend_schema(operation_id="forms_render", responses=OpenApiTypes.BINARY,
                    summary="The form rendered as a printable HTML page, pre-filled from the registry")
     def get(self, request, reference, code):
@@ -414,6 +502,7 @@ def _form_json(form) -> dict:
 
 
 class DocumentListView(CallAPIView):
+    scope = "documents"
     audit_kind = "documents"
 
     @extend_schema(responses=JSON, summary="Documents visible to you")
@@ -437,6 +526,7 @@ class DocumentListView(CallAPIView):
 
 
 class DocumentDownloadView(CallAPIView):
+    scope = "documents"
     @extend_schema(responses=OpenApiTypes.BINARY, summary="Download a document (access is audited)")
     def get(self, request, reference, document_id):
         call, actor = self.resolve(request, reference)
@@ -455,6 +545,7 @@ class DocumentDownloadView(CallAPIView):
 
 
 class DocumentSignView(CallAPIView):
+    scope = "documents"
     @extend_schema(request=JSON, responses=JSON, summary="Sign a document (optional hand-drawn signature PNG)")
     def post(self, request, reference, document_id):
         call, actor = self.resolve(request, reference)
@@ -469,24 +560,26 @@ class DocumentSignView(CallAPIView):
 
 # ============================================================================ measurements & pumping log
 class MeasurementListView(CallAPIView):
+    scope = "mesures"
     audit_kind = "measurements"
 
-    @extend_schema(responses=JSON, summary="Measurements (ship / shore / surveyor)")
+    @extend_schema(responses=JSON, summary="Measurements (ship / shore / surveyor) with the tank readings you may read")
     def get(self, request, reference):
         call, actor = self.resolve(request, reference)
         if not rights.measurements_visible(actor):
             raise NotVisible()
-        return Response({"results": [rep.measurement_dict(m) for m in call.measurements.all()]})
+        return Response({"results": [rep.measurement_dict(m, actor) for m in call.measurements.all()]})
 
     @extend_schema(request=JSON, responses=JSON, summary="Open a measurement")
     def post(self, request, reference):
         call, actor = self.resolve(request, reference)
         m = meas_svc.create_measurement(call, actor, request.data.get("kind", ""), unit=request.data.get("unit", "MT"),
                                         product=request.data.get("product", ""))
-        return Response(rep.measurement_dict(m), status=201)
+        return Response(rep.measurement_dict(m, actor), status=201)
 
 
 class MeasurementValueView(CallAPIView):
+    scope = "mesures"
     @extend_schema(request=JSON, responses=JSON, summary="Add your party's value (single emitter)")
     def post(self, request, reference, measurement_id):
         call, actor = self.resolve(request, reference)
@@ -496,36 +589,173 @@ class MeasurementValueView(CallAPIView):
         data = request.data
         meas_svc.add_value(m, actor, data.get("party", ""), data.get("value"), temperature=data.get("temperature_c"),
                            density=data.get("density"), declared_at=when(data.get("declared_at")), note=data.get("note", ""))
-        return Response(rep.measurement_dict(m), status=201)
+        return Response(rep.measurement_dict(m, actor), status=201)
 
 
-class PumpingLogView(CallAPIView):
+class TankReadingView(CallAPIView):
+    scope = "mesures"
+    audit_kind = "tanks"
+
+    @extend_schema(responses=JSON, summary="Tank readings of a measurement: validated ones, and your own side's pending ones")
+    def get(self, request, reference, measurement_id):
+        call, actor = self.resolve(request, reference)
+        m = Measurement.objects.filter(call=call, pk=measurement_id).first()
+        if m is None or not (rights.measurements_visible(actor) or actor.has("NAV", "TER", "INS")):
+            raise NotVisible()
+        return Response({"results": [rep.tank_reading_dict(r) for r in meas_svc.visible_readings(m, actor)]})
+
+    @extend_schema(request=JSON, responses=JSON, summary="Read a tank: the ship its cargo tanks, the terminal its shore tanks (awaits the surveyor's validation)")
+    def post(self, request, reference, measurement_id):
+        call, actor = self.resolve(request, reference)
+        m = Measurement.objects.filter(call=call, pk=measurement_id).first()
+        if m is None:
+            raise NotVisible()
+        data = request.data
+        supersedes = TankReading.objects.filter(measurement=m, pk=pk_of(data.get("supersedes"))).first() if data.get("supersedes") else None
+        figures = {name: data.get(name) for name in meas_svc.TANK_FIELDS}
+        reading = meas_svc.add_tank_reading(m, actor, side=data.get("side") or None, tank=str(data.get("tank", "")),
+                                            declared_at=when(data.get("declared_at")), note=str(data.get("note", "")),
+                                            supersedes=supersedes, **figures)
+        return Response(rep.tank_reading_dict(reading), status=201)
+
+
+class TankReadingReviewView(CallAPIView):
+    scope = "mesures"
+    @extend_schema(request=JSON, responses=JSON, summary="Surveyor: validate (decision=validate) or reject (decision=reject, note) a tank reading")
+    def post(self, request, reference, measurement_id, reading_id):
+        call, actor = self.resolve(request, reference)
+        reading = TankReading.objects.filter(measurement__call=call, measurement_id=measurement_id, pk=reading_id).first()
+        if reading is None or not rights.tank_reading_visible(actor, reading):
+            raise NotVisible()
+        decision = str(request.data.get("decision", "")).lower()
+        if decision not in ("validate", "reject"):
+            raise RuleViolation("decision is 'validate' or 'reject'.")
+        meas_svc.review_tank_reading(reading, actor, validate=decision == "validate", note=str(request.data.get("note", "")))
+        return Response(rep.tank_reading_dict(reading))
+
+
+class PumpingSheetView(CallAPIView):
+    scope = "mesures"
     audit_kind = "pumping"
 
-    @extend_schema(responses=JSON, summary="Pumping log")
+    @extend_schema(responses=JSON, summary="Pumping log sheets (ship and shore headers)")
     def get(self, request, reference):
         call, actor = self.resolve(request, reference)
-        if not rights.measurements_visible(actor):
+        if not rights.can_read_report(actor, "PUMPING_LOG"):
             raise NotVisible()
-        return Response({"results": [{"declared_at": rep.dt(p.declared_at), "role": p.role, "by": p.entered_label,
-                                      "pressure_bar": str(p.manifold_pressure_bar) if p.manifold_pressure_bar is not None else None,
-                                      "rate_m3h": str(p.flow_rate_m3h) if p.flow_rate_m3h is not None else None,
-                                      "temperature_c": str(p.temperature_c) if p.temperature_c is not None else None,
-                                      "source": p.source, "deferred": p.deferred} for p in call.pumping_log.all()]})
+        return Response({"results": [rep.pumping_sheet_dict(s) for s in call.pumping_sheets.all()]})
 
-    @extend_schema(request=JSON, responses=JSON, summary="Add a pumping-log reading (manual or automatic feed)")
+    @extend_schema(request=JSON, responses=JSON, summary="Open your side's pumping log sheet (tank, calibration, density, VCF, planned quantity…)")
     def post(self, request, reference):
         call, actor = self.resolve(request, reference)
         data = request.data
-        entry = meas_svc.add_pumping_entry(call, actor, declared_at=when(data.get("declared_at"), "declared_at"),
+        figures = {name: data.get(name) for name in meas_svc.SHEET_FIELDS}
+        sheet = meas_svc.open_pumping_sheet(call, actor, side=data.get("side") or None, tank=str(data.get("tank", "")),
+                                            product=str(data.get("product", "")), estimated_start=when(data.get("estimated_start")),
+                                            estimated_completion=when(data.get("estimated_completion")),
+                                            note=str(data.get("note", "")), **figures)
+        return Response(rep.pumping_sheet_dict(sheet), status=201)
+
+
+class PumpingSheetCloseView(CallAPIView):
+    scope = "mesures"
+    @extend_schema(request=JSON, responses=JSON, summary="Complete your side's sheet: actual stop level, final volume")
+    def post(self, request, reference, sheet_id):
+        call, actor = self.resolve(request, reference)
+        sheet = PumpingLogSheet.objects.filter(call=call, pk=sheet_id).first()
+        if sheet is None or not rights.can_read_report(actor, "PUMPING_LOG"):
+            raise NotVisible()
+        data = request.data
+        meas_svc.close_pumping_sheet(sheet, actor, actual_stop_level_mm=data.get("actual_stop_level_mm"),
+                                     final_volume_m3=data.get("final_volume_m3"), note=str(data.get("note", "")))
+        return Response(rep.pumping_sheet_dict(sheet))
+
+
+class PumpingLogView(CallAPIView):
+    scope = "mesures"
+    audit_kind = "pumping"
+
+    @extend_schema(responses=JSON, summary="Pumping log: the readings of both sides, and their comparison reading by reading")
+    def get(self, request, reference):
+        call, actor = self.resolve(request, reference)
+        if not rights.can_read_report(actor, "PUMPING_LOG"):
+            raise NotVisible()
+        comparison = [{"at": rep.dt(r["at"]), "shore": r["shore"].pk if r["shore"] is not None else None,
+                       "ship": r["ship"].pk if r["ship"] is not None else None,
+                       "hourly_deviation_m3": rep.num(r["hourly_deviation"]), "hourly_pct": rep.num(r["hourly_pct"]),
+                       "cumulative_deviation_m3": rep.num(r["cumulative_deviation"]), "cumulative_pct": rep.num(r["cumulative_pct"]),
+                       "exceeds_tolerance": r["exceeds"]} for r in meas_svc.compare_sides(call)]
+        return Response({"results": [rep.pumping_entry_dict(p) for p in call.pumping_log.select_related("sheet")],
+                         "comparison": comparison, "tolerance_pct": str(call.port.quantity_tolerance_pct)})
+
+    @extend_schema(request=JSON, responses=JSON, summary="Add a pumping-log reading of your side (manual or automatic feed)")
+    def post(self, request, reference):
+        call, actor = self.resolve(request, reference)
+        data = request.data
+        sheet = PumpingLogSheet.objects.filter(call=call, pk=pk_of(data.get("sheet_id"))).first() if data.get("sheet_id") else None
+        entry = meas_svc.add_pumping_entry(call, actor, declared_at=when(data.get("declared_at"), "declared_at"), sheet=sheet,
+                                           tank=str(data.get("tank", "")), level_mm=data.get("level_mm"), hourly_m3=data.get("hourly_m3"),
+                                           cumulative_m3=data.get("cumulative_m3"),
                                            manifold_pressure_bar=data.get("pressure_bar"), flow_rate_m3h=data.get("rate_m3h"),
-                                           temperature_c=data.get("temperature_c"), note=data.get("note", ""),
-                                           device_id=data.get("device_id", ""), automatic=bool(data.get("automatic")))
-        return Response({"id": entry.pk}, status=201)
+                                           temperature_c=data.get("temperature_c"), note=str(data.get("note", "")),
+                                           device_id=str(data.get("device_id", "")), automatic=bool(data.get("automatic")))
+        return Response(rep.pumping_entry_dict(entry), status=201)
+
+
+# ============================================================================ ship/shore safety checklist
+class ChecklistView(CallAPIView):
+    audit_kind = "checklist"
+
+    @extend_schema(responses=JSON, summary="The ship/shore safety checklist of the call, with every item and the answers of both sides")
+    def get(self, request, reference):
+        call, actor = self.resolve(request, reference)
+        if not checklist_svc.visible(actor, call):
+            raise NotVisible()
+        record = checklist_svc.current(call)
+        if record is None:
+            return Response({"checklist": None, "versions": []})
+        return Response({"checklist": rep.checklist_dict(record, checklist_svc.rows(record, actor)),
+                         "progress": _progress_json(checklist_svc.progress(record)),
+                         "versions": [rep.checklist_dict(c) for c in call.safety_checklists.all()]})
+
+    @extend_schema(operation_id="v1_calls_safety_checklist_open", request=JSON, responses=JSON, summary="Open the checklist (ship or terminal); optional repeat_interval_h")
+    def post(self, request, reference):
+        call, actor = self.resolve(request, reference)
+        record = checklist_svc.open_checklist(call, actor, repeat_interval_h=request.data.get("repeat_interval_h"))
+        return Response(rep.checklist_dict(record, checklist_svc.rows(record, actor)), status=201)
+
+
+def _progress_json(progress: dict) -> dict:
+    data = {side: progress[side] for side in ("SHIP", "SHORE")}
+    data["agreements"] = progress["agreements"]
+    data["repetition_due"] = rep.dt(progress["due"])
+    return data
+
+
+class ChecklistActionView(CallAPIView):
+    @extend_schema(operation_id="v1_calls_safety_checklist_action", request=JSON, responses=JSON, summary="answer (items: [{item_code, state, value, remark, repetition}]) | sign (comment) | cancel (reason)")
+    def post(self, request, reference, action):
+        call, actor = self.resolve(request, reference)
+        record = checklist_svc.current(call)
+        if record is None:
+            raise NotVisible()
+        data = request.data
+        if action == "answer":
+            checklist_svc.answer_many(record, actor, list(data.get("items", [])))
+        elif action == "sign":
+            checklist_svc.sign(record, actor, comment=str(data.get("comment", "")))
+        elif action == "cancel":
+            checklist_svc.cancel(record, actor, str(data.get("reason", "")))
+        else:
+            raise NotVisible()
+        record.refresh_from_db()
+        return Response({"checklist": rep.checklist_dict(record, checklist_svc.rows(record, actor)),
+                         "progress": _progress_json(checklist_svc.progress(record))})
 
 
 # ============================================================================ disputes & correspondence
 class DisputeListView(CallAPIView):
+    scope = "contestations"
     audit_kind = "disputes"
 
     @extend_schema(responses=JSON, summary="Disputes")
@@ -545,6 +775,7 @@ class DisputeListView(CallAPIView):
 
 
 class DisputeActionView(CallAPIView):
+    scope = "contestations"
     @extend_schema(operation_id="disputes_action", request=JSON, responses=JSON, summary="respond | close (agreed true/false) — no 'reject' exists")
     def post(self, request, reference, dispute_id, action):
         call, actor = self.resolve(request, reference)
@@ -562,6 +793,7 @@ class DisputeActionView(CallAPIView):
 
 
 class ThreadListView(CallAPIView):
+    scope = "echanges"
     audit_kind = "threads"
 
     @extend_schema(responses=JSON, summary="Correspondence threads of the call")
@@ -585,6 +817,7 @@ class ThreadListView(CallAPIView):
 
 
 class ThreadMessageView(CallAPIView):
+    scope = "echanges"
     @extend_schema(request=JSON, responses=JSON, summary="Post a message in a thread")
     def post(self, request, reference, thread_id):
         call, actor = self.resolve(request, reference)
@@ -597,6 +830,7 @@ class ThreadMessageView(CallAPIView):
 
 # ============================================================================ journal, export, sync, field bundle
 class JournalView(CallAPIView):
+    scope = "journal"
     audit_kind = "journal"
 
     @extend_schema(responses=JSON, summary="Call journal (hash-chained), filtered by your roles")
@@ -663,6 +897,62 @@ class FieldBundleView(CallAPIView):
 
 
 # ============================================================================ dashboard, AIS, verification
+class BoardView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses=JSON, summary="Port call board: every declared call of the port (vessel, agency, area, state, times) — no operational data of other agencies' calls")
+    def get(self, request):
+        user = request.user
+        if getattr(user, "master", None) is not None or user.port is None:
+            raise NotVisible()
+        actor = port_actor(user)
+        if not rights.can_read_report(actor, "CALL_BOARD"):
+            raise NotVisible()
+        journal.audit(port=user.port, user=user, action="view", object_kind="board", detail="api", request=request._request)
+        results = []
+        for r in board_svc.rows(user.port, user):
+            results.append({"reference": r["call"].reference, "vessel": r["vessel"], "imo": r["imo"],
+                            "flag": r["flag"], "vessel_kind": r["vessel_kind"], "agency": r["agency"], "area": r["area"], "operations": r["operations"],
+                            "status": r["status_code"], "group": r["group"], "eta": rep.dt(r["eta"]), "etb": rep.dt(r["etb"]),
+                            "etd": rep.dt(r["etd"]), "ata": rep.dt(r["ata"]), "atb": rep.dt(r["atb"]), "atd": rep.dt(r["atd"]),
+                            "cargo": r["cargo"] or None, "quantity": r["quantity"] or None, "fal_filed": r["fal"], "manifest_filed": r["manifest"],
+                            "sts_partner": r["sts_partner"] or None, "party": r["link"]})
+        return Response({"results": results, "shows_cargo": user.port.board_shows_cargo})
+
+
+class BoardOccupationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses=JSON, summary="Berth occupation plan of a period (?start=YYYY-MM-DD&end=YYYY-MM-DD): the calls per berth, as the terminals' sheets")
+    def get(self, request):
+        from datetime import timedelta
+        from datetime import timezone as dt_timezone
+
+        from django.utils import timezone
+
+        user = request.user
+        if getattr(user, "master", None) is not None or user.port is None:
+            raise NotVisible()
+        actor = port_actor(user)
+        if not rights.can_read_report(actor, "CALL_BOARD"):
+            raise NotVisible()
+        now = timezone.now()
+        try:
+            start = datetime.strptime(request.query_params.get("start", ""), "%Y-%m-%d").replace(tzinfo=dt_timezone.utc)
+        except ValueError:
+            start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        try:
+            end = datetime.strptime(request.query_params.get("end", ""), "%Y-%m-%d").replace(hour=23, minute=59, tzinfo=dt_timezone.utc)
+        except ValueError:
+            end = (start + timedelta(days=45)).replace(day=1) - timedelta(minutes=1)
+        journal.audit(port=user.port, user=user, action="view", object_kind="board", detail="occupation-api", request=request._request)
+        rows = [{"area": r["area"], "reference": r["call"].reference, "vessel": r["vessel"], "operations": r["operations"], "agency": r["agency"],
+                 "trader": r["trader"] or None, "cargo": r["cargo"] or None, "quantity": r["quantity"] or None, "state": r["state"],
+                 "eta": rep.dt(r["eta"]), "etb": rep.dt(r["etb"]), "etd": rep.dt(r["etd"]), "party": r["link"]}
+                for r in board_svc.occupation(user.port, user, start, end)]
+        return Response({"start": rep.dt(start), "end": rep.dt(end), "results": rows})
+
+
 class DashboardView(APIView):
     permission_classes = [IsAuthenticated]
 

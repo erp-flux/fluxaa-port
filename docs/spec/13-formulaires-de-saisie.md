@@ -93,25 +93,94 @@ Sans champ. **Effets** : la session de lien est fermée, en-tête `Clear-Site-Da
 | `vessel` | Navire enregistré / Registered vessel | select | oui, sauf nouveau navire | `Vessel` du port | — |
 | `new_imo` | IMO | text `[0-9]{7}` | si nouveau navire | 7 chiffres, unique dans le port | — |
 | `new_name` | Nom / Name | text | si nouveau navire | mis en capitales | — |
-| `new_flag`, `new_type`, `new_dwt` | Pavillon, Type, DWT / Flag, Type, DWT | text, text, number ≥ 0 | non | `Vessel.full_clean()` | — |
+| `new_flag`, `new_kind`, `new_type`, `new_dwt` | Pavillon, Type de navire, Type (détail), DWT / Flag, Kind of vessel, Type, DWT | text, select, text, number ≥ 0 | non | `new_kind` parmi `VesselKind` (1.5 : TANKER_CRUDE, TANKER_PRODUCT, TANKER_CHEM, GAS, BULK, CONTAINER, GENERAL, RORO, REEFER, PASSENGER, OSV, TUG, NAVAL, FISHING, OTHER) ; `Vessel.full_clean()` | `TANKER_PRODUCT` |
+| `cargo_kind` | Nature de la cargaison / Kind of cargo (1.5) | radio | oui | `LIQUID` vrac liquide, `DRY` vrac sec, `CONTAINER`, `GENERAL` divers, `RORO`, `OTHER` (`CargoKind`) ; filtre les gabarits, les unités, les mesures et la liste de contrôle | `LIQUID` |
 | `kind` | Zone d'opération / Operating area | radio | oui | `JETTY` quai / appontement, `ANCHORAGE` rade, `SPM` bouée au large, `STS_AREA` zone STS (`Berth.Kind`) | — |
 | `requested_berth` | Poste ou zone demandé / Requested berth or area | select | non | `Berth` actif du port, de la nature `kind` | — |
-| `operations` | Opérations / Operations | cases | au moins une en pratique | codes des gabarits actifs de nature OPERATION (M1…M8) | — |
+| `operations` | Opérations / Operations | cases | au moins une en pratique | codes des gabarits actifs de nature OPERATION **de la nature de cargaison** (M1…M8 liquide ; MB1, MB2 vrac sec ; MC1 conteneurs ; MG1 divers ; MR1 roulier ; MX1 toute escale) — un gabarit d'une autre nature est refusé (`_check_templates`) | — |
 | `modules` | Modules complémentaires / Additional modules | cases | non | gabarits de nature MODULE (M9, MA2, MA3…) ; MA2 ajouté d'office pour SPM, MA3 pour rade et zone STS | — |
-| `linked_call` | Escale partenaire / Partner call | select | non | escale en cours de la même agence ; lien `STS` | — |
+| `linked_call` | Escale partenaire déjà annoncée / Partner call | select | non | escale en cours de la même agence ; lien `STS` | — |
+| `sts_role` | Rôle dans le transfert STS / Role in the STS transfer (1.5) | radio | si STS (M3 ou zone STS avec partenaire) | `DONOR` livre la cargaison, `RECEIVER` la reçoit (`StsRole`) ; le partenaire prend le rôle inverse | — |
+| `partner_vessel`, `partner_agency` | Navire partenaire (enregistré), Agence du navire partenaire (1.5) | select, select | non | `Vessel` du port autre que le navire annoncé ; agence du port (`allowed_roles` ∋ AGE) ou vide = la mienne ; **crée l'escale du partenaire** sous cette agence, avec l'agence annonçante en agence associée ; les deux champs sont **désactivés dès qu'une escale partenaire est choisie** (`linked_call` : elle a déjà son navire et son agence) | — |
+| `partner_agency_name`, `partner_agency_email` | *Son agence n'est pas dans la liste* : Nom de l'agence, E-mail de l'agence (1.6) | texte ≤ 200, e-mail | non | pour un navire sans escale encore, quand `partner_agency` est vide : l'agence est **enregistrée dans le port** (`calls.partner_agency` → `register_organization`, rôle AGE, nature *agence maritime / consignataire*) ou **retrouvée par son nom** si elle existe déjà ; l'escale du partenaire est créée sous elle ; si personne ne peut encore se connecter pour elle, **les administrateurs fonctionnels du port sont avertis** et l'agent annonçant le lit sur l'escale créée | — |
+| `partner_imo`, `partner_name`, `partner_flag`, `partner_kind`, `partner_dwt` | Enregistrer le navire partenaire (1.5) | text, text, text, select, number | IMO et nom si navire partenaire nouveau | mêmes règles que le navire annoncé | — |
 | `eta` | ETA | datetime-local | oui | heure du port | — |
+| `validity_days` | Validité de l'annonce (jours) / Validity of the announcement (days) (1.5) | number | oui | entier entre 1 et `Port.max_validity_days` (90) ; `valid_until` = création + validité ; conservée pour la facturation | `Port.default_validity_days` (15) |
 | `etb`, `ets`, `etc`, `etd` | ETB, Début / Fin des opérations (est.), ETD | datetime-local | non | heure du port | — |
-| `product` | Produit / Product | text | non | libre (ex. *Gasoil 10 ppm*) | — |
-| `quantity`, `quantity_unit` | Quantité déclarée, Unité / Declared quantity, Unit | number (3 décimales), select | non | `MT`, `M3`, `BBL` | `MT` |
+| `product` | Produit / nature de la cargaison / Product | text | non | libre (ex. *Gasoil 10 ppm*, *Clinker*, *Tcs/Tcs*, *Véhicules*) | — |
+| `quantity`, `quantity_unit` | Quantité déclarée, Unité / Declared quantity, Unit | number (3 décimales), select | non | `MT`, `M3` (@15 °C), `BBL`, `TEU` EVP, `BOX` boîtes, `MOVES` mouvements, `UNIT` unités, `M3B` m³ en vrac, `PAX` passagers (`QUANTITY_UNITS`, filtrées sur la nature par `UNITS_BY_CARGO`) | `MT` |
+| `planned_pump_hours`, `batch_reference` | Durée d'opération prévue (h), Référence de lot / de réservation | number (0,25), text ≤ 60 | non | alimentent le time sheet | — |
+| `expected_documents[]` | Documents facultatifs du catalogue du port / Optional documents (1.5) | cases | non | codes de `DocumentType` actifs non générés (sauf `OTHER`) ; chacun devient une tâche F non bloquante de son premier rôle émetteur (`request_documents`) | — |
+| `custom_doc_label[]`, `custom_doc_role[]`, `custom_doc_hours[]` | Autres documents (liste ouverte) : document, fourni par, heures avant l'ETA (1.5) | text ≤ 200, select, number ≥ 0 | libellé pour qu'une ligne compte | rôle parmi `DOC_ROLES` (AGE, NAV, TER, INS, COM, PRE, SVC, CAP, APO, ADM, SUR) ; type `OTHER`, échéance ETA − heures | 24 h |
 | `voyage`, `last_port`, `next_port` | Voyage, Dernier port, Prochain port | text | non | libres | — |
-| `party_role[]` | Rôle / Role | select, une par ligne | — | `TER`, `INS`, `COM`, `PRE`, `SVC` (`AGENCY_INVITABLE_ROLES`) | trois lignes TER, INS, PRE |
+| `party_role[]` | Rôle / Role | select, une par ligne | — | `TER`, `INS`, `COM`, `PRE`, `SVC`, `AGE` agence associée (`AGENCY_INVITABLE_ROLES`, 1.5) | trois lignes TER, INS, PRE |
 | `party_org[]` | Organisation enregistrée / Registered organisation | select | — | id d'une `Organization` active du port portant le rôle, `new` = nouvelle, vide = ligne ignorée | — |
 | `party_name[]` | Nouvelle organisation : nom / New organisation: name | text ≤ 200 | si `new` | ≥ 2 caractères après réduction des espaces ; un nom existant (sans casse) réutilise l'organisation si elle porte le rôle | — |
 | `party_kind[]` | Nature (suggérée ou libre) / Kind | text ≤ 80, datalist `kinds-<rôle>` | non | `normalize_kind` : libellé FR ou EN connu → code `PARTY_KINDS`, sinon conservé | — |
 | `party_email[]`, `party_phone[]` | Courriel, Téléphone / E-mail, Phone | email, text ≤ 40 | non | courriel en minuscules | — |
+| `party_access[]` | Accès au dossier / Access to the file (1.5) | select | — | `FULL`, `READ`, ou `PARTIAL:<onglets>` parmi les accès prédéfinis (`ACCESS_PRESETS` : tâches et documents ; aperçu, jalons, journal ; mesures et documents ; demandes et tâches ; aperçu, tâches, demandes, documents) — `parse_access` | `FULL` |
 | `party_<ROLE>` | (anciens champs) | hidden | non | un id d'organisation par rôle, encore accepté | — |
+| `op_<MODÈLE>_<clé>` | les questions du modèle d'opération / what the port asks for this operation (1.6) | selon `intake_schema` : text, textarea, number, integer, datetime-local, checkbox, select | selon la fiche, **seulement si le modèle est coché** | typées et validées par `intake.parse_intake` ; refus *\<Modèle> — \<question> est obligatoire pour cette opération*, *… : un nombre est attendu*, *… : choisissez l'une des options proposées* ; gardées dans `operation_details[<MODÈLE>]` | — |
+| `linked_call` (1.6) | Escale partenaire déjà annoncée | select à deux groupes | l'un des trois si M3 | *Mes escales* (brouillon ou active) → lien réciproque ; *Escales du port — autres agences (conférence de placement)* : escales actives non brouillon en rade ou en zone STS → **lien à sens unique**, agence, capitaine et capitainerie de l'escale désignée avertis, rôle STS inverse pris d'office, confirmé par l'autorisation `STS_ZONE` | — |
+| `db_position` | Accostage à couple : ce navire vient à couple (extérieur) / est à quai et reçoit l'autre (intérieur) (1.6) | radio | si M9 | `OUTER`, `INNER` → `link_kind` de l'escale annoncée, position inverse sur l'autre | `OUTER` |
+| `db_partner_call` | L'autre navire : une escale du port (1.6) | select | l'un des trois si M9 | escale active non brouillon, à quai ou attendue à quai, **de toute agence** (conférence de placement) ; même agence ou capitainerie : lien réciproque ; autre agence : lien à sens unique jusqu'à l'autorisation d'accostage à couple | — |
+| `db_partner_vessel` | Ou un navire enregistré sans escale encore (1.6) | select | l'un des trois si M9 | `Vessel` du port autre que le navire annoncé ; **crée l'escale de l'autre navire** (`_create_db_partner`) | — |
+| `db_imo`, `db_name`, `db_flag`, `db_kind`, `db_dwt` | Ou enregistrer l'autre navire (1.6) | text, text, text, select, number | IMO et nom si navire nouveau | mêmes règles que le navire annoncé | — |
+| `db_partner_agency` | Agence de l'autre navire (1.6) | select | non | agence du port ou vide = la mienne ; pour un navire sans escale ; l'agence annonçante devient agence associée de l'escale créée ; désactivé, comme `db_partner_vessel`, dès qu'une escale du port est choisie (`db_partner_call`) | — |
+| `db_agency_name`, `db_agency_email` | *Son agence n'est pas dans la liste* : Nom de l'agence, E-mail de l'agence (1.6) | texte ≤ 200, e-mail | non | mêmes règles que `partner_agency_name` / `partner_agency_email` : agence enregistrée ou retrouvée par son nom, escale de l'autre navire créée sous elle, administrateurs du port avertis si elle n'a pas de compte | — |
 
-**Effets** : `PortCall` en brouillon (`DRAFT`) avec la référence `<PORT>-<année>-<nnnn>`, les gabarits pris à leur version publiée (`CallTemplateUse`), l'étape 1 (`CallStage`), les parties (AGE, parties par défaut du port, parties nommées), toutes les tâches instanciées (`instantiate_tasks`), les organisations nouvelles créées (`organization.created`), le lien réciproque sur l'escale partenaire ; journal `call.created` ; les tâches `auto_event=call.created` sont closes par la plateforme ; message *Escale \<réf> créée en brouillon…*. **Refus** : *Seule une agence maritime peut créer une escale* ; *Choisissez un navire ou enregistrez-en un nouveau* ; *Ce navire n'est pas enregistré dans ce port* ; *Le poste demandé ne correspond pas à la zone d'opération* ; *L'escale partenaire appartient à un autre port* ; *Escale partenaire introuvable parmi vos escales…* ; *Nommez l'organisation que vous invitez* ; *… est enregistrée dans le port sans le rôle …* ; *… existe mais est inactive* ; combinaison de gabarits invalide (`_check_templates`).
+**Effets** : `PortCall` en brouillon (`DRAFT`) avec la référence `<PORT>-<année>-<nnnn>`, sa nature de cargaison, sa validité (`valid_until`), les gabarits pris à leur version publiée (`CallTemplateUse`), l'étape 1 (`CallStage`), les parties (AGE agent principal, parties par défaut du port, parties nommées avec leur accès), toutes les tâches instanciées pour la nature de cargaison (`instantiate_tasks`), les tâches documentaires demandées (`D1`, `D2`…, `requested_at_creation`), les organisations nouvelles créées (`organization.created`), le lien réciproque sur l'escale partenaire — créée dans le même acte pour un STS avec navire partenaire (`_create_sts_partner` : zone STS, M3 + MA3, rôle inverse, agence nommée, agence annonçante en agence associée) ; journal `call.created` ; les tâches `auto_event=call.created` sont closes par la plateforme ; message *Escale \<réf> créée en brouillon…*. Depuis la 1.6 : les réponses aux questions des modèles (`operation_details`) et, pour un accostage à couple, le lien avec l'autre escale (réciproque ou à sens unique selon l'agence) ou l'escale de l'autre navire créée dans le même acte ; message *Liée à \<réf> pour l'accostage à couple : l'accord exprès du navire intérieur est requis avant l'autorisation* ou *\<réf> relève d'une autre agence : elle en est avertie…* ; avertissement *\<poste> est tenu ou attendu sur la même fenêtre par …* quand le poste demandé est occupé sans M9. **Refus** : *Seule une agence maritime peut créer une escale* ; *Choisissez un navire ou enregistrez-en un nouveau* ; *Ce navire n'est pas enregistré dans ce port* ; *Le poste demandé ne correspond pas à la zone d'opération* ; *L'escale partenaire appartient à un autre port* ; *Escale partenaire introuvable parmi vos escales…* ; *Nommez l'organisation que vous invitez* ; *… est enregistrée dans le port sans le rôle …* ; *… existe mais est inactive* ; combinaison de gabarits invalide (`_check_templates`) ; *Le gabarit … ne s'applique pas à cette nature de cargaison* ; *La validité de l'annonce est comprise entre 1 et n jours pour ce port* ; *Nature de cargaison inconnue* ; *Un navire livre la cargaison et l'autre la reçoit* ; *Le navire partenaire est un autre navire* ; *L'agence du navire partenaire doit être une agence de ce port* ; *Un accès partiel nomme au moins un onglet du dossier* ; 1.6 : *Un accostage à couple nomme l'autre navire : une escale du port, un navire enregistré ou un navire nouveau* ; *Dans un accostage à couple, ce navire est soit à l'extérieur, soit à l'intérieur* ; *Une seule escale partenaire à la fois* ; *\<Modèle> — \<question> est obligatoire pour cette opération*.
+
+### Occupation du poste demandé — `GET /escales/nouvelle/occupation/` (`views.berth_occupation`, fragment HTMX) — AGE — 1.6
+
+| Champ | Type | Règle |
+| --- | --- | --- |
+| `requested_berth`, `eta`, `etb`, `etd` | ceux du formulaire d'annonce (`hx-include`) | rechargé à chaque changement du poste ou des heures (`hx-trigger`) |
+| `vessel`, ou `new_imo`, `new_name`, `new_dwt` ; `cargo_kind` | ceux du formulaire d'annonce (1.6) | le navire choisi (ses caractéristiques enregistrées) ou le navire nouveau (son DWT seul) est lu contre les limites d'acceptation du poste (`forms/cargo.vetting_rows_for`) ; la nature de cargaison contre les natures reçues par le poste (`Berth.cargo_kinds`) |
+
+**Effets** : aucun (lecture) ; la réponse liste les escales actives qui tiennent ou attendent le poste sur la fenêtre (navire, référence, agence, état, à quai depuis / ETB, ETD) et propose un autre poste, d'autres heures ou un accostage à couple ; puis (1.6) le bloc *Le navire au regard des limites d'acceptation du poste* — avis et lignes évaluables (✓ / ✗ / !) — ou la mention que les caractéristiques ou les limites ne sont pas renseignées, et l'avertissement *ce poste reçoit : … — pas la nature de cargaison choisie* ; vide hors agence.
+
+**Parties proposées par l'opération** (1.6, sans champ propre) : sous la légende des parties, la liste `[data-party-hints]` montre pour chaque modèle coché les parties qu'il appelle (`PARTIES_BY_OPERATION`) ; le bouton *Ajouter* d'une ligne crée une ligne de partie (`party_role` présélectionné, `party_kind` prérempli pour une organisation nouvelle) — le reste de la ligne (organisation enregistrée ou nouvelle, accès) se renseigne comme toute autre partie.
+
+### Refaire l'annonce — `renew` (`calls.renew_call`) — agent principal — 1.5
+
+Sans champ (confirmation). **Préalables** : escale obsolète (`EXPIRED`), annulée ou rejetée ; aucune reprise encore active. **Effets** : nouvelle `PortCall` en brouillon — même navire, zone, poste demandé, opérations, modules, cargaison, quantité et unité, durée prévue, lot, voyage, rôle STS, parties et accès ; même validité en jours, comptée depuis la reprise ; `renewed_from` ; journal `call.renewed` sur l'escale refaite et `call.created` sur la nouvelle ; message *Annonce refaite : nouvelle escale \<réf> créée en brouillon (validité n jours)* ; redirection vers la nouvelle escale. **Refus** : *L'agent principal refait l'annonce de l'escale* ; *Seule une annonce obsolète, annulée ou rejetée est refaite* ; *Cette annonce a déjà été refaite*.
+
+### Fixer l'accès d'une partie — `party_access` (`calls.set_party_access`) — agent principal, CAP — 1.5
+
+| Champ | Libellé | Type | Obligatoire | Valeurs, validation |
+| --- | --- | --- | --- | --- |
+| `party_id` | — | hidden | oui | `CallParty` active de l'escale, ni partie par défaut ni agent principal |
+| `access` | Accès complet / Accès partiel — les onglets cochés / Lecture seule | radio | oui | `FULL`, `PARTIAL`, `READ` (`CallParty.Access`) |
+| `scopes[]` | onglets | cases | si `PARTIAL` (au moins un) | `apercu`, `parties`, `taches`, `demandes`, `jalons`, `documents`, `mesures`, `contestations`, `echanges`, `journal` (`SCOPES`) |
+
+**Effets** : `access`, `scopes`, `access_set_by`, `access_set_at` ; journal `party.access` ; partie notifiée ; message *Accès de \<organisation> fixé : …*. **Refus** : *L'agent principal ou la capitainerie fixe l'accès d'une partie* ; *L'agent principal et les parties propres du port gardent leur accès complet* ; *Accès inconnu* ; *Un accès partiel nomme au moins un onglet du dossier*.
+
+### Retirer un feu vert — `green_withdraw` (`tasks.withdraw_green_light`) — la partie qui l'a donné, CAP — 1.5
+
+| Champ | Libellé | Type | Obligatoire | Valeurs |
+| --- | --- | --- | --- | --- |
+| `task_id` | — | hidden | oui | tâche `green_light` faite de l'escale |
+| `reason` | Motif (obligatoire, communiqué à toutes les parties concernées) | text | oui | libre |
+
+**Effets** : la tâche repasse `PENDING` avec la note *retiré par \<rôle> : \<motif>* ; les points d'arrêt qu'elle garde se referment ; journal `task.green_light_withdrawn` ; notification temps réel à AGE, CAP, NAV, TER, APO (*FEU VERT RETIRÉ par … — motif*) ; message *Feu vert retiré : toutes les parties concernées en sont informées*. **Refus** : *Seul un feu vert peut être retiré* ; *Ce feu vert est une décision sur une demande : il se retire en annulant l'autorisation* ; *Ce feu vert n'a pas été donné* ; *Un motif est requis*.
+
+### Demander d'autres documents — `documents_request` (`tasks.request_documents`) — AGE, CAP — 1.5
+
+| Champ | Libellé | Type | Obligatoire | Valeurs |
+| --- | --- | --- | --- | --- |
+| `document_types[]` | Documents du catalogue | cases | — | codes de `DocumentType` actifs non générés |
+| `custom_label`, `custom_role`, `custom_hours` | Autre document : libellé, fourni par, heures avant l'ETA | text, select, number | libellé pour compter | rôle parmi `DOC_ROLES` ; type `OTHER` |
+
+**Effets** : une tâche F non bloquante par document (`D<n>`, `requested_at_creation`, échéance ETA − heures), journal `documents.requested`, partie notifiée ; message *n document(s) désormais attendu(s) sur l'escale*. **Refus** : *Rôle inconnu pour un document* ; escale close.
+
+### Relancer une partie — `remind` (`preparation.remind`) — AGE, CAP — 1.4
+
+| Champ | Libellé | Type | Obligatoire | Valeurs, validation | Défaut |
+| --- | --- | --- | --- | --- | --- |
+| `task_id` | — | hidden | oui | une tâche en attente de l'escale, visible du rôle (encadré *Avant la déclaration*, encadré de refus) | — |
+
+**Effets** : notification temps réel aux comptes des rôles de la tâche (jamais au rôle de qui relance) ; pour une tâche du navire, courriel de rappel à l'adresse de l'accès capitaine (`preparation.send_task_reminder`) ; journal `task.reminded` (AGE, CAP, rôles de la tâche) ; message *Relance envoyée (n destinataire(s)) et consignée au journal* ; la dernière relance s'affiche sous l'élément. **Refus** : *L'agence ou la capitainerie envoie les relances* ; *Cette tâche n'est pas en attente* ; *Le capitaine n'a pas d'accès valide : remettez-le depuis l'onglet Parties…* ; *L'accès du capitaine a été remis sans adresse de courriel : relancez-le par le canal de remise (…)*.
 
 ### Déclarer l'escale — `declare` (`calls.declare_call`) — AGE
 
@@ -153,8 +222,9 @@ Sans champ. **`close_request`** (`confirm_closure`, tâche M0:39 côté agence) 
 | `role` | Rôle / Role | select | oui | rôles invitables par l'acteur |
 | `organization` | Organisation enregistrée / Registered organisation | select | oui ou `new` | id d'une organisation active du port portant le rôle (`allowed_roles`), ou `new` |
 | `party_name`, `party_kind`, `party_email`, `party_phone` | Nouvelle organisation : nom, nature, courriel, téléphone | text, text (datalist), email, text | nom si `new` | mêmes règles qu'à l'annonce |
+| `access` | Accès au dossier (1.5) | select | non | `FULL`, `READ`, `PARTIAL:<onglets>` (`ACCESS_PRESETS`) ; agent principal et CAP seulement, `FULL` sinon |
 
-**Effets** : organisation créée le cas échéant (`organization.created`) ; `CallParty` (réutilisé s'il existe déjà actif) ; journal `party.granted` ; si l'escale n'est plus en brouillon : notification *Vous êtes invité sur l'escale…* et convocation (lien d'accès émis pour une partie sans compte) ; les ordres de service en attente de prestataire lui sont attribués s'il est seul de son rôle (`assign_pending_providers`). **Refus** : *L'escale est close* ; *Cette organisation n'est pas active dans ce port* ; *… n'est pas habilitée au rôle …* ; *L'agence n'invite que les terminaux, inspecteurs, armateurs / affréteurs, prestataires et services nautiques* ; *Nommez l'organisation que vous invitez*.
+**Effets** : organisation créée le cas échéant (`organization.created`) ; `CallParty` (réutilisé s'il existe déjà actif) avec son accès ; journal `party.granted` ; si l'escale n'est plus en brouillon : notification *Vous êtes invité sur l'escale…* et convocation (lien d'accès émis pour une partie sans compte) ; les ordres de service en attente de prestataire lui sont attribués s'il est seul de son rôle (`assign_pending_providers`). **Refus** : *L'escale est close* ; *Cette organisation n'est pas active dans ce port* ; *… n'est pas habilitée au rôle …* ; *L'agence ne peut inviter que des terminaux, des inspecteurs, des armateurs/affréteurs, des prestataires, des services nautiques et des agences associées* ; *Cette agence est l'agent principal de l'escale* ; *Nommez l'organisation que vous invitez*.
 
 ### Désigner pour la terre, révoquer un rôle — `party_shore`, `party_revoke` — AGE, CAP
 
@@ -172,9 +242,10 @@ Sans champ. **`close_request`** (`confirm_closure`, tâche M0:39 côté agence) 
 | `master_name` | Nom du capitaine / Master's name | text | oui | la signature est nominative | — |
 | `channel` | Remis par / Handed over by | select | oui | `EMAIL`, `QR`, `PRINT`, `SMS`, `OTHER` | `EMAIL` |
 | `vessel_position` | Navire / Vessel | select | oui | `OWN` ce navire, `INNER` navire intérieur (accostage à couple) | `OWN` |
+| `send_to` (1.4) | Courriel du capitaine (facultatif) / Master's e-mail | email | non | adresse à laquelle la plateforme envoie l'accès avec la liste de ce que le port attend du navire (tâches NAV en attente et échéances) | — |
 | `note` | Note de remise / Delivery note | text | non | libre | — |
 
-**Effets** : `MasterAccessLink` rôle NAV (jeton et code stockés par empreinte), expiration = ETD + `master_link_grace_hours` du port, plafonnée à `master_link_max_days` ; lien, code et QR affichés **une seule fois** (session `fluxaa_new_master_link`) ; journal `master_link.issued` (AGE, CAP). **Refus** : *Le lien d'accès est émis par l'agence* ; *Le nom du capitaine est requis…* ; *L'escale est close* ; *L'expiration doit être dans le futur*.
+**Effets** : `MasterAccessLink` rôle NAV (jeton et code stockés par empreinte ; `sent_to` = l'adresse), expiration = ETD + `master_link_grace_hours` du port, plafonnée à `master_link_max_days` ; lien, code et QR affichés **une seule fois** (session `fluxaa_new_master_link`) ; journal `master_link.issued` (AGE, CAP) ; avec une adresse : courriel « votre accès capitaine » (`preparation.access_mail`) et journal `master_link.sent`. **Refus** : *Le lien d'accès est émis par l'agence* ; *Le nom du capitaine est requis…* ; *L'escale est close* ; *L'expiration doit être dans le futur*.
 
 ### Accès d'une partie sans compte — `party_link` (`calls.issue_party_link`) — AGE, CAP
 
@@ -215,7 +286,9 @@ Sans champ. **`close_request`** (`confirm_closure`, tâche M0:39 côté agence) 
 | `task_id` | — | hidden | oui | tâche de l'escale visible du rôle |
 | `note` | Note (facultatif) / Note (optional) | text | non | libre, gardée comme `completion_note` |
 
-**Effets** : tâche `DONE` avec l'heure, le rôle et la personne (`completed_by`, nom du titulaire de lien le cas échéant) ; journal `task.completed` ; l'alerte en cours s'éteint ; un point d'arrêt qui l'attendait s'ouvre. **Refus** : *Cette tâche n'est pas affectée à votre rôle* ; *Cette tâche est déjà close* ; *L'escale est close* ; *Les armateurs et affréteurs n'ont pas de droit de saisie…* (COM fournit des documents) ; *Cette tâche exige la signature de chaque partie : utilisez « Signer »* ; *Cette tâche se réalise par sa demande (…)* ; *… par l'enregistrement de ses jalons* ; *… en fournissant le document attendu* — une tâche liée à un objet ne se clot que par cet objet.
+Depuis la 1.5, chaque tâche en attente de la personne porte sur sa ligne de l'onglet Tâches le formulaire qui l'exécute (`_task_execute.html`) : `document_upload` (fichier, titre ; type et tâche imposés), `request_create` (les champs du type), `request_decide` (une demande en attente), `milestone` (type et heure), ou ce `task_complete` ; les mêmes actions que les onglets de l'objet, avec un retour sur l'onglet Tâches (`back`). Un **feu vert** (`Task.green_light`) se donne par ce `task_complete` depuis le panneau de l'aperçu ou la ligne de tâche — COM y est admis.
+
+**Effets** : tâche `DONE` avec l'heure, le rôle et la personne (`completed_by`, nom du titulaire de lien le cas échéant) ; journal `task.completed` ; l'alerte en cours s'éteint ; un point d'arrêt qui l'attendait s'ouvre ; pour un feu vert, notification temps réel *feu vert donné par …* à AGE, CAP, NAV, TER, APO. **Refus** : *Cette tâche n'est pas affectée à votre rôle* ; *Cette tâche est déjà close* ; *L'escale est close* ; *Les armateurs et affréteurs n'ont pas de droit de saisie…* (COM fournit des documents — sauf son feu vert) ; *Votre accès à cette escale est en lecture seule…* / *… ne couvre pas cette partie du dossier* (1.5) ; *Cette tâche exige la signature de chaque partie : utilisez « Signer »* ; *Cette tâche se réalise par sa demande (…)* ; *… par l'enregistrement de ses jalons* ; *… en fournissant le document attendu* — une tâche liée à un objet ne se clot que par cet objet.
 
 ### Signer une tâche conjointe — `task_sign` (`tasks.sign_task`) — chaque rôle signataire (rôle + cosignataires)
 
@@ -352,6 +425,7 @@ Sans formulaire : une autorisation échue passe la demande à `EXPIRED` (journal
 | `counterpart_role` | Contrepartie (N3) / Counterpart | select | si `N3` | AGE, NAV, TER, COM, INS, CAP ; à défaut, premier `audience_roles` du type | — |
 | `file` | Fichier / File | file | oui | extensions `.pdf .png .jpg .jpeg .webp .heic .tif .tiff .doc .docx .xls .xlsx .csv .txt .eml .msg .html .xml .json .zip` ; taille ≤ `FLUXAA_MAX_UPLOAD_MB` (25 Mo) ; non vide ; type MIME reconnu sur les premiers octets pour PDF, PNG, JPEG, WebP (un fichier qui prétend l'être sans l'être est stocké en octets bruts, téléchargement seulement) | — |
 | `previous_id` | *Nouvelle version* (bouton du document) | hidden | non | document `ISSUED` ou `SIGNED` de la même escale et du même type, non généré, dont la personne est l'émetteur | — |
+| (ligne de tâche, 1.5) | *Fournir le document* sur l'onglet Tâches | `task_id` et `type` cachés, `file`, `title` | — | le type est celui que la tâche attend ; un document demandé à l'annonce sous un libellé libre attend le type `OTHER` | — |
 
 **Effets** : `Document` en statut `ISSUED`, version 1 (ou version du précédent + 1, le précédent passant `REPLACED`), empreinte SHA-256, taille, type MIME, `issuer_role` / `issuer_org` / `issuer_user` ou `issuer_master`, `required_signers` = `signer_roles` du type, lecteurs N2 (`audience_roles` du type et du document), `retention_until` = aujourd'hui + `retention_years` du type ; journal `document.issued` (visible des lecteurs du document) ; la tâche désignée — ou l'unique tâche en attente de ce type pour le rôle émetteur — est close par le dépôt (`system_complete`, preuve `document:<id>`) ; si le type exige des signatures, la tâche attend la dernière signature et les signataires sont notifiés (clé `document:<id>:sign`). Un type `is_bill_of_lading` passe par le verrou `BL_ISSUE` (`holdpoints.check`) : refus `LockRefused` journalisé `holdpoint.refused`. Depuis l'application de terrain, le dépôt porte `client_uuid` (idempotent) et `deferred` (saisie différée). **Refus** : *Choisissez un fichier* ; *Type de document inconnu* ; *L'escale est close* ; *Ce document est généré depuis le registre, jamais déposé (EF-7.3)* ; *Les documents N4 sont déposés dans l'espace sûreté seulement* ; *Un document bilatéral (N3) nomme sa contrepartie* ; *Type de fichier non accepté (…)* ; *Fichier trop volumineux (max 25 Mo)* ; *Le fichier est vide* ; *La tâche … attend un autre document : …* ; *La tâche … n'est pas accomplie par la fourniture d'un document* ; *Cette tâche est déjà close* ; *Une nouvelle version concerne la même escale et le même type* ; *Seul un document émis ou signé peut être remplacé* ; *Seul l'émetteur publie une nouvelle version* ; refus du verrou du connaissement.
 
@@ -377,7 +451,7 @@ Sans formulaire : une autorisation échue passe la demande à `EXPIRED` (journal
 
 Sans formulaire. Chaque consultation est inscrite au journal d'accès (`download`). Affichage dans le navigateur (`?inline=1`) pour les PDF et images reconnus sur leur contenu et pour les documents HTML générés par la plateforme (rapport des faits, formulaires), sous `Content-Security-Policy: sandbox` ; tout fichier envoyé par une partie est sinon servi en `application/octet-stream` (téléchargement), jamais rendu comme une page du site. Lecteurs : N1 toutes les parties, N2 superviseurs (`AGE`, `CAP`, `DIR`) + `COM` + émetteur + signataires + `audience_roles`, N3 émetteur et contrepartie ; un prestataire (`PRE`) ne lit que ses propres pièces N1.
 
-### Ouvrir une mesure — `measurement_open` (`measurements.create_measurement`) — INS, TER, NAV
+### Ouvrir une mesure — `measurement_open` (`measurements.create_measurement`) — INS, TER, NAV (natures depuis la 1.5 : jaugeage initial / final, draft survey initial / final, pesée à terre, pointage ; unités `QUANTITY_UNITS`)
 
 | Champ | Libellé | Type | Obligatoire | Valeurs, validation | Défaut |
 | --- | --- | --- | --- | --- | --- |
@@ -403,14 +477,78 @@ Sans formulaire. Chaque consultation est inscrite au journal d'accès (`download
 
 | Champ | Libellé | Type | Obligatoire | Valeurs, validation | Défaut |
 | --- | --- | --- | --- | --- | --- |
+| `sheet_id` (1.4) | Feuille (citerne) / Sheet (tank) | select | non | une feuille ouverte du côté ; sans valeur, la feuille ouverte du côté la plus récente (appli terrain) | la première |
 | `declared_at` | Heure / Time | datetime-local (`data-default-now`) | non | heure du port | maintenant |
 | `pressure_bar` | bar | text décimal | non | pression au collecteur | — |
-| `rate_m3h` | m³/h | text décimal | non | débit | — |
+| `level_mm` (1.4) | Niveau (mm) / Level | text décimal | non | niveau (dip) ou creux de la citerne | — |
 | `temperature_c` | °C | text décimal | non | température | — |
-| `note` (API) | Note | text | non | libre | — |
-| `device_id`, `automatic` (API) | — | — | non | relevé instrumenté : source `AUTOMATIC`, identifiant de l'appareil ; `client_uuid` idempotent | — |
+| `hourly_m3` (1.4) | Transféré depuis le précédent (m³) / Moved since previous | text décimal | non | vide → \|niveau − niveau précédent (ou de départ)\| / 1000 × barème de la feuille | calculé |
+| `cumulative_m3` (1.4) | Cumul (m³) / Cumulated | text décimal | non | vide → cumul précédent + transféré ; cumul (t) = cumul × densité × VCF | calculé |
+| `rate_m3h` | m³/h | text décimal | non | débit ; vide → transféré ÷ heures depuis le relevé précédent | calculé |
+| `note` | Remarque / Remark | text (300) | non | libre (début du déchargement, changement de bac…) | — |
+| `tank`, `device_id`, `automatic` (API) | — | — | non | citerne ; relevé instrumenté : source `AUTOMATIC`, identifiant de l'appareil ; `client_uuid` idempotent | — |
 
-**Effets** : `PumpingLogEntry` (`recorded_at`, rôle, auteur, `deferred` si saisie différée), journal `pumping.entry` ; le tableau de l'onglet Mesures affiche la chaîne des relevés avec les mentions *automatique* et *différé*. **Refus** : *L'escale est close* ; *« … » doit être un nombre*.
+**Effets** : `PumpingLogEntry` (`recorded_at`, rôle, auteur, côté par la feuille, `deferred` si saisie différée), journal `pumping.entry` ; la ligne est appariée au relevé de l'autre bord déclaré à moins de 45 minutes (`compare_sides`) et l'écart terre − bord horaire ou cumulé au-delà de la tolérance du port crée une alerte `QUANTITY` et une notification temps réel aux lecteurs du journal (*arrêt pour investigation*) ; notification groupée *relevés en cours* (une par côté et fenêtre de six heures). **Refus** : *L'escale est close* ; *« … » doit être un nombre* ; *Les relevés du bord sont saisis par le navire, ceux de la terre par le terminal* ; *Les relevés de la terre sont saisis par le terminal qui parle au nom du côté terre* ; *Cette feuille est terminée* ; *Cette feuille appartient à une autre escale*.
+
+### Ouvrir une feuille de journal de pompage — `sheet_open` (`measurements.open_pumping_sheet`) — NAV (feuille bord), TER parlant pour la terre (feuille terre) — 1.4
+
+| Champ | Libellé | Type | Obligatoire | Valeurs, validation | Défaut |
+| --- | --- | --- | --- | --- | --- |
+| `tank` | Citerne / bac — Tank | text (40) | non | bac à terre ou citernes du navire concernés | — |
+| `product` | Produit / Product | text | non | — | produit de l'escale |
+| `start_level_mm`, `expected_stop_level_mm` | Niveau de départ, niveau d'arrêt prévu (mm) | text décimal | non | — | — |
+| `m3_per_metre` | m³/m | text décimal | non | barème : volume par mètre de niveau | — |
+| `density`, `vcf` | Densité (t/m³), VCF | text décimal | non | — | — |
+| `planned_quantity_m3`, `planned_quantity_mt` | Prévu (m³), prévu (t) | text décimal | non | t vide → m³ × densité × VCF | calculé |
+| `expected_rate_m3h`, `expected_pressure_bar` | Débit attendu (m³/h), pression attendue (bar) | text décimal | non | — | — |
+| `estimated_start`, `estimated_completion` | Début estimé, fin estimée | datetime-local | non | heure du port | — |
+
+**Effets** : `PumpingLogSheet` (côté selon le rôle, auteur), journal `pumping.sheet`, notification aux lecteurs du journal. **Refus** : rôle sans côté (*Les relevés du bord sont saisis par le navire…*) ; terminal qui ne parle pas pour la terre ; escale close.
+
+### Terminer une feuille — `sheet_close` (`measurements.close_pumping_sheet`) — le côté de la feuille — 1.4
+
+| Champ | Libellé | Type | Obligatoire | Valeurs, validation | Défaut |
+| --- | --- | --- | --- | --- | --- |
+| `sheet_id` | — | hidden | oui | une feuille de l'escale, du côté de la personne | — |
+| `actual_stop_level_mm`, `final_volume_m3` | Niveau d'arrêt réel (mm), volume final (m³) | text décimal | non | volume final vide → dernier cumul de la feuille | calculé |
+| `note` (API) | Note | text | non | ajoutée à la note de la feuille | — |
+
+**Effets** : `closed_at`, journal `pumping.sheet_closed` ; la feuille n'accepte plus de relevé. **Refus** : *Cette feuille est déjà terminée* ; côté ou escale close.
+
+### Relever une citerne — `tank_reading` (`measurements.add_tank_reading`) — NAV (citernes du navire), TER parlant pour la terre (bacs du terminal) — 1.4
+
+| Champ | Libellé | Type | Obligatoire | Valeurs, validation | Défaut |
+| --- | --- | --- | --- | --- | --- |
+| `measurement_id` | — | hidden | oui | une mesure de l'escale | — |
+| `tank` | Citerne / bac — Tank | text (40) | oui | nom de la citerne (3P) ou du bac (TK-101) | — |
+| `level_mm`, `temperature_c`, `free_water_mm`, `density`, `tov_m3`, `gov_m3`, `vcf`, `gsv_m3`, `weight_mt` | creux / innage (mm), °C, eau libre (mm), densité à 15 °C, TOV, GOV, VCF, GSV (m³), masse (t) | text décimal | au moins une valeur | GSV vide → GOV × VCF ; masse vide → GSV × densité (API MPMS ch. 12) | calculé |
+| `declared_at` | Heure du relevé / Time of the reading | datetime-local (`data-default-now`) | non | heure du port | maintenant |
+| `note` | Note | text (300) | non | libre | — |
+| `supersedes` | — | hidden | non | relevé du même côté et de la même mesure que celui-ci corrige (bouton *Corriger*) | — |
+| `side` (API) | — | — | non | `SHIP` ou `SHORE` ; déduit du rôle sinon | selon le rôle |
+
+**Effets** : `TankReading` scellé, état *en attente de l'inspecteur*, visible de son côté et de l'inspecteur seulement ; journal `tank.reading` (rôle, INS) ; notification temps réel à l'inspecteur (une par mesure, côté et heure). **Refus** : *Nommez la citerne ou le bac* ; *Saisissez au moins une valeur* ; *Une correction porte sur un relevé de la même partie* ; rôle qui n'est pas le côté ; escale close.
+
+### Valider ou rejeter un relevé — `tank_review` (`measurements.review_tank_reading`) — INS — 1.4
+
+| Champ | Libellé | Type | Obligatoire | Valeurs, validation | Défaut |
+| --- | --- | --- | --- | --- | --- |
+| `reading_id` | — | hidden | oui | un relevé visible de l'inspecteur, en attente, non remplacé | — |
+| `decision` | Valider / Rejeter — Validate / Reject | hidden (`validate`, `reject`) | oui | — | — |
+| `note` | Motif / Reason | text (300) | pour un rejet | libre | — |
+
+**Effets** : `TankReadingReview` scellé ; validé → journal `tank.validated` (lecteurs des mesures), relevé visible de tous les lecteurs, total des citernes validées mis à jour, notification groupée aux lecteurs ; rejeté → journal `tank.rejected` (côté, INS), notification temps réel au côté et à l'agence, le côté enregistre un relevé corrigé. **Refus** : *Les relevés de citernes sont validés par l'inspecteur* ; *Ce relevé a déjà été examiné* ; *Ce relevé a été corrigé : examinez le dernier relevé* ; *Un rejet indique son motif*.
+
+### Liste de contrôle de sécurité en ligne — `checklist_open`, `checklist_answer`, `checklist_sign`, `checklist_cancel` (`services/checklist`) — NAV et TER parlant pour la terre ; annulation AGE, CAP — 1.4 (page `/escales/<id>/liste-de-controle/`) ; référentiel selon la nature de cargaison depuis la 1.5 (`SafetyChecklist.standard` : SSSCL, BLU, CARGO)
+
+| Action | Champs | Validation | Effets |
+| --- | --- | --- | --- |
+| `checklist_open` | `repeat_interval_h` (décimal, facultatif) | une seule liste ouverte à la fois ; rôle d'un côté | `SafetyChecklist` v*n* avec les 45 points copiés ; journal `checklist.opened` ; notification temps réel à l'autre bord et à l'agence |
+| `checklist_answer` | `part` (code de partie, pour le retour) ; `item_code` (répété : les points du formulaire) ; par point : `state_<code>` (`YES` / `NO` / `NA`), `remark_<code>` (300) ou `value_<code>` (accord, 300) ; `repetition` (0 = initial ; *n* pour une répétition) | le côté répond à ses points ; un *non* exige une remarque ; une valeur d'accord non vide ; liste ouverte — signée : points R seulement, en répétition ; seules les réponses qui changent sont enregistrées | `SafetyCheckAnswer` scellés (append-only) ; journal `checklist.answer` ; un *non* notifie l'autre bord, l'agence et la capitainerie en temps réel |
+| `checklist_sign` | `comment` (300, facultatif) | tous les points du côté *oui* ou *S. O.*, accords écrits, pas déjà signé | `SafetyChecklistSignature` scellée ; signature de la tâche conjointe M0:28 pour le rôle ; seconde signature → liste `SIGNED`, M0:28 faite, jalon `SSSCL_SIGNED`, formulaire `SSSCL` déposé pré-rempli (lié à la liste), intervalle lu au point 5A.8 s'il manquait ; journaux `checklist.signed`, `checklist.completed` ; notifications (autre bord et agence ; puis NAV, TER, AGE, CAP, INS) |
+| `checklist_cancel` | `reason` (300) | liste ouverte ; AGE ou CAP | `CANCELLED` avec motif ; journal `checklist.cancelled` |
+
+**Refus** : *La liste de contrôle navire/terre est renseignée par le navire et le terminal* ; *…par le terminal qui parle au nom du côté terre* ; *Une liste de contrôle est déjà en cours* ; *Ce point est renseigné par l'autre partie* ; *Un « non » indique ce qui reste à faire (remarque)* ; *La liste est signée : seules les vérifications répétées…* ; *Les points répondus « non » doivent être résolus avant de signer : …* ; *Points non encore vérifiés : …* ; *Accords non encore écrits (partie 5A) : …* ; *Votre partie a déjà signé* ; *Seule une liste de contrôle ouverte peut être annulée*. Les mêmes actes existent dans l'API (`POST …/safety-checklist/`, `…/safety-checklist/answer|sign|cancel/`).
 
 ## 13.7 Contestations, échanges, rapport des faits, formulaires standards et assistant
 
@@ -479,10 +617,10 @@ Sans formulaire. Chaque consultation est inscrite au journal d'accès (`download
 
 | Champ | Libellé | Type | Obligatoire | Valeurs, validation | Défaut |
 | --- | --- | --- | --- | --- | --- |
-| `code` | — | hidden (bouton *Émettre et déposer* de la ligne) | oui | code d'un des 76 formulaires offert à l'escale (`forms.offered`) et émis par un rôle de la personne | — |
+| `code` | — | hidden (bouton *Émettre et déposer* de la ligne) | oui | code d'un des 94 formulaires offert à l'escale (`forms.offered` : rôles, opérations, **nature de cargaison** et gabarits du formulaire) et émis par un rôle de la personne | — |
 | `as_role` (API) | — | — | non | quand la personne tient plusieurs rôles du formulaire | premier rôle tenu (ordre alphabétique) |
 
-**Effets** : rendu HTML du formulaire prérempli (`forms.render`), déposé par `documents.upload_document` comme document généré du type du formulaire, nom `<référence>_<code>.html`, titre `<titre FR> / <titre EN> — <référence>`, numéro `CODE-RÉFÉRENCE-nn`, version n + 1 du document de même titre encore émis ou signé, confidentialité du type, signataires du type ; journal `document.issued`. L'aperçu (`/escales/<id>/formulaires/<code>/`) est libre et ne dépose rien. Le formulaire *Connaissement — données d'émission* passe par le verrou `BL_ISSUE`. Les dépôts automatiques (acte de chaque décision, NOR, time sheet) sont décrits en 4.2. **Refus** : *Formulaire inconnu* ; *Ce formulaire n'est pas généré par votre rôle* ; *Ce formulaire ne s'applique pas aux opérations de cette escale* ; refus du verrou du connaissement ; escale close.
+**Effets** : rendu HTML du formulaire prérempli (`forms.render`), déposé par `documents.upload_document` comme document généré du type du formulaire, nom `<référence>_<code>.html`, titre `<titre FR> / <titre EN> — <référence>`, numéro `CODE-RÉFÉRENCE-nn`, version n + 1 du document de même titre encore émis ou signé, confidentialité du type, signataires du type ; journal `document.issued`. L'aperçu (`/escales/<id>/formulaires/<code>/`) est libre et ne dépose rien. Le formulaire *Connaissement — données d'émission* passe par le verrou `BL_ISSUE`. Les dépôts automatiques (acte de chaque décision, NOR, time sheet) sont décrits en 4.2. **Refus** : *Formulaire inconnu* ; *Ce formulaire n'est pas généré par votre rôle* ; *Ce formulaire ne s'applique pas aux opérations de cette escale* (ni à sa nature de cargaison) ; refus du verrou du connaissement ; escale close ; accès sans droit d'agir sur les documents (1.5).
 
 ### Assistant — actions `ai.*` — port dont `ai_assistance_enabled` est vrai ; jamais par un lien d'accès ; l'assistant propose, une personne valide
 

@@ -1,0 +1,36 @@
+{% load i18n fluxaa %}{# In-line execution of a pending task (v1.5, EXG-R-01). Context: call, t (task), x (execution dict), strong #}
+{% if x.kind == "document" %}
+<details class="action"><summary>{% trans "Provide the document" %}</summary><div>
+  {% if x.forms %}<p class="small">{% trans "Generate it from the registry:" %} {% for f in x.forms %}<a class="btn small secondary" href="{% url 'registry:form_preview' call.pk f.code %}">{{ f.title.0 }}</a> {% endfor %}</p>{% endif %}
+  <form method="post" action="{% url 'registry:call_action' call.pk 'document_upload' %}" enctype="multipart/form-data" class="form">{% csrf_token %}
+    <input type="hidden" name="task_id" value="{{ t.pk }}"><input type="hidden" name="type" value="{{ x.type.code }}"><input type="hidden" name="back" value="?tab=taches#t{{ t.pk }}">
+    <div><label for="xf{{ t.pk }}">{{ x.type.label }} — {% trans "file" %}</label><input type="file" id="xf{{ t.pk }}" name="file" required></div>
+    <div><label for="xt{{ t.pk }}">{% trans "Title (optional)" %}</label><input id="xt{{ t.pk }}" name="title"></div>
+    <button class="btn small">{% trans "Upload and complete the task" %}</button></form></div></details>
+{% elif x.kind == "request" %}
+<details class="action"><summary>{% trans "File the request" %}</summary><div>
+  <form method="post" action="{% url 'registry:call_action' call.pk 'request_create' %}" class="form">{% csrf_token %}
+    <input type="hidden" name="type" value="{{ x.type.code }}"><input type="hidden" name="back" value="?tab=taches#t{{ t.pk }}">
+    <p class="small muted">{{ x.type.label }}</p>
+    {% if x.prefilled %}<p class="small"><span class="prefill-tag">{% trans "pre-filled from the announcement — check before submitting" %}</span></p>{% endif %}
+    {% include "registry/_schema_fields.html" with fields=x.fields prefix="" idprefix=x.idprefix %}
+    <button class="btn small">{% trans "Submit the request" %}</button></form></div></details>
+{% elif x.kind == "decide" %}
+  {% if x.requests %}{% for r in x.requests %}
+  <details class="action"><summary>{% trans "Decide" %} — {{ r.reference }}{% if not strong %} ({% trans "second factor required" %}){% endif %}</summary><div>
+    <form method="post" action="{% url 'registry:call_action' call.pk 'request_decide' %}" class="form" data-confirm="{% trans 'Record this decision? It binds the port.' %}">{% csrf_token %}
+      <input type="hidden" name="request_id" value="{{ r.pk }}"><input type="hidden" name="back" value="?tab=taches#t{{ t.pk }}">
+      <div><label for="xd{{ r.pk }}">{% trans "Decision" %}</label><select id="xd{{ r.pk }}" name="decision"><option value="APPROVED">{% trans "Approve" %}</option><option value="APPROVED_COND">{% trans "Approve with conditions" %}</option><option value="INFO_REQUIRED">{% trans "Ask for more information" %}</option><option value="REFUSED">{% trans "Refuse" %}</option></select></div>
+      <div><label for="xc{{ r.pk }}">{% trans "Conditions" %}</label><input id="xc{{ r.pk }}" name="conditions"></div>
+      <div><label for="xre{{ r.pk }}">{% trans "Reason (mandatory for a refusal or a request for information)" %}</label><textarea id="xre{{ r.pk }}" name="reason"></textarea></div>
+      <p class="small muted">{% trans "Berth, validity and other details: on the requests tab." %}</p>
+      <button class="btn small">{% trans "Record the decision" %}</button></form></div></details>
+  {% endfor %}{% else %}<span class="small muted">{% trans "no request to decide yet" %}</span>{% endif %}
+{% elif x.kind == "milestone" %}
+  {% if x.can_record %}<details class="action"><summary>{% trans "Record the milestone" %}</summary><div>
+    <form method="post" action="{% url 'registry:call_action' call.pk 'milestone' %}" class="form">{% csrf_token %}<input type="hidden" name="back" value="?tab=taches#t{{ t.pk }}">
+      <div><label for="xm{{ t.pk }}">{% trans "Milestone" %}</label><select id="xm{{ t.pk }}" name="type">{% for m in x.types %}<option value="{{ m.code }}">{{ m.label }}</option>{% endfor %}</select></div>
+      <div><label for="xa{{ t.pk }}">{% trans "Date and time (UTC)" %}</label><input type="datetime-local" id="xa{{ t.pk }}" name="declared_at"></div>
+      <div><label for="xn{{ t.pk }}">{% trans "Note (optional)" %}</label><input id="xn{{ t.pk }}" name="note"></div>
+      <button class="btn small">{% trans "Record" %}</button></form></div></details>{% endif %}
+{% endif %}

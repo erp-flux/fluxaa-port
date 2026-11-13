@@ -11,10 +11,10 @@ from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
 
-from ..models import WebhookDelivery
+from ..models import ACTIVE_STATUSES, EXPIRABLE_STATUSES, CallStatus, PortCall, WebhookDelivery
 from .alerts import evaluate_all
 from .milestones import apply_tacit_countersignatures
-from .notifications import send_daily_digests
+from .notifications import notify, send_daily_digests
 from .requests import expire_authorizations
 
 log = logging.getLogger(__name__)
@@ -66,6 +66,49 @@ def _purge_ais_positions(now) -> int:
     return purge(now)
 
 
+# Reminders of the validity of an announcement (FLX-CDC-002 v1.5, EXG-R-02): before it runs out, then every day
+# it is overrun by a call already alongside (the overrun is counted for billing)
+VALIDITY_REMINDERS_H = (72, 24)
+
+
+def watch_validity(now=None) -> dict:
+    """Every call announced for a period: reminded to the agency and the harbour master 72 h and 24 h before the
+    period runs out; made obsolete when it runs out before the vessel is alongside; signalled daily when it is
+    overrun by a vessel already alongside or working."""
+    from .calls import call_url, expire_call
+
+    now = now or timezone.now()
+    reminded = expired = overrun = 0
+    calls = PortCall.objects.filter(valid_until__isnull=False, status__in=[CallStatus.DRAFT, *ACTIVE_STATUSES]) \
+        .select_related("vessel", "port")
+    for call in calls:
+        left = call.valid_until - now
+        if left.total_seconds() <= 0:
+            if call.status in EXPIRABLE_STATUSES:
+                expired += int(expire_call(call))
+            else:
+                # alongside or working past the validity: never cut off, signalled once a day
+                reminded_key = f"validity:{call.pk}:overrun:{now:%Y%m%d}"
+                if notify(call, ["AGE", "CAP", "APO"], key=reminded_key, url=call_url(call),
+                          title_fr=f"{call.reference} ({call.vessel.name}) : validité de l'annonce dépassée depuis le "
+                                   f"{call.valid_until:%d/%m %H:%M} UTC — le dépassement est compté ; l'agence régularise l'annonce",
+                          title_en=f"{call.reference} ({call.vessel.name}): validity of the announcement overrun since "
+                                   f"{call.valid_until:%Y-%m-%d %H:%M} UTC — the overrun is counted; the agency regularises the announcement"):
+                    overrun += 1
+            continue
+        hours_left = left.total_seconds() / 3600
+        for hours in sorted(VALIDITY_REMINDERS_H):  # the nearest deadline first: one reminder per threshold
+            if hours_left <= hours:
+                if notify(call, ["AGE", "CAP"], key=f"validity:{call.pk}:{hours}h", url=call_url(call), realtime=hours == 24,
+                          title_fr=f"{call.reference} ({call.vessel.name}) : l'annonce expire le {call.valid_until:%d/%m %H:%M} UTC "
+                                   f"(dans {int(hours_left)} h) — clôturer l'escale, ou la refaire après l'échéance",
+                          title_en=f"{call.reference} ({call.vessel.name}): the announcement expires on {call.valid_until:%Y-%m-%d %H:%M} UTC "
+                                   f"(in {int(hours_left)} h) — close the call, or announce it again after the deadline"):
+                    reminded += 1
+                break
+    return {"reminded": reminded, "expired": expired, "overrun": overrun}
+
+
 def tick(now=None) -> dict:
     now = now or timezone.now()
     summary = {}
@@ -73,6 +116,7 @@ def tick(now=None) -> dict:
         ("tacit", apply_tacit_countersignatures),
         ("alerts", evaluate_all),
         ("expired", expire_authorizations),
+        ("validity", watch_validity),
         ("digests", send_daily_digests),
         ("webhooks", deliver_webhooks),
         ("ais_purge", _purge_ais_positions),

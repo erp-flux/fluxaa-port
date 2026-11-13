@@ -5,7 +5,7 @@ from datetime import timedelta
 from types import SimpleNamespace
 
 import pytest
-from django.utils import timezone
+from django.utils import timezone, translation
 
 from apps.core.models import Organization, Port, User
 from apps.registry.bootstrap import bootstrap_port
@@ -18,6 +18,16 @@ from apps.registry.services.context import Actor, actor_for_call, system_actor
 def port(db):
     bootstrap_port("SLFNA")
     return Port.objects.get(code="SLFNA")
+
+
+@pytest.fixture(autouse=True)
+def _language_of_the_test_world():
+    """Every test starts in the language of the test world's port (Freetown: English). A message a service writes
+    outside a request — a withdrawal note, a refusal — no longer depends on the language a previous test's request
+    left active: a test passes alone as it passes in the suite."""
+    translation.activate("en")
+    yield
+    translation.deactivate()
 
 
 @pytest.fixture
@@ -53,16 +63,22 @@ def world(port):
     return SimpleNamespace(port=port, orgs=orgs, users=users, vessel=vessel)
 
 
-def make_call(world, *, operations=("M1",), kind="JETTY", eta=None, modules=(), parties=None, **extra):
+def make_call(world, *, operations=("M1",), kind="JETTY", eta=None, modules=(), parties=None, green_lights=True, **extra):
+    """A call of the test world. The green lights of the naval base, the terminal and the principal (v1.5) are
+    given at once unless *green_lights* is False: the scenarios written before 1.5 keep their focus; the green
+    lights have their own tests."""
     eta = eta or (timezone.now() + timedelta(days=8))
     parties = parties if parties is not None else [
         (world.orgs.terminal, "TER"), (world.orgs.surveyor, "INS"), (world.orgs.owner, "COM"), (world.orgs.waste, "PRE"),
     ]
-    return call_svc.create_call(
+    call = call_svc.create_call(
         world.users["AGE"], vessel=world.vessel, eta=eta, requested_berth_kind=kind, operations=list(operations),
         modules=list(modules), parties=parties, etb=eta + timedelta(hours=4), etd=eta + timedelta(days=2),
         product="Gasoil", quantity=30000, **extra,
     )
+    if green_lights:
+        force_done(call, ["M0:09b", "M0:09c", "M0:09d"])
+    return call
 
 
 def act(world, call, role, strong=True) -> Actor:

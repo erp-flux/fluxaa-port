@@ -24,6 +24,7 @@
       {% with section=request.resolver_match.url_name %}
       {% if "NAV" not in USER_ROLES or USER_ROLES|length > 1 %}<a href="{% url 'registry:dashboard' %}" {% if section == 'dashboard' %}aria-current="page"{% endif %}>{% trans "Dashboard" %}</a>{% endif %}
       <a href="{% url 'registry:call_list' %}" {% if section == 'call_list' or section == 'call_detail' or section == 'call_create' %}aria-current="page"{% endif %}>{% trans "Calls" %}</a>
+      {% if "NAV" not in USER_ROLES or USER_ROLES|length > 1 %}<a href="{% url 'registry:board' %}" {% if section == 'board' %}aria-current="page"{% endif %}>{% trans "Placement conference" %}</a>{% endif %}
       {% if "NAV" not in USER_ROLES or USER_ROLES|length > 1 %}<a href="{% url 'ais:board' %}" {% if request.resolver_match.namespace == 'ais' %}aria-current="page"{% endif %}>{% trans "AIS board" %}</a>{% endif %}
       {% if IS_STATISTICS %}<a href="{% url 'registry:statistics' %}" {% if section == 'statistics' %}aria-current="page"{% endif %}>{% trans "Statistics" %}</a>{% endif %}
       {% if IS_ASSISTANT %}<a href="{% url 'ai:port' %}" {% if section == 'port' and request.resolver_match.namespace == 'ai' %}aria-current="page"{% endif %}>{% trans "Assistant" %}</a>{% endif %}
@@ -60,7 +61,7 @@
   </div>
 </main>
 <footer class="wrap small muted" style="padding-bottom:24px">
-  {% trans "FLUXAA Port — operational registry of tanker calls." %}
+  {% trans "FLUXAA Port — operational registry of ship calls." %}
   {% if PORT %}{% blocktrans with tz=PORT.timezone %}Times are shown in the port time zone ({{ tz }}) and stored in UTC.{% endblocktrans %}{% endif %}
 </footer>
 {% block scripts %}{% endblock %}

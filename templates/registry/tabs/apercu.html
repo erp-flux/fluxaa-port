@@ -19,6 +19,69 @@
     </section>
     {% endif %}
 
+    {% if green_lights %}
+    <section class="section" aria-labelledby="green-title" id="feux-verts">
+      <div class="section-head"><h2 id="green-title">{% trans "Green lights" %}</h2>
+        <span class="small muted">{% trans "Each party's go-ahead, in its own name: the harbour master's (decision on the request), the naval base's, the terminal's, the principal's. A green light given can be withdrawn with a reason; the hold points it guards close again." %}</span></div>
+      <div class="lights">
+        {% for g in green_lights %}{% with t=g.task %}
+        <div class="light light-{{ g.state|lower }}" id="light-{{ t.pk }}">
+          <div class="light-head"><span class="lamp" aria-hidden="true"></span><b>{{ t.role|role_name }}</b>
+            <span class="chip {% if g.state == 'GIVEN' %}done{% elif g.state == 'REFUSED' %}contested{% elif g.state == 'NA' %}na{% else %}pending{% endif %}">{% if g.state == 'GIVEN' %}{% trans "given" %}{% elif g.state == 'REFUSED' %}{% trans "refused" %}{% elif g.state == 'NA' %}{% trans "not applicable" %}{% else %}{% trans "awaited" %}{% endif %}</span></div>
+          <div class="small">{{ t.title }}</div>
+          {% if g.state == 'GIVEN' %}<div class="small muted">{{ g.by }}{% if g.at %} — <time>{{ g.at|date:"d/m H:i" }}</time>{% endif %}</div>
+          {% elif g.request %}<div class="small muted">{{ g.request.get_decision_display }} — <time>{{ g.request.decided_at|date:"d/m H:i" }}</time></div>
+          {% elif t.due_at %}<div class="small muted">{% trans "due" %} <time>{{ t.due_at|date:"d/m H:i" }}</time></div>{% endif %}
+          {% if t.completion_note and g.state != 'GIVEN' %}<div class="small">{{ t.completion_note|linebreaksbr }}</div>{% endif %}
+          <div class="actions">
+            {% if g.can_give %}<details class="action"><summary>{% trans "Give the green light" %}</summary><div>
+              <form method="post" action="{% url 'registry:call_action' call.pk 'task_complete' %}" class="form">{% csrf_token %}<input type="hidden" name="task_id" value="{{ t.pk }}"><input type="hidden" name="back" value="?tab=apercu#feux-verts">
+                <div><label for="gl{{ t.pk }}">{% trans "Note (optional)" %}</label><input id="gl{{ t.pk }}" name="note"></div><button class="btn small">{% trans "Give the green light" %}</button></form></div></details>
+            {% elif g.state == 'PENDING' and t.request_type_code %}<a class="btn small secondary" href="?tab=demandes&type={{ t.request_type_code }}">{% trans "Through its request" %}</a>{% endif %}
+            {% if g.can_withdraw %}<details class="action"><summary>{% trans "Withdraw" %}</summary><div>
+              <form method="post" action="{% url 'registry:call_action' call.pk 'green_withdraw' %}" class="form" data-confirm="{% trans 'Withdraw this green light? The operations it allows are held until it is given again.' %}">{% csrf_token %}<input type="hidden" name="task_id" value="{{ t.pk }}"><input type="hidden" name="back" value="?tab=apercu#feux-verts">
+                <div><label for="gw{{ t.pk }}">{% trans "Reason (mandatory, told to everyone concerned)" %}</label><input id="gw{{ t.pk }}" name="reason" required></div><button class="btn small danger">{% trans "Withdraw the green light" %}</button></form></div></details>{% endif %}
+          </div>
+        </div>
+        {% endwith %}{% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    {% if declaration %}
+    <section class="section" aria-labelledby="declare-title" id="declaration">
+      <div class="section-head"><h2 id="declare-title">{% trans "Before the declaration" %}</h2>
+        <span class="small muted">{% trans "What the platform waits for to declare the call, who answers for it, and what you can do now." %}</span></div>
+      {% if declaration.ready %}<p><span class="chip done">{% trans "Everything is in: the call can be declared." %}</span></p>
+      {% else %}
+      <ul class="calllist">
+        {% for item in declaration.items %}{% with t=item.task %}
+        <li><div><span class="code">{{ t.code }}</span> {{ t.title }}
+            <div class="small" style="margin-top:4px">{% for r in item.responsible %}<span class="chip {% if r.can_act %}done{% else %}hold{% endif %}" title="{{ r.how }}">{{ r.name }} ({{ r.role }}) — {{ r.how }}</span> {% endfor %}</div>
+            {% if item.reminded_at %}<div class="small muted">{% trans "last reminder" %} <time>{{ item.reminded_at|date:"d/m H:i" }}</time></div>{% endif %}</div>
+          <div class="actions">
+            {% if item.can_act %}<a class="btn small" href="{{ item.hint.query }}">{% if item.hint.kind == "document" %}{% trans "Provide the document" %}{% elif item.hint.kind == "request" %}{% trans "Open the request" %}{% elif item.hint.kind == "milestone" %}{% trans "Record the milestone" %}{% else %}{% trans "Confirm in the tasks" %}{% endif %}</a>{% endif %}
+            {% if item.needs_master_link %}<a class="btn small secondary" href="?tab=parties">{% trans "Hand the master his access" %}</a>{% elif item.can_remind %}<form method="post" action="{% url 'registry:call_action' call.pk 'remind' %}" class="inline">{% csrf_token %}<input type="hidden" name="task_id" value="{{ t.pk }}"><input type="hidden" name="back" value="?tab=apercu#declaration"><button class="btn small quiet">{% trans "Remind" %}</button></form>{% endif %}
+          </div></li>
+        {% endwith %}{% endfor %}
+      </ul>
+      {% for reason in declaration.reasons %}<p class="small">{{ reason.0 }}</p>{% endfor %}
+      <p class="small muted">{% trans "The agency may file the statutory certificates on the master's behalf; the master's access, sent by e-mail, lists what the port expects from him." %}</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    {% if checklist_visible and checklist or checklist_can_complete and not call.is_terminal_state %}
+    <section class="section" aria-labelledby="ssscl-title">
+      <div class="section-head"><h2 id="ssscl-title">{% if LANGUAGE_CODE == "en" %}{{ checklist_label.1 }}{% else %}{{ checklist_label.0 }}{% endif %}</h2>
+        <a class="small" href="{% url 'registry:checklist' call.pk %}">{% trans "Open the checklist" %}</a></div>
+      {% if checklist %}
+      <p>{% if checklist.status == "SIGNED" %}<span class="chip done">{% trans "signed by both sides" %}</span> <time>{{ checklist.signed_at|date:"d/m H:i" }}</time>{% elif checklist.status == "OPEN" %}<span class="chip pending">{% trans "being completed" %}</span>{% else %}<span class="chip na">{{ checklist.get_status_display }}</span>{% endif %}
+        {% if checklist_progress %} — {% trans "ship" %} {{ checklist_progress.SHIP.answered }}/{{ checklist_progress.SHIP.total }}{% if checklist_progress.SHIP.signed %} ✓{% endif %} · {% trans "shore" %} {{ checklist_progress.SHORE.answered }}/{{ checklist_progress.SHORE.total }}{% if checklist_progress.SHORE.signed %} ✓{% endif %} · {% trans "agreements" %} {{ checklist_progress.agreements.written }}/{{ checklist_progress.agreements.total }}{% if checklist_progress.due %} — {% trans "next repetitive check" %} <time>{{ checklist_progress.due|date:"d/m H:i" }}</time>{% endif %}{% endif %}</p>
+      {% else %}<p class="small muted">{% trans "Not opened yet: the ship or the terminal opens it from the checklist page; both complete it on line and sign it before the transfer." %}</p>{% endif %}
+    </section>
+    {% endif %}
+
     {% if assistant and assistant.can_review %}
     <section class="section" id="assistant" aria-labelledby="assistant-title">
       <div class="section-head"><h2 id="assistant-title">{% trans "Assisted review" %}</h2>
@@ -94,14 +157,65 @@
   </div>
 
   <aside>
-    {% if is_age %}
+    <section class="section" id="validite">
+      <h2>{% trans "Validity of the announcement" %}</h2>
+      {% if call.valid_until %}
+      <dl class="facts">
+        <div><dt>{% trans "Announced for" %}</dt><dd>{{ call.validity_days }} {% trans "days" %} — {% trans "until" %} <time>{{ call.valid_until|date:"d/m/Y H:i" }}</time> UTC</dd></div>
+        {% if call.status == "EXPIRED" %}<div><dt>{% trans "State" %}</dt><dd><span class="chip contested">{% trans "obsolete" %}</span> {% trans "since" %} <time>{{ call.expired_at|date:"d/m H:i" }}</time></dd></div>
+        {% elif call.validity_overrun %}<div><dt>{% trans "State" %}</dt><dd><span class="chip late">{% trans "overrun" %}</span> {% if validity.overrun_hours %}{{ validity.overrun_hours }} h{% endif %} — {% trans "counted for billing" %}</dd></div>
+        {% elif call.validity_remaining and not call.is_terminal_state %}<div><dt>{% trans "Remaining" %}</dt><dd>{{ call.valid_until|timeuntil }}</dd></div>{% endif %}
+        {% if validity.hours_in_port %}<div><dt>{% trans "Time in port" %}</dt><dd>{{ validity.hours_in_port }} h</dd></div>{% endif %}
+        {% if call.renewed_from %}<div><dt>{% trans "Announced again from" %}</dt><dd><span class="code">{{ call.renewed_from.reference }}</span></dd></div>{% endif %}
+        {% if renewal %}<div><dt>{% trans "Announced again as" %}</dt><dd><a href="{% url 'registry:call_detail' renewal.pk %}" class="code">{{ renewal.reference }}</a></dd></div>{% endif %}
+      </dl>
+      {% if can_renew %}<form method="post" action="{% url 'registry:call_action' call.pk 'renew' %}" data-confirm="{% trans 'Announce the call again? A new draft call is created with the same vessel, operations, cargo and parties.' %}">{% csrf_token %}<button class="btn">{% trans "Announce the call again" %}</button></form>{% endif %}
+      <p class="small muted">{% trans "The validity is fixed at the announcement and kept for billing; a call not yet alongside at its end becomes obsolete, a call alongside is never cut off." %}</p>
+      {% else %}<p class="small muted">{% trans "No validity was fixed for this announcement (created before version 1.5)." %}</p>{% endif %}
+    </section>
+    {% if call.linked_call and call.link_kind == "OUTER" or call.linked_call and call.link_kind == "INNER" %}
+    <section class="section" id="accostage-a-couple">
+      <h2>{% trans "Double banking" %}</h2>
+      <p>{% trans "This vessel" %} : <b>{% if call.link_kind == "OUTER" %}{% trans "outside — comes alongside the vessel at the berth" %}{% else %}{% trans "inside — at the berth, receives the other vessel" %}{% endif %}</b><br>
+        {% trans "Other vessel" %} : <b>{{ call.linked_call.vessel.name }}</b> — <span class="code">{{ call.linked_call.reference }}</span> — {{ call.linked_call.agency }}<br>
+        {% if not link_confirmed %}<span class="chip pending">{% trans "link to be confirmed" %}</span> <span class="small">{% trans "by the harbour master's double-banking authorization" %}</span><br>{% endif %}
+        <span class="small muted">{% trans "The inner vessel's express consent is never presumed (M9:9.02); the harbour master authorises the configuration; the compatibility and mooring studies, the SIMOPS matrix and the emergency unmooring plan are the terminal's." %}</span></p>
+    </section>
+    {% endif %}
+    {% if declared %}
+    <section class="section" id="declare-a-l-annonce">
+      <h2>{% trans "Declared at the announcement" %}</h2>
+      {% for d in declared %}
+      <h3 class="small"><span class="code">{{ d.code }}</span> {{ d.name }}</h3>
+      <dl class="facts">{% for label, value in d.rows %}<div><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endfor %}</dl>
+      {% endfor %}
+      <p class="small muted">{% trans "What the agency answered to the port's questions for each operation; the requests of these operations start pre-filled with it." %}</p>
+    </section>
+    {% endif %}
+    {% if call.is_sts and call.linked_call %}
+    <section class="section" id="transbordement">
+      <h2>{% trans "Ship-to-ship transfer" %}</h2>
+      <p>{% trans "This vessel" %} : <b>{{ call.get_sts_role_display|default:"—" }}</b><br>{% trans "Partner vessel" %} : <b>{{ call.linked_call.vessel.name }}</b> — <span class="code">{{ call.linked_call.reference }}</span> — {{ call.linked_call.agency }}{% if call.linked_call.sts_role %} — {{ call.linked_call.get_sts_role_display|lower }}{% endif %}<br>
+        {% if not link_confirmed %}<span class="chip pending">{% trans "link to be confirmed" %}</span> <span class="small">{% trans "by the harbour master's STS area and window authorization" %}</span><br>{% endif %}
+        <span class="small muted">{% trans "Each vessel has its own call, agency and team; the pumping logs of the two are compared reading by reading on the Measurements tab." %}{% if not link_confirmed %} {% trans "Until the link is confirmed, nothing of the partner's file is read from this one." %}{% endif %}</span></p>
+    </section>
+    {% endif %}
+    {% if incoming_links %}
+    <section class="section" id="navires-lies">
+      <h2>{% trans "Other vessels naming this call" %}</h2>
+      <ul class="plain small">{% for o in incoming_links %}<li><b>{{ o.vessel.name }}</b> — <span class="code">{{ o.reference }}</span> — {{ o.agency }} — {% if o.link_kind == "OUTER" %}{% trans "comes alongside (double banking)" %}{% elif o.link_kind == "INNER" %}{% trans "receives this vessel alongside (double banking)" %}{% else %}STS{% if o.sts_role %} — {{ o.get_sts_role_display }}{% endif %}{% endif %} — {{ o.get_status_display }}{% if o.eta %} — ETA {{ o.eta|date:"d/m H:i" }}{% endif %}</li>{% endfor %}</ul>
+      <p class="small muted">{% trans "A mother vessel may be named by several vessels, each with its own call, agency and team; each of their files compares its own log with this vessel's. The harbour master authorises each configuration." %}</p>
+    </section>
+    {% endif %}
+    {% if is_age and not call.is_terminal_state %}
     <section class="section">
-      <h2>{% trans "Agency" %}</h2>
-      {% if call.status == "DRAFT" %}
+      <h2>{% trans "Agency" %}{% if not is_principal %} <span class="small muted">— {% trans "co-nominated" %}</span>{% endif %}</h2>
+      {% if call.status == "DRAFT" and is_principal %}
       <p class="small">{% trans "Declaring notifies every party and requests the green light. It requires the vessel dataset (M0:02), the certificates from the master (M0:03) and the sanctions screening (M0:05)." %}</p>
       <form method="post" action="{% url 'registry:call_action' call.pk 'declare' %}" data-confirm="{% trans 'Declare the call and notify every party?' %}">{% csrf_token %}<button class="btn">{% trans "Declare the call" %}</button></form>
+      {% elif not is_principal %}<p class="small muted">{% trans "The principal agent declares, revises, cancels and closes the call; you act within the access it gave you." %}</p>
       {% endif %}
-      {% if not call.is_terminal_state %}
+      {% if not call.is_terminal_state and is_principal %}
       <details class="action" style="margin-top:10px"><summary>{% trans "Revise the times" %}</summary><div>
         <form method="post" action="{% url 'registry:call_action' call.pk 'estimates' %}" class="form">{% csrf_token %}
           {% for field, label, value in estimate_fields %}<div><label for="e_{{ field }}">{{ label }}</label><input type="datetime-local" id="e_{{ field }}" name="{{ field }}" value="{{ value|date:'Y-m-d\TH:i' }}"></div>{% endfor %}
@@ -117,10 +231,10 @@
         <button class="btn secondary">{% trans "Generate the statement of facts" %}</button></form>
       {% if assistant %}<form method="post" action="{% url 'ai:remarks' call.pk %}" style="margin-top:6px">{% csrf_token %}<input type="hidden" name="next" value="{% url 'registry:call_detail' call.pk %}#statement"><button class="btn small quiet">{% trans "Draft the remarks with the assistant" %}</button></form>{% endif %}
       {% endif %}
-      {% if call.status == "DEPARTED" %}
+      {% if call.status == "DEPARTED" and is_principal %}
       <form method="post" action="{% url 'registry:call_action' call.pk 'close_request' %}" style="margin-top:10px" data-confirm="{% trans 'Ask the harbour master to close the call?' %}">{% csrf_token %}<button class="btn secondary">{% trans "Request closure" %}</button></form>
       {% endif %}
-      {% if call.status == "DRAFT" or call.status == "DECLARED" or call.status == "ACCEPTED" or call.status == "PLANNED" %}
+      {% if is_principal and call.status == "DRAFT" or is_principal and call.status == "DECLARED" or is_principal and call.status == "ACCEPTED" or is_principal and call.status == "PLANNED" %}
       <details class="action" style="margin-top:10px"><summary>{% trans "Cancel the call" %}</summary><div>
         <form method="post" action="{% url 'registry:call_action' call.pk 'cancel' %}" class="form" data-confirm="{% trans 'Cancel this call? This cannot be undone.' %}">{% csrf_token %}
           <div><label for="cancel_reason">{% trans "Reason" %}</label><input id="cancel_reason" name="reason" required></div><button class="btn danger">{% trans "Cancel the call" %}</button></form></div></details>
@@ -129,7 +243,7 @@
       <details class="action" style="margin-top:10px"><summary>{% trans "Link a partner call (STS, double banking)" %}</summary><div>
         <form method="post" action="{% url 'registry:call_action' call.pk 'link' %}" class="form">{% csrf_token %}
           <div><label for="partner">{% trans "Reference of the partner call" %}</label><input id="partner" name="partner" placeholder="{{ call.port.code }}-{% now "Y" %}-0001" required></div>
-          <p class="small muted">{% trans "Your agency links its own calls; the harbour master links the calls of two different agencies." %}</p>
+          <p class="small muted">{% trans "Your agency links its own calls; a call of another agency shown on the placement conference is named one-way, until the harbour master authorises the STS area or the double banking." %}</p>
           <div><label for="link_kind">{% trans "Link" %}</label><select id="link_kind" name="link_kind"><option value="STS">STS</option><option value="OUTER">{% trans "This vessel outside (double banking)" %}</option><option value="INNER">{% trans "This vessel inside (double banking)" %}</option></select></div>
           <button class="btn secondary">{% trans "Link" %}</button></form></div></details>
       {% endif %}
@@ -152,7 +266,7 @@
     </section>
     {% endif %}
 
-    {% if "AGE" in actor.roles or "NAV" in actor.roles or "SUR" in actor.roles or "CAP" in actor.roles %}
+    {% if security_filing %}
     {% if not call.is_terminal_state %}
     <section class="section">
       <h2>{% trans "Confidential security filing" %}</h2>

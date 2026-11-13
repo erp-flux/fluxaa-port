@@ -23,6 +23,9 @@ PARTY_KINDS: list[tuple[str, str, str, str]] = [
     ("REFINERY", "TER", "Raffinerie", "Refinery"),
     ("SPM_OPERATOR", "TER", "Exploitant de bouée / monobouée (SPM)", "SPM / buoy operator"),
     ("PIPELINE_OPERATOR", "TER", "Exploitant de pipeline", "Pipeline operator"),
+    ("BULK_TERMINAL", "TER", "Terminal / quai de vrac sec", "Dry bulk terminal"),
+    ("CONTAINER_TERMINAL", "TER", "Terminal à conteneurs", "Container terminal"),
+    ("GENERAL_CARGO_TERMINAL", "TER", "Terminal de marchandises diverses / roulier", "General cargo / ro-ro terminal"),
     # harbour master, port authority, management
     ("HARBOUR_MASTER", "CAP", "Capitainerie", "Harbour master's office"),
     ("VTS", "CAP", "Centre de trafic maritime (VTS)", "Vessel traffic service (VTS)"),
@@ -51,6 +54,8 @@ PARTY_KINDS: list[tuple[str, str, str, str]] = [
     ("VETTING_INSPECTOR", "INS", "Inspecteur vetting (SIRE / CDI)", "Vetting inspector (SIRE / CDI)"),
     ("MARINE_CHEMIST", "INS", "Chimiste maritime (dégazage)", "Marine chemist (gas-free)"),
     ("DRAFT_SURVEYOR", "INS", "Expert maritime (draft survey, avaries)", "Marine surveyor (draft survey, damage)"),
+    ("TALLY_COMPANY", "INS", "Société de pointage (tally)", "Tally company"),
+    ("BUNKER_SURVEYOR", "INS", "Inspecteur de soutage (bunker survey)", "Bunker surveyor"),
     # owner, charterer, cargo interests
     ("SHIPOWNER", "COM", "Armateur / propriétaire", "Shipowner"),
     ("SHIP_MANAGER", "COM", "Gestionnaire technique / opérateur", "Ship manager / operator"),
@@ -58,9 +63,13 @@ PARTY_KINDS: list[tuple[str, str, str, str]] = [
     ("RECEIVER", "COM", "Réceptionnaire / importateur", "Receiver / importer"),
     ("SHIPPER", "COM", "Expéditeur / exportateur", "Shipper / exporter"),
     ("TRADER", "COM", "Négociant (trader)", "Trader"),
+    ("SUPERINTENDENT", "COM", "Superintendant (représentant de l'armateur ou de l'affréteur)", "Superintendent (owner's or charterer's representative)"),
+    ("SUPERCARGO", "COM", "Subrécargue (supercargo)", "Supercargo"),
+    ("LOSS_CONTROL", "COM", "Contrôle des pertes (loss control) de l'affréteur ou du négociant", "Charterer's or trader's loss control"),
     ("COLLATERAL_MANAGER", "COM", "Gestionnaire de garanties / banque (collateral management)", "Collateral manager / bank"),
     ("INSURER", "COM", "Assureur / club P&I", "Insurer / P&I club"),
     ("BROKER", "COM", "Courtier maritime", "Ship broker"),
+    ("FREIGHT_FORWARDER", "COM", "Transitaire / commissionnaire de transport", "Freight forwarder"),
     # service providers
     ("STS_PROVIDER", "PRE", "Prestataire STS (POAC, mooring master)", "STS service provider (POAC, mooring master)"),
     ("FENDER_HOSE_SUPPLIER", "PRE", "Fournisseur de défenses et de flexibles", "Fender and hose supplier"),
@@ -76,6 +85,10 @@ PARTY_KINDS: list[tuple[str, str, str, str]] = [
     ("FIRE_SERVICE", "PRE", "Service incendie / sécurité civile", "Fire service / civil protection"),
     ("SECURITY_GUARDS", "PRE", "Gardiennage (non armé)", "Security guards (unarmed)"),
     ("TRANSPORT", "PRE", "Transport (camions-citernes, logistique)", "Transport (tank trucks, logistics)"),
+    ("STEVEDORE", "PRE", "Entreprise de manutention (stevedore)", "Stevedoring company"),
+    ("LASHING", "PRE", "Saisissage / arrimage", "Lashing / securing"),
+    ("FUMIGATION", "PRE", "Fumigation / traitement phytosanitaire", "Fumigation / phytosanitary treatment"),
+    ("WEIGHBRIDGE", "PRE", "Pesée à terre (pont-bascule)", "Weighbridge"),
     ("MEDICAL", "PRE", "Services médicaux / évacuation", "Medical services / evacuation"),
     ("TELECOM", "PRE", "Télécommunications / connectivité", "Telecommunications / connectivity"),
     ("OTHER", "", "Autre partie", "Other party"),
@@ -121,3 +134,67 @@ def default_role(kind: str) -> str:
         if code == kind:
             return role
     return ""
+
+
+# --------------------------------------------------------------------------------------------
+# The parties an operation usually brings to the call (FLX-CDC-002 v1.6, EXG-R-11): when the agency ticks a model
+# on the announcement, the form lists these beside the parties block, each with a button that adds the row with
+# its role and kind — a suggestion drawn from port practice, never a requirement; the open list stays open.
+# (template code → [(kind code, French reason, English reason)]; the role is the kind's default role)
+# --------------------------------------------------------------------------------------------
+PARTIES_BY_OPERATION: dict[str, list[tuple[str, str, str]]] = {
+    "M1": [("OIL_TERMINAL", "reçoit la cargaison, tient le journal de pompage côté terre", "receives the cargo, keeps the shore pumping log"),
+           ("CARGO_SURVEYOR", "jaugeages, échantillons, certificat de quantité", "ullages, samples, quantity certificate"),
+           ("RECEIVER", "destinataire de la cargaison, lecteur du time sheet", "consignee of the cargo, reads the time sheet"),
+           ("LABORATORY", "analyses de qualité avant et après transfert", "quality analyses before and after the transfer")],
+    "M2": [("OIL_TERMINAL", "expédie la cargaison, tient le journal de pompage côté terre", "ships the cargo, keeps the shore pumping log"),
+           ("CARGO_SURVEYOR", "jaugeages, échantillons, certificat de quantité", "ullages, samples, quantity certificate"),
+           ("SHIPPER", "chargeur / exportateur, instruction documentaire", "shipper / exporter, documentary instruction"),
+           ("LABORATORY", "certificat de qualité du lot chargé", "quality certificate of the parcel loaded")],
+    "M3": [("STS_PROVIDER", "fournit le POAC, les défenses et les flexibles ; tenu de la liste de contrôle STS", "provides the POAC, fenders and hoses; keeps the STS checklist"),
+           ("CARGO_SURVEYOR", "mesures contradictoires sur les deux navires", "joint measurements on both vessels"),
+           ("CHARTERER", "affréteur ou négociant qui ordonne le transbordement", "charterer or trader ordering the transfer")],
+    "M4": [("BUNKER_SUPPLIER", "soutier : licence, certification de la barge, BDN", "bunker supplier: licence, barge certification, BDN"),
+           ("BUNKER_SURVEYOR", "contrôle des quantités livrées (optionnel)", "checks the quantities delivered (optional)")],
+    "M5": [("LABORATORY", "analyse des eaux de ballast si l'autorité l'exige (optionnel)", "ballast water analysis when the authority requires it (optional)")],
+    "M6": [("WASTE_CONTRACTOR", "installation de réception des déchets et des slops (MARPOL)", "reception facility for waste and slops (MARPOL)"),
+           ("TANK_CLEANING", "nettoyage et dégazage des citernes, chimiste maritime", "tank cleaning and gas-freeing, marine chemist")],
+    "M7": [("REPAIR_YARD", "entreprise de réparation, permis de travaux", "repair contractor, works permit"),
+           ("CLASS_SOCIETY", "présence de la classification si les travaux la concernent", "class attendance when the works concern it"),
+           ("DIVING", "travaux sous-marins, inspection de la coque (optionnel)", "underwater works, hull inspection (optional)")],
+    "M8": [("CREW_AGENCY", "relève d'équipage : visas, transport, hébergement", "crew change: visas, transport, accommodation"),
+           ("SHIP_CHANDLER", "avitaillement en vivres et pièces", "provisions and spares"),
+           ("WATER_SUPPLIER", "eau douce (optionnel)", "fresh water (optional)"),
+           ("MEDICAL", "consultation ou évacuation médicale (optionnel)", "medical consultation or evacuation (optional)")],
+    "M9": [("FENDER_HOSE_SUPPLIER", "défenses et certificats, si ni le terminal ni le navire extérieur ne les fournissent", "fenders and certificates, when neither the terminal nor the outer vessel supplies them")],
+    "MB1": [("BULK_TERMINAL", "quai, aires de stockage, cadence de déchargement", "quay, storage areas, discharge rate"),
+            ("STEVEDORE", "manutention : grues, grappins, trémies, équipes", "stevedoring: cranes, grabs, hoppers, gangs"),
+            ("DRAFT_SURVEYOR", "draft survey initial et final, inspection des cales", "initial and final draft survey, hold inspection"),
+            ("RECEIVER", "réceptionnaire, destinataire du constat de quantité", "receiver, addressee of the quantity statement"),
+            ("WEIGHBRIDGE", "pesée à terre si le port compte en pesées (optionnel)", "shore weighing when the port counts by weighbridge (optional)")],
+    "MB2": [("BULK_TERMINAL", "quai, stocks à charger, cadence de chargement", "quay, stock to load, loading rate"),
+            ("STEVEDORE", "manutention : chargeur, nivellement des cales", "stevedoring: loader, trimming of the holds"),
+            ("DRAFT_SURVEYOR", "draft survey, acceptation des cales", "draft survey, hold acceptance"),
+            ("SHIPPER", "chargeur / exportateur : déclaration IMSBC, instruction documentaire", "shipper / exporter: IMSBC declaration, documentary instruction")],
+    "MC1": [("CONTAINER_TERMINAL", "terminal : bay plan, moyens, plan de travail", "terminal: bay plan, means, work plan"),
+            ("STEVEDORE", "manutention et saisissage si le terminal ne les assure pas", "stevedoring and lashing when the terminal does not provide them"),
+            ("FREIGHT_FORWARDER", "transitaire des conteneurs import / export (optionnel)", "forwarder of the import / export containers (optional)")],
+    "MG1": [("GENERAL_CARGO_TERMINAL", "quai et aires, moyens de levage", "quay and areas, lifting gear"),
+            ("STEVEDORE", "manutention, colis lourds, saisissage", "stevedoring, heavy lifts, lashing"),
+            ("TALLY_COMPANY", "pointage contradictoire, constat de réception", "joint tally, out-turn report"),
+            ("RECEIVER", "réceptionnaire ou chargeur des colis", "receiver or shipper of the packages")],
+    "MR1": [("GENERAL_CARGO_TERMINAL", "terminal roulier : rampe, aires de parcage", "ro-ro terminal: ramp, parking areas"),
+            ("STEVEDORE", "conducteurs, saisissage des unités", "drivers, securing of the units"),
+            ("TALLY_COMPANY", "pointage et constat de dommages des unités", "tally and damage report of the units"),
+            ("RECEIVER", "réceptionnaire des véhicules", "receiver of the vehicles")],
+    "MX1": [("STEVEDORE", "manutention si l'escale en comporte (optionnel)", "stevedoring when the call needs it (optional)")],
+}
+
+
+def parties_for_operation(code: str, lang: str = "fr") -> list[dict]:
+    """The parties the model usually calls for, with their default role and labels — for the announcement."""
+    out = []
+    for kind, why_fr, why_en in PARTIES_BY_OPERATION.get(code, []):
+        out.append({"kind": kind, "role": default_role(kind), "label": kind_label(kind, lang),
+                    "why": why_en if lang == "en" else why_fr})
+    return out
